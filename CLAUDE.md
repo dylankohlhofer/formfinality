@@ -98,3 +98,9 @@ smoke pass is its only test.
 
 **The next milestone is not code.** It's two beginner test sessions
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.
+
+## Documentation
+`docs/` is an Obsidian vault — 17 markdown files, wikilinked. Read `docs/README.md`
+for the index and `docs/project-status.md` for current state (its figures are
+recomputed, not remembered; it wins over any other doc).
+Session notes from user testing go in `docs/sessions/`.
