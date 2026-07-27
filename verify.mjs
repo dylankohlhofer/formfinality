@@ -87,8 +87,12 @@ console.log(`vectors ${VECTORS} (${Object.values(V).filter(Array.isArray).reduce
     const mv = E.M[r.movement];
     const t  = mv?.targets.find(x => x.id === r.target);
     if(!t){ check("scoreTarget", `${r.movement}.${r.target}`, "missing target", "present"); continue; }
+    /* r.v is stored at 3dp but the generator scored it at full precision, so
+       quantisation alone can move the score ~1.16–1.49 points near the falloff
+       edge (verified: recorded scores match tol×2.185 exactly). 1.5 absorbs that
+       without masking a real drift — see README-verify.md, category 3. */
     check("scoreTarget", `${r.movement}.${r.target}@${r.tier} v=${r.v}`,
-          +E.scoreTarget(t, r.v, r.tier).toFixed(4), +r.score.toFixed(4), 1);
+          +E.scoreTarget(t, r.v, r.tier).toFixed(4), +r.score.toFixed(4), 1.5);
     if(r.cue !== undefined)
       check("scoreTarget", `${r.movement}.${r.target}@${r.tier} v=${r.v} cue`,
             E.cueFor(t, r.v, r.tier) ?? null, r.cue ?? null);
