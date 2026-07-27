@@ -211,7 +211,14 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
   const dd = E.M["downward-dog"].targets.find(t => t.id === "hipAngle");
   for(const r of V.aspect){
     const f = E.REF["downward-dog"].frames[1];
-    const pose = {}; for(const k in f){ if(k === "spine") continue; pose[k] = f[k]; }
+    /* These rows assert aspect INVARIANCE: one physical pose must read the same
+       angle in any capture orientation. MediaPipe normalises x by width and y by
+       height separately, so to stand in for a capture at this aspect we divide x
+       by it — which is exactly the distortion readMetric's `A` undoes. Setting
+       frame.aspect on unnormalised coords instead asked the engine to correct a
+       distortion nothing had applied, which is why 1.778 and 0.563 diverged while
+       1.0 (a no-op both ways) passed. */
+    const pose = {}; for(const k in f){ if(k === "spine") continue; pose[k] = [f[k][0] / r.aspect, f[k][1]]; }
     const frame = frameFromPose(pose); frame.aspect = r.aspect;
     check("aspect", `aspect ${r.aspect}`, +E.readMetric(dd.m, frame, "left").toFixed(2),
           +r.hipAngle.toFixed(2), 0.1);
@@ -275,7 +282,13 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
       if(step.action === "check") continue;
       for(let i = 0; i < step.n; i++){
         now += DT;
-        const res = ev.evaluate(frameFromPose(V.poses[step.pose]), DT, now);
+        /* `over` sets frame-level fields the pose itself can't carry — sideness is
+           derived from landmark z, which these 2-D synthetic poses have none of.
+           Dropping it silently left the four view scenarios grading a frame whose
+           viewing angle was never set, so every view assertion failed. */
+        const f = frameFromPose(V.poses[step.pose]);
+        if(step.over) Object.assign(f, step.over);
+        const res = ev.evaluate(f, DT, now);
         seen[frame] = res;
         snap[frame] = { hold: ev.hold, guided: ev.guided ?? false };
         frame++;
