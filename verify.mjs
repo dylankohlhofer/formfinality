@@ -13,8 +13,12 @@
    cannot drift from the Swift tests because both read the same JSON.
 
    USAGE
-     node verify.mjs                      # verify the default build
-     node verify.mjs path/to/build.html   # verify a specific build
+     node verify.mjs path/to/build.html   # the build is REQUIRED, never defaulted
+
+   The build argument has no default on purpose. It used to fall back to
+   form-coach-v4.8.html, so a bare `node verify.mjs` silently graded v4.9-recorded
+   vectors against the v4.8 build — a green run that proved nothing about the build
+   anyone was actually editing. Fail loudly (rule 4).
 
    EXIT CODE 0 = every vector matches. Non-zero = a divergence, named.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -22,7 +26,8 @@
 import { readFileSync, writeFileSync, unlinkSync } from "fs";
 import { pathToFileURL } from "url";
 
-const BUILD = process.argv[2] || "form-coach-v4.8.html";
+const BUILD = process.argv[2];
+if (!BUILD) { console.error("usage: node verify.mjs <build.html>"); process.exit(2); }
 const VECTORS = "conformance-vectors.json";
 const CONTENT = "content-v4.8.json";
 
@@ -52,6 +57,22 @@ finally { try { unlinkSync(tmp); } catch {} }
 const V = JSON.parse(readFileSync(VECTORS, "utf8"));
 const C = JSON.parse(readFileSync(CONTENT, "utf8"));
 const DT = V.meta?.dt ?? 1/30;
+
+/* ── tolerances — one source of truth ─────────────────────────────────────
+   Every numeric slack lives in meta.tolerances and BOTH harnesses read it from
+   there. They used to be split: hardcoded inline here (1.5 for scoreTarget,
+   5e-5 for filters) and read from meta in Swift (score: 1.0). The two drifted,
+   and the same ten scoreTarget rows passed here while failing in Swift — a
+   divergence report that was really a tolerance report. A missing tolerance is
+   an error, not a default: silently grading at 1e-6 is how this started. */
+const tol = k => {
+  const t = V.meta?.tolerances?.[k];
+  if(typeof t !== "number"){
+    console.error(`meta.tolerances.${k} missing from ${VECTORS} — cannot verify`);
+    process.exit(2);
+  }
+  return t;
+};
 
 /* ── reporting ──────────────────────────────────────────────────────────── */
 let pass = 0, fail = 0;
@@ -89,10 +110,11 @@ console.log(`vectors ${VECTORS} (${Object.values(V).filter(Array.isArray).reduce
     if(!t){ check("scoreTarget", `${r.movement}.${r.target}`, "missing target", "present"); continue; }
     /* r.v is stored at 3dp but the generator scored it at full precision, so
        quantisation alone can move the score ~1.16–1.49 points near the falloff
-       edge (verified: recorded scores match tol×2.185 exactly). 1.5 absorbs that
-       without masking a real drift — see README-verify.md, category 3. */
+       edge (verified: recorded scores match tol×2.185 exactly). meta.tolerances
+       .score absorbs that without masking a real drift — see README-verify.md,
+       category 3. */
     check("scoreTarget", `${r.movement}.${r.target}@${r.tier} v=${r.v}`,
-          +E.scoreTarget(t, r.v, r.tier).toFixed(4), +r.score.toFixed(4), 1.5);
+          +E.scoreTarget(t, r.v, r.tier).toFixed(4), +r.score.toFixed(4), tol("score"));
     if(r.cue !== undefined)
       check("scoreTarget", `${r.movement}.${r.target}@${r.tier} v=${r.v} cue`,
             E.cueFor(t, r.v, r.tier) ?? null, r.cue ?? null);
@@ -112,7 +134,7 @@ console.log(`vectors ${VECTORS} (${Object.values(V).filter(Array.isArray).reduce
     const pose = {}; for(const k in f){ if(k === "spine") continue; pose[k] = f[k]; }
     const got = E.readMetric(t.m, frameFromPose(pose), "left");
     check("readMetric", `${r.movement}.${r.target} frame ${r.frame}`,
-          got == null ? null : +got.toFixed(4), r.v == null ? null : +r.v.toFixed(4), 1e-3);
+          got == null ? null : +got.toFixed(4), r.v == null ? null : +r.v.toFixed(4), tol("value"));
   }
   done(b);
 }
@@ -121,7 +143,10 @@ console.log(`vectors ${VECTORS} (${Object.values(V).filter(Array.isArray).reduce
 {
   const b = fail; section("filters", V.filters.length);
   for(const r of V.filters)
-    check("filters", `alpha=${r.alpha} dt=${r.dt}`, +E.emaAlpha(r.alpha, r.dt).toFixed(6), +r.out.toFixed(6), 5e-5);
+    /* meta.tolerances.filter, not exact: the rows store dt rounded to 6dp but
+       were computed at full precision, which moves emaAlpha by ~1e-6. */
+    check("filters", `alpha=${r.alpha} dt=${r.dt}`,
+          +E.emaAlpha(r.alpha, r.dt).toFixed(6), +r.out.toFixed(6), tol("filter"));
   done(b);
 }
 
@@ -235,12 +260,66 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
 }
 {
   const b = fail; section("repScenarios", V.repScenarios.length);
+  /* These rows record `finalReps`/`finalState`/`primed`/`events` — this section used
+     to read sc.reps and sc.rushed, which no row has, so all three scenarios verified
+     NOTHING while reporting ok. Both `undefined` guards were doing the hiding. */
+  const kindOf = ev => ev.atPeak ? "atPeak" : ev.rejected ? "rejected" : ev.short ? "short" : "rep";
   for(const sc of V.repScenarios){
     const rep = new E.Rep(sc.spec);
     let now = 0;
-    for(const v of sc.seq){ now += DT; rep.update(v, now, DT, 1); }
-    if(sc.reps !== undefined) check("repScenarios", `${sc.name} reps`, rep.reps, sc.reps);
-    if(sc.rushed !== undefined) check("repScenarios", `${sc.name} rushed`, rep.rushed, sc.rushed);
+    const events = [];
+    sc.seq.forEach((v, i) => {
+      now += DT;
+      const ev = rep.update(v, now, DT, 1);
+      if(ev) events.push({ i, kind: kindOf(ev), n: ev.n ?? null, repsAfter: rep.reps });
+    });
+    check("repScenarios", `${sc.name} finalReps`, rep.reps, sc.finalReps);
+    check("repScenarios", `${sc.name} finalState`, rep.state, sc.finalState);
+    check("repScenarios", `${sc.name} primed`, rep.primed, sc.primed);
+    check("repScenarios", `${sc.name} events`, JSON.stringify(events), JSON.stringify(sc.events));
+    if(sc.base != null)
+      check("repScenarios", `${sc.name} base`, +rep.base.toFixed(3), sc.base, tol("value"));
+    /* ACKNOWLEDGEMENT PRECEDES ACCOUNTING — the property, not just the recording. */
+    sc.events.forEach((w, idx) => {
+      if(w.kind !== "rep") return;
+      const peak = [...sc.events.slice(0, idx)].reverse().find(e => e.kind === "atPeak");
+      check("repScenarios", `${sc.name} rep ${w.n} has a preceding atPeak`, !!peak, true);
+      if(!peak) return;
+      check("repScenarios", `${sc.name} rep ${w.n} atPeak number`, peak.n, w.n);
+      check("repScenarios", `${sc.name} rep ${w.n} atPeak precedes it`, peak.i < w.i, true);
+      check("repScenarios", `${sc.name} rep ${w.n} atPeak leaves the count alone`,
+            peak.repsAfter, w.repsAfter - 1);
+    });
+  }
+  done(b);
+}
+
+/* ── 9e · rep dispatch — the double-count trap, as a vector ─────────────────
+   atPeak shares one dispatch with rep/short/tooFast and needs a branch of its own
+   ahead of the final else. Without one the up-crossing is routed to `rep`, and the
+   shell hears "rep completed" twice per rep — at the top and again at the bottom —
+   while the COUNT never moves, which is exactly why a count-only assertion misses
+   it. These rows pin which slot each event lands in, frame by frame. */
+{
+  const b = fail; section("repDispatch", V.repDispatch.length);
+  for(const row of V.repDispatch){
+    const ev = new E.Evaluator(E.M[row.movement], row.tier);
+    let now = 0, frame = 0;
+    const got = [];
+    for(const step of row.timeline){
+      if(step.action === "arm"){ ev.arm(now); continue; }
+      for(let i = 0; i < step.n; i++){
+        now += DT;
+        const f = frameFromPose(V.poses[step.pose]);
+        if(step.over) Object.assign(f, step.over);
+        const r = ev.evaluate(f, DT, now);
+        const slot = r.atPeak ? "atPeak" : r.tooFast ? "tooFast"
+                   : r.short ? "short" : r.rep ? "rep" : null;
+        if(slot) got.push({ frame, slot, n: (r.atPeak ?? r.rep)?.n ?? null, reps: r.reps });
+        frame++;
+      }
+    }
+    check("repDispatch", `${row.id} events`, JSON.stringify(got), JSON.stringify(row.events));
   }
   done(b);
 }
@@ -306,8 +385,15 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
           check("evaluatorScenarios", `${sc.id} f${cp.frame}.${field}`,
                 JSON.stringify(got ?? []), JSON.stringify(want));
         } else if(typeof want === "number"){
+          /* Per-quantity, from meta — a blanket 1.5 was applied to EVERY numeric
+             checkpoint field, which meant `reps` was being compared at ±1.5: a
+             counter that double-counted or dropped a rep passed silently. Counts
+             are exact; only measured quantities get slack. */
+          const t = field === "hold" ? tol("hold")
+                  : field === "score" ? tol("score")
+                  : 0;
           check("evaluatorScenarios", `${sc.id} f${cp.frame}.${field}`,
-                got == null ? null : +(+got).toFixed(2), +want.toFixed(2), 1.5);
+                got == null ? null : +(+got).toFixed(2), +want.toFixed(2), t);
         } else if(typeof want === "boolean"){
           check("evaluatorScenarios", `${sc.id} f${cp.frame}.${field}`, !!got, want);
         } else {

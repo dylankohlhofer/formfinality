@@ -8,7 +8,12 @@ final class ConformanceTests: XCTestCase {
 
     // ── vector schema ──
     struct Meta: Codable { let dt: Double; let tolerances: Tol }
-    struct Tol: Codable { let value: Double; let score: Double; let hold: Double }
+    /// Every numeric slack comes from meta.tolerances, which verify.mjs reads too.
+    /// Nothing here may hardcode a tolerance: the two harnesses drifted once (score
+    /// 1.0 here, 1.5 inline in verify.mjs) and it read as a port divergence for ten
+    /// scoreTarget rows that were in fact identical to the browser to the last bit.
+    struct Tol: Codable { let value: Double; let score: Double; let hold: Double
+        let filter: Double }
     struct ScoreRow: Codable { let movement, target, tier: String; let v: Double
         let score: Double; let cue: String? }
     struct MetricRow: Codable { let movement: String; let frame: Int; let target: String
@@ -19,7 +24,15 @@ final class ConformanceTests: XCTestCase {
     struct ClipRow: Codable { let key: String; let variant: Int; let vars: ClipVarsRow
         let tmpl: String; let manifest: [String]; let expect: [String]? }
     struct SlugRow: Codable { let `in`: String; let out: String }
-    struct RepEventRow: Codable { let i: Int; let n: Int }
+    /// `kind` and `repsAfter` are what make "acknowledgement precedes accounting"
+    /// assertable: an atPeak event carries the rep number the person is working on
+    /// while repsAfter still shows the previous total.
+    struct RepEventRow: Codable { let i: Int; let kind: String; let n: Int?
+        let repsAfter: Int }
+    struct DispatchEvent: Codable { let frame: Int; let slot: String; let n: Int?
+        let reps: Int }
+    struct DispatchRow: Codable { let id, movement, tier: String
+        let timeline: [TimelineStep]; let events: [DispatchEvent] }
     struct RepRow: Codable { let name: String; let spec: RepSpec; let seq: [Double]
         let finalReps: Int; let finalState: String; let primed: Bool
         let events: [RepEventRow]; let base: Double? }
@@ -62,16 +75,35 @@ final class ConformanceTests: XCTestCase {
         let clipResolver: [ClipRow]
         let slug: [SlugRow]
         let repScenarios: [RepRow]
+        let repDispatch: [DispatchRow]
         let evaluatorScenarios: [Scenario]
     }
 
     static var vec: Vectors!
     static var content: ContentPack!
 
+    /// THE REPO ROOT — the one canonical home of the vectors and the content.
+    ///
+    /// These used to be copied into Tests/…/Vectors and shipped as bundle resources.
+    /// The copy went stale: root's content-v4.8.json was corrected (side-plank and
+    /// crunch demo keyframes, beginner test 01) and the copy was not, so `swift test`
+    /// reported 19 readMetric failures describing a divergence that did not exist.
+    /// Reading the same files verify.mjs reads makes that class of failure impossible
+    /// rather than merely unlikely — there is nothing left to keep in sync.
+    static let repoRoot: URL = {
+        var u = URL(fileURLWithPath: #filePath)          // …/swift/FormCoachEngine/Tests/FormCoachEngineTests/ConformanceTests.swift
+        for _ in 0..<5 { u.deleteLastPathComponent() }   // … up to the repo root
+        return u
+    }()
+
     override class func setUp() {
         super.setUp()
-        let vURL = Bundle.module.url(forResource: "Vectors/conformance-vectors", withExtension: "json")!
-        let cURL = Bundle.module.url(forResource: "Vectors/content-v4.8", withExtension: "json")!
+        let vURL = repoRoot.appendingPathComponent("conformance-vectors.json")
+        let cURL = repoRoot.appendingPathComponent("content-v4.8.json")
+        // Fail loudly and by name: a missing fixture must never look like a pass.
+        for u in [vURL, cURL] where !FileManager.default.fileExists(atPath: u.path) {
+            fatalError("conformance fixture missing: \(u.path) — expected at the repo root")
+        }
         vec = try! JSONDecoder().decode(Vectors.self, from: Data(contentsOf: vURL))
         content = try! ContentLoader.load(from: cURL)
     }
@@ -94,8 +126,13 @@ final class ConformanceTests: XCTestCase {
     // ── sections ──
     /// The filter conversion itself — identity at 30fps, and no update on a zero dt.
     func testFilterConversion() {
+        // meta.tolerances.filter, not exact: the rows store dt rounded to 6dp but
+        // were computed at full precision, so emaAlpha lands ~1e-6 away. Asserting
+        // 1e-9 here failed all 20 rows against an engine that matches the browser
+        // exactly — the vectors' rounding, not the port.
         for r in Self.vec.filters {
-            XCTAssertEqual(emaAlpha(r.alpha, r.dt), r.out, accuracy: 1e-9,
+            XCTAssertEqual(emaAlpha(r.alpha, r.dt), r.out,
+                           accuracy: Self.vec.meta.tolerances.filter,
                            "emaAlpha(alpha: \(r.alpha), dt: \(r.dt))")
         }
     }
@@ -325,21 +362,94 @@ final class ConformanceTests: XCTestCase {
         }
     }
 
+    /// How the harness reads an event's kind. Deliberately the same precedence the
+    /// engine dispatches by — atPeak first, because it is the only event that says
+    /// nothing about whether the cycle completed.
+    func kind(_ e: RepEvent) -> String {
+        e.atPeak ? "atPeak" : e.rejected ? "rejected" : e.short ? "short" : "rep"
+    }
+
     func testRepScenarios() {
         let dt = Self.vec.meta.dt
         for r in Self.vec.repScenarios {
             let rc = RepCounter(r.spec)
             var now = 0.0
-            var events: [(Int, Int)] = []
+            var events: [(i: Int, kind: String, n: Int, repsAfter: Int)] = []
             for (i, v) in r.seq.enumerated() {
                 now += dt
-                if let ev = rc.update(v, now: now) { events.append((i, ev.n)) }
+                if let ev = rc.update(v, now: now) {
+                    events.append((i, kind(ev), ev.n, rc.reps))
+                }
             }
             XCTAssertEqual(rc.reps, r.finalReps, "\(r.name) reps")
             XCTAssertEqual(rc.state, r.finalState, "\(r.name) state")
             XCTAssertEqual(rc.primed, r.primed, "\(r.name) primed")
-            XCTAssertEqual(events.map { $0.0 }, r.events.map { $0.i }, "\(r.name) event frames")
+            XCTAssertEqual(events.map { $0.i }, r.events.map { $0.i }, "\(r.name) event frames")
+            XCTAssertEqual(events.map { $0.kind }, r.events.map { $0.kind }, "\(r.name) event kinds")
+            XCTAssertEqual(events.map { $0.repsAfter }, r.events.map { $0.repsAfter },
+                           "\(r.name) reps after each event")
+            for (got, want) in zip(events, r.events) {
+                guard let wn = want.n else { continue }   // short/rejected carry no rep number
+                XCTAssertEqual(got.n, wn, "\(r.name) event n @frame \(want.i)")
+            }
+            // The property itself, stated once rather than inferred from the lists:
+            // every counted rep is preceded by an atPeak carrying the SAME number,
+            // at an EARLIER frame, while the count still reads one less.
+            for (idx, want) in r.events.enumerated() where want.kind == "rep" {
+                let peak = r.events[..<idx].last { $0.kind == "atPeak" }
+                XCTAssertNotNil(peak, "\(r.name) rep \(want.n ?? -1) has no preceding atPeak")
+                if let p = peak {
+                    XCTAssertEqual(p.n, want.n, "\(r.name) atPeak/rep number agree")
+                    XCTAssertEqual(p.repsAfter, want.repsAfter - 1,
+                                   "\(r.name) atPeak must not move the count")
+                    XCTAssertEqual(p.i < want.i, true, "\(r.name) atPeak precedes the count")
+                }
+            }
             if let b = r.base { XCTAssertEqual(rc.base ?? .nan, b, accuracy: 0.1, "\(r.name) base") }
+        }
+    }
+
+    /// THE DOUBLE-COUNT TRAP, as a vector rather than as an inspection.
+    ///
+    /// atPeak reaches the shell through the same dispatch as rep/short/tooFast, and
+    /// needs a branch of its own ahead of the final `else`. Without one the
+    /// up-crossing is routed to `rep` and the shell hears "rep completed" twice per
+    /// rep — at the top and again at the bottom — while the counter itself never
+    /// moves, which is what makes it invisible to a count-only assertion. These rows
+    /// record the SLOT each event landed in, frame by frame, so the fall-through
+    /// fails by name. Verified by mutation: deleting the branch fails four rows here
+    /// and nothing else in the suite.
+    func testRepDispatch() {
+        let dt = Self.vec.meta.dt
+        for row in Self.vec.repDispatch {
+            let ev = Evaluator(Self.content.movements[row.movement]!,
+                               tier: Self.content.tiers[row.tier]!)
+            var now = 0.0
+            var frameIdx = 0
+            var got: [(frame: Int, slot: String, n: Int?, reps: Int)] = []
+            for step in row.timeline {
+                if step.action == "arm" { ev.arm(now: now); continue }
+                guard let pose = step.pose, let n = step.n else { continue }
+                for _ in 0..<n {
+                    now += dt
+                    let r = ev.evaluate(frame(pose: pose, over: step.over), dt: dt, now: now)
+                    let slot: String? = r.atPeak != nil ? "atPeak"
+                                      : r.tooFast != nil ? "tooFast"
+                                      : r.short != nil ? "short"
+                                      : r.rep != nil ? "rep" : nil
+                    if let s = slot {
+                        got.append((frameIdx, s, (r.atPeak ?? r.rep)?.n, r.reps))
+                    }
+                    frameIdx += 1
+                }
+            }
+            XCTAssertEqual(got.count, row.events.count, "\(row.id) event count")
+            for (g, w) in zip(got, row.events) {
+                XCTAssertEqual(g.frame, w.frame, "\(row.id) event frame")
+                XCTAssertEqual(g.slot, w.slot, "\(row.id) f\(w.frame) slot")
+                XCTAssertEqual(g.n, w.n, "\(row.id) f\(w.frame) n")
+                XCTAssertEqual(g.reps, w.reps, "\(row.id) f\(w.frame) reps")
+            }
         }
     }
 

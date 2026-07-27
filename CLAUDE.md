@@ -54,7 +54,7 @@ makes a reading unreliable, suppress the cue and log the suppression. `cat-cow` 
 ## Before you commit
 
 ```bash
-node verify.mjs            # must exit 0
+node verify.mjs form-coach-v4.9.html   # must exit 0 — naming the build is required
 ```
 
 Then the permanent static audits — each exists because a bug got past the previous set:

@@ -15,6 +15,9 @@ public struct FormResult {
     public var blocking: [String] = []
     public var score: Int? = nil
     public var rep: RepEvent? = nil
+    /// Set at the up-crossing, one whole half-cycle BEFORE `rep`. `reps` does not move
+    /// with it. The shell turns this into the repPeak effect; `rep` is what counts.
+    public var atPeak: RepEvent? = nil
     public var tooFast: RepEvent? = nil
     public var reps = 0
     public var ok = true
@@ -248,7 +251,14 @@ public final class Evaluator {
         if let rc = rep, let spec = mv.reps {
             if let driver = out.readings.first(where: { $0.target.id == spec.driver }) {
                 if let ev = rc.update(driver.v, now: now, dt: dt, minScale: tier.repMin ?? 1) {
-                    if ev.rejected { out.tooFast = ev }
+                    // atPeak needs a branch of its OWN, ahead of the final else.
+                    // Drop it and the up-crossing falls through to `rep`: the shell
+                    // is told the rep completed at the top of the movement and again
+                    // at the bottom — two completions per rep, even though the
+                    // counter itself never moves. Covered by the repDispatch vectors,
+                    // which fail on the slot at the exact frame.
+                    if ev.atPeak { out.atPeak = ev }
+                    else if ev.rejected { out.tooFast = ev }
                     else if ev.short { out.short = ev }
                     else { out.rep = ev }
                 }

@@ -4,11 +4,23 @@ Replays the conformance vectors against the browser build. The browser-side twin
 `swift test`: same recorded cases, same specification, so the two can't drift.
 
 ```bash
-node verify.mjs                      # default build
-node verify.mjs path/to/build.html   # a specific build
+node verify.mjs path/to/build.html   # the build is REQUIRED
 ```
 
-Exit 0 = every vector matches.
+Exit 0 = every vector matches. Exit 2 = you didn't name a build.
+
+There is **no default build**. There used to be (`form-coach-v4.8.html`), and since the
+vectors are recorded from v4.9 a bare `node verify.mjs` quietly graded one build's vectors
+against a different build — green, and proving nothing about the file being edited. Naming
+the build is the whole point of the tool.
+
+All numeric slack lives in **`meta.tolerances`** in the vectors, and both harnesses read it
+from there. Nothing may hardcode a tolerance in either one: `score` was 1.5 inline here and
+1.0 in `meta` for the Swift tests, and the drift surfaced as ten phantom "port divergences"
+on rows where Swift matched the browser to the last bit. Each value is the measured
+worst-case quantisation error of the recorded rows — `value` 1e-3 (max 4.96e-4), `score` 1.5
+(max 1.4178), `hold` 0.05 (max 3.33e-4), `filter` 5e-5 (max 4.90e-6). A missing tolerance
+exits 2 rather than silently defaulting.
 
 ## Why it exists
 
@@ -19,7 +31,15 @@ the Swift tests.
 
 ## Known state
 
-**3,812 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
+**3,847 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
+
+Up from 3,812: `repDispatch` is new, and `repScenarios` went from asserting *nothing* to
+asserting 30-odd things. It read `sc.reps`/`sc.rushed`, fields no row has, behind
+`!== undefined` guards — three scenarios reported ok while checking nothing at all. It now
+reads `finalReps`/`finalState`/`primed`/`events`. Separately, `evaluatorScenarios` applied a
+blanket ±1.5 to *every* numeric checkpoint field, `reps` included, so a counter that
+double-counted a rep would have passed; counts are now exact and only measured quantities
+get slack.
 
 It formerly reported ~3,789 passing / 23 divergences. All 23 were **harness** faults — the
 build never diverged and the vectors were never wrong. Kept here because the reasoning is
@@ -43,7 +63,13 @@ This is exactly the kind of task to hand to Claude Code with the repo in front o
 `scoreTarget` (1,428) · `readMetric` (169) · `filters` (24) · `tempo` (120) ·
 `neededJoints` (21) · `framing` (7) · `tintDerivation` (68) · `tintScenarios` (3) ·
 `planExpansion` (15) · `aspect` (3) · `slug` (4) · `repScenarios` (3) ·
-`evaluatorScenarios` (14) · content integrity (5)
+`repDispatch` (2) · `evaluatorScenarios` (14) · content integrity (5)
+
+`repDispatch` is the v4.9 **atPeak** coverage: acknowledgement (the up-crossing, where the
+effort peaks) is a separate event from accounting (the completed cycle). Each row records
+which `FormResult` slot every rep event landed in and what the count read at that frame, so
+routing `atPeak` into `rep` — which tells the shell a rep completed at the top *and* at the
+bottom, while the count never moves — fails by name rather than by inspection.
 
 ## What it does *not* cover
 

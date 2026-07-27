@@ -11,10 +11,18 @@ public struct RepEvent {
     /// threshold. No rep counts and the score drops, so it must be explained.
     public let short: Bool
     public let reached: Double
+    /// ACKNOWLEDGEMENT, not accounting. Fired at the up-crossing, where the effort
+    /// actually peaks — `n` is the rep the person is mid-way through, and `reps` has
+    /// NOT yet moved. The cycle still completes on the return (hysteresis is what
+    /// makes the count noise-proof); this only says "that landed" at the moment it
+    /// landed. Beginner test 01: "it doesn't trigger until he lays back down, but it
+    /// should be when he reaches the peak."
+    public let atPeak: Bool
     public init(n: Int, peak: Double, dur: Double?, rejected: Bool = false,
-                short: Bool = false, reached: Double = 0) {
+                short: Bool = false, reached: Double = 0, atPeak: Bool = false) {
         self.n = n; self.peak = peak; self.dur = dur
         self.rejected = rejected; self.short = short; self.reached = reached
+        self.atPeak = atPeak
     }
 }
 
@@ -64,7 +72,13 @@ public final class RepCounter {
             let span = up - down
             let prog = span == 0 ? 0 : (v - down) / span
             pMax = max(pMax, prog)
-            if (s.rising == true) ? v > up : v < up { state = "up"; peak = v; pMax = 0; return nil }
+            if (s.rising == true) ? v > up : v < up {
+                // The CYCLE still completes on the return — but the user's effort
+                // peaks HERE, so this is when they should be told it landed.
+                // Acknowledgement and accounting are separate events (v4.9).
+                state = "up"; peak = v; pMax = 0
+                return RepEvent(n: reps + 1, peak: v, dur: nil, atPeak: true)
+            }
             // SHORT RANGE — a property of the whole cycle, never of one frame. A
             // per-frame cue on the driver would fire at the bottom of every GOOD rep,
             // which is exactly the bug that shipped in glute-bridge (#16).
