@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form Coach — Test Harness v2</title>
+<!--
+  TEST HARNESS v2 — rebuilt for the v4 tiered, multi-target model.
+  Open this alongside the app. Nothing is uploaded; it all stays in memory.
+
+  It embeds the ACTUAL movement data from v4, so when you type in the angle you
+  saw on a good rep and the angle you saw on a bad one, it computes the exact
+  edit: "plank → hipAlign → tol: 0.025 → 0.034".
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#10161C; --panel:#1A232B; --line:#2A3641; --chalk:#EDEAE2; --muted:#7E8B94;
+         --mint:#5BD6B0; --coral:#FF6B5E; --amber:#E8B44A; --sky:#6FA8DC;
+         --display:"Bricolage Grotesque",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace; }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--ink);color:var(--chalk);font:16px/1.55 system-ui,-apple-system,sans-serif;
+       padding:24px 16px 60px;display:flex;flex-direction:column;align-items:center}
+  .wrap{width:100%;max-width:820px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(21px,4vw,29px);margin:0}
+  h1 small{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--muted);
+           text-transform:uppercase;margin-top:4px}
+  .lede{color:var(--muted);font-size:14px;margin:12px 0 22px;border-left:2px solid var(--mint);padding-left:12px}
+  .lede b{color:var(--chalk)}
+  h2{font-family:var(--display);font-size:19px;margin:0 0 3px}
+  .sec{border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:13px;background:var(--panel)}
+  .sec>.hint{color:var(--muted);font-size:13px;margin:0 0 12px;line-height:1.5}
+  .sec.key{border-color:var(--mint)}
+  .badge{float:right;font:600 9px var(--mono);letter-spacing:.12em;color:var(--mint);
+         border:1px solid var(--mint);border-radius:999px;padding:3px 9px}
+  label.q{display:block;font-size:14px;margin:14px 0 6px}
+  label.q b{font-weight:600}
+  .sub{color:var(--muted);font-size:12px;font-family:var(--mono)}
+  input[type=text],input[type=number],textarea,select{
+    background:var(--ink);border:1px solid var(--line);color:var(--chalk);border-radius:9px;
+    padding:9px 12px;font:600 14px var(--mono);width:100%}
+  input[type=number]{width:100px}
+  textarea{font:400 14px system-ui;min-height:64px;resize:vertical}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--mint);outline-offset:-2px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;
+        border-radius:999px;padding:7px 14px;font:600 12px var(--mono)}
+  .chip[aria-pressed="true"]{border-color:var(--mint);color:var(--mint);background:rgba(91,214,176,.08)}
+  .chip.bad[aria-pressed="true"]{border-color:var(--coral);color:var(--coral);background:rgba(255,107,94,.08)}
+  details.mv{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--ink)}
+  details.mv[open]{border-color:var(--mint)}
+  summary{cursor:pointer;padding:12px 15px;font-family:var(--display);font-size:15.5px;font-weight:600;
+          display:flex;justify-content:space-between;align-items:center;list-style:none;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary .pri{font:600 9px var(--mono);letter-spacing:.1em;padding:2px 7px;border-radius:4px;
+               border:1px solid var(--line);color:var(--muted)}
+  summary .pri.must{border-color:var(--coral);color:var(--coral)}
+  summary .st{font:600 9px var(--mono);letter-spacing:.1em;color:var(--muted);margin-left:auto}
+  summary .st.done{color:var(--mint)}
+  .mvb{padding:0 15px 15px}
+  .script{background:rgba(91,214,176,.06);border-left:2px solid var(--mint);padding:9px 12px;
+          border-radius:0 8px 8px 0;margin:12px 0;font-size:13.5px;line-height:1.5}
+  .script b{color:var(--mint);font:600 10px var(--mono);letter-spacing:.1em;display:block;margin-bottom:3px}
+  .script.f{background:rgba(255,107,94,.06);border-color:var(--coral)}
+  .script.f b{color:var(--coral)}
+  .tgt{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:8px 0;background:var(--panel)}
+  .tgt .nm{font:600 12px var(--mono);color:var(--chalk)}
+  .tgt .cur{font:400 11px var(--mono);color:var(--muted);margin-left:6px}
+  .diag{margin-top:9px;padding:11px;border-radius:9px;font:600 12.5px/1.55 var(--mono)}
+  .diag.ok{background:rgba(91,214,176,.08);color:var(--mint)}
+  .diag.warn{background:rgba(232,180,74,.08);color:var(--amber)}
+  .diag.bad{background:rgba(255,107,94,.08);color:var(--coral)}
+  .diag .fix{display:block;color:var(--chalk);font-weight:400;margin-top:5px}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--chalk);border-radius:10px;
+       padding:12px 20px;font:600 14px var(--mono);cursor:pointer}
+  .btn.primary{background:var(--mint);color:var(--ink);border-color:var(--mint)}
+  pre#report{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:15px;
+             font:400 12px/1.6 var(--mono);color:var(--muted);white-space:pre-wrap;max-height:320px;overflow:auto}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+         background:var(--mint);color:var(--ink);padding:11px 22px;border-radius:999px;
+         font:600 13px var(--mono);opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Test Harness <small>Form Coach v4 · tiered multi-target model</small></h1>
+<p class="lede">
+  Fill this in <b>while you test</b>, app open next to it.<br>
+  <b>Do all threshold testing at Building tier.</b> Learning and Strong derive from it
+  (×1.9 and ×1.0) — tune once, not three times.<br>
+  Type in the angle you saw on a <b>good</b> rep and on a <b>bad</b> one, and this works out
+  the exact edit to make.
+</p>
+
+<!-- 1 TESTER -->
+<section class="sec">
+  <h2>1 · Who's testing</h2>
+  <p class="hint">Limb length drives these thresholds more than anything else. Run this with a few different bodies if you can.</p>
+  <label class="q"><b>Name / tag</b></label><input type="text" id="t_name" placeholder="Dylan">
+  <div class="row">
+    <div><label class="q"><b>Height (cm)</b></label><input type="number" id="t_height" placeholder="178"></div>
+    <div style="flex:1"><label class="q"><b>Build</b></label>
+      <select id="t_build"><option value="">—</option><option>Slim / long-limbed</option>
+      <option>Average</option><option>Stocky / short-limbed</option><option>Larger build</option></select></div>
+  </div>
+  <label class="q"><b>Do they actually exercise?</b> <span class="sub">— the whole product is aimed at "no"</span></label>
+  <div class="chips" data-s="t_exp">
+    <button class="chip" data-v="Never / barely">Never / barely</button>
+    <button class="chip" data-v="Occasionally">Occasionally</button>
+    <button class="chip" data-v="Trains regularly">Trains regularly</button>
+  </div>
+  <label class="q"><b>Room, light, space</b></label><input type="text" id="t_room" placeholder="living room, lamp on, 3m of floor">
+</section>
+
+<!-- 2 SETUP -->
+<section class="sec">
+  <h2>2 · Setup &amp; tracking</h2>
+  <p class="hint">v4 tracks <b>wrists and elbows</b> for the first time — bird dog, downward dog and cobra need the arms. Check they're actually being seen.</p>
+  <label class="q"><b>Seconds from opening the page to a tracked skeleton</b></label>
+  <input type="number" id="s_time" placeholder="60">
+  <label class="q"><b>Were the ARMS tracked?</b> <span class="sub">— skeleton should draw shoulder→elbow→wrist</span></label>
+  <div class="chips" data-s="s_arms">
+    <button class="chip" data-v="Yes, both arms">Yes, both arms</button>
+    <button class="chip" data-v="Patchy">Patchy</button>
+    <button class="chip bad" data-v="No arms drawn">No arms drawn</button>
+  </div>
+  <label class="q"><b>Skeleton alignment</b></label>
+  <div class="chips" data-s="s_orient">
+    <button class="chip" data-v="Correct">Correct</button>
+    <button class="chip bad" data-v="Rotated / mirrored / offset">Rotated or offset</button>
+  </div>
+  <label class="q"><b>What was annoying or confusing?</b></label>
+  <textarea id="s_friction" placeholder="Be brutal. Most useful box on the page."></textarea>
+</section>
+
+<!-- 3 CALIBRATION -->
+<section class="sec key">
+  <h2>3 · Calibration &amp; tier <span class="badge">HEADLINE FEATURE</span></h2>
+  <p class="hint">Instead of asking "are you a beginner?", the app watches a plank and infers the tier. Did it work — and did it feel respectful?</p>
+  <div class="row">
+    <div><label class="q"><b>Seconds held</b></label><input type="number" id="c_held" placeholder="22"></div>
+    <div><label class="q"><b>Form score</b></label><input type="number" id="c_score" placeholder="74"></div>
+  </div>
+  <label class="q"><b>Tier it assigned</b></label>
+  <div class="chips" data-s="c_tier">
+    <button class="chip" data-v="Learning">Learning</button>
+    <button class="chip" data-v="Building">Building</button>
+    <button class="chip" data-v="Strong">Strong</button>
+  </div>
+  <label class="q"><b>Was it right?</b></label>
+  <div class="chips" data-s="c_right">
+    <button class="chip" data-v="Spot on">Spot on</button>
+    <button class="chip bad" data-v="Too generous">Too generous</button>
+    <button class="chip bad" data-v="Too harsh">Too harsh</button>
+  </div>
+  <label class="q"><b>How did the wording land?</b>
+    <span class="sub">— it deliberately never says "beginner". Did that come across, or did it still feel like being graded?</span></label>
+  <div class="chips" data-s="c_word">
+    <button class="chip" data-v="Felt encouraging">Felt encouraging</button>
+    <button class="chip" data-v="Neutral">Neutral</button>
+    <button class="chip bad" data-v="Felt judged">Felt judged</button>
+  </div>
+</section>
+
+<!-- 4 THE TIER EXPERIMENT -->
+<section class="sec key">
+  <h2>4 · The tier experiment <span class="badge">THE THESIS</span></h2>
+  <p class="hint">
+    <b>Do this:</b> hold a plank at <b>Learning</b>, deliberately sag. Then flip the header toggle to
+    <b>Strong</b> and do the exact same thing. Listen to the difference.<br><br>
+    <i>"Your hips are dipping towards the floor — squeeze your bum and lift them, so your body's one
+    straight line"</i> → <i>"Hips."</i><br><br>
+    If that difference doesn't land, the entire tier system is wrong and we need to know now.
+  </p>
+  <label class="q"><b>Did the difference between tiers land?</b></label>
+  <div class="chips" data-s="x_land">
+    <button class="chip" data-v="Yes — felt like two different coaches">Two different coaches</button>
+    <button class="chip" data-v="Somewhat">Somewhat</button>
+    <button class="chip bad" data-v="No — felt like the same app talking more">Just more words</button>
+  </div>
+  <label class="q"><b>Learning tier dialogue</b></label>
+  <div class="chips" data-s="x_learn">
+    <button class="chip bad" data-v="Patronising">Patronising</button>
+    <button class="chip" data-v="Just right for a beginner">Right for a beginner</button>
+    <button class="chip bad" data-v="Too wordy — got in the way">Too wordy</button>
+  </div>
+  <label class="q"><b>Strong tier dialogue</b></label>
+  <div class="chips" data-s="x_strong">
+    <button class="chip bad" data-v="Too terse — felt cold">Too terse / cold</button>
+    <button class="chip" data-v="Right — focused">Right — focused</button>
+    <button class="chip bad" data-v="Not enough info to act on">Can't act on it</button>
+  </div>
+  <label class="q"><b>Any line that felt wrong, robotic or fake?</b> <span class="sub">— quote it if you can</span></label>
+  <textarea id="x_lines" placeholder=""></textarea>
+</section>
+
+<!-- 5 CUE BUDGET -->
+<section class="sec key">
+  <h2>5 · The cue budget <span class="badge">THE BEGINNER RULE</span></h2>
+  <p class="hint">
+    At Learning, the coach may raise <b>one</b> correction per set — ever. Everything else it swallows
+    (watch the amber <span class="sub">↓ swallowed:</span> line in the telemetry).<br>
+    This is either the kindest thing in the app or a bug. You decide.
+  </p>
+  <label class="q"><b>Do a plank at Learning with several faults at once</b> (sag + dropped head + wide elbows).
+    <span class="sub">How did one-cue-only feel?</span></label>
+  <div class="chips" data-s="b_feel">
+    <button class="chip" data-v="Supportive — one thing to think about">Supportive</button>
+    <button class="chip" data-v="Fine">Fine</button>
+    <button class="chip bad" data-v="Sparse — I wanted more help">Too sparse</button>
+    <button class="chip bad" data-v="It felt broken / like it wasn't working">Felt broken</button>
+  </div>
+  <label class="q"><b>Did you SEE it swallow cues in the telemetry?</b></label>
+  <div class="chips" data-s="b_saw">
+    <button class="chip" data-v="Yes">Yes</button>
+    <button class="chip bad" data-v="No — nothing appeared">No</button>
+  </div>
+  <label class="q"><b>Now the same at Building (budget 2). Better or worse?</b></label>
+  <div class="chips" data-s="b_two">
+    <button class="chip" data-v="Two is the right number">Two is right</button>
+    <button class="chip" data-v="One was better">One was better</button>
+    <button class="chip bad" data-v="Still not enough">Still not enough</button>
+  </div>
+  <label class="q"><b>Was the coach ever silent when you desperately wanted feedback?</b></label>
+  <textarea id="b_silent" placeholder="When, and what did you want it to say?"></textarea>
+</section>
+
+<!-- 6 MOVEMENTS -->
+<section class="sec">
+  <h2>6 · Movement thresholds</h2>
+  <p class="hint">
+    <b>Set the app to Building tier for all of this.</b><br><br>
+    Each movement: a <b>clean run</b> (the coach should stay quiet) and a <b>fault run</b> (it should
+    catch you fast). Read the target's angle off the telemetry strip in both — that pair of numbers
+    is what lets this compute the fix.
+  </p>
+  <div id="mvList"></div>
+</section>
+
+<!-- 7 REGRESSION -->
+<section class="sec key">
+  <h2>7 · The regression offer <span class="badge">THE KIND BIT</span></h2>
+  <p class="hint">At Learning, collapse out of a plank and stay collapsed for ~6 seconds. The coach should offer the knee plank rather than nag.</p>
+  <label class="q"><b>Did it trigger?</b></label>
+  <div class="chips" data-s="r_fire">
+    <button class="chip" data-v="Yes">Yes</button>
+    <button class="chip bad" data-v="No — never appeared">Never appeared</button>
+    <button class="chip bad" data-v="Fired when my form was fine">Fired unfairly</button>
+  </div>
+  <label class="q"><b>How did being offered an easier version feel?</b>
+    <span class="sub">— this is the moment a beginner either feels cared for or humiliated</span></label>
+  <div class="chips" data-s="r_feel">
+    <button class="chip" data-v="Kind — a relief">Kind — a relief</button>
+    <button class="chip" data-v="Neutral">Neutral</button>
+    <button class="chip bad" data-v="Insulting / like failing">Felt like failing</button>
+  </div>
+  <label class="q"><b>Did the early-stop ("form's fading, let's stop") ever fire? How did it land?</b></label>
+  <textarea id="r_degrade" placeholder=""></textarea>
+</section>
+
+<!-- 8 MOBILITY -->
+<section class="sec">
+  <h2>8 · Mobility &amp; breath</h2>
+  <p class="hint">Cat–Cow is <b>guided</b>: the app deliberately makes no form claims, it just leads the breath. Downward Dog and Cobra <i>are</i> scored — and need your arms in frame.</p>
+  <label class="q"><b>Cat–Cow breath pacing (4.5s per phase)</b></label>
+  <div class="chips" data-s="m_breath">
+    <button class="chip bad" data-v="Too fast">Too fast</button>
+    <button class="chip" data-v="About right">About right</button>
+    <button class="chip bad" data-v="Too slow">Too slow</button>
+  </div>
+  <label class="q"><b>Did "guided, no form claims" feel honest or feel like a missing feature?</b></label>
+  <div class="chips" data-s="m_guided">
+    <button class="chip" data-v="Honest — fine">Honest — fine</button>
+    <button class="chip bad" data-v="Felt like it was broken">Felt broken</button>
+  </div>
+  <label class="q"><b>Downward Dog / Cobra — did they track at all?</b></label>
+  <textarea id="m_notes" placeholder="Arms in frame? Did the score make sense?"></textarea>
+</section>
+
+<!-- 9 VERDICT -->
+<section class="sec key">
+  <h2>9 · The questions that decide it</h2>
+  <label class="q"><b>Would you use this tomorrow, unprompted?</b></label>
+  <div class="chips" data-s="v_return">
+    <button class="chip" data-v="Yes">Yes</button><button class="chip" data-v="Maybe">Maybe</button>
+    <button class="chip bad" data-v="No">No</button>
+  </div>
+  <label class="q"><b>Was there a moment it felt genuinely impressive?</b>
+    <span class="sub">— if there wasn't, say so. That IS the finding.</span></label>
+  <textarea id="v_magic" placeholder="What was happening at that exact moment?"></textarea>
+  <label class="q"><b>What would make you delete it?</b></label>
+  <textarea id="v_delete"></textarea>
+  <label class="q"><b>Did it ever tell you something that was simply WRONG?</b>
+    <span class="sub">— the one thing this product cannot survive</span></label>
+  <textarea id="v_wrong" placeholder="Claimed a fault you weren't making, or missed an obvious one."></textarea>
+</section>
+
+<!-- REPORT -->
+<section class="sec">
+  <h2>10 · Report</h2>
+  <p class="hint">Copy this back into the chat. The suggested edits are ready to apply to the <span class="sub">M</span> object in v4.</p>
+  <div class="row" style="margin-bottom:12px">
+    <button class="btn primary" id="copyBtn">Copy report</button>
+    <button class="btn" id="dlBtn">Download .md</button>
+  </div>
+  <pre id="report"></pre>
+</section>
+
+</div>
+<div class="toast" id="toast">Copied</div>
+
+<script>
+/* ── the ACTUAL v4 movement data, so we can compute real edits ── */
+const TIER_TOL = { learning:1.9, building:1.25, strong:1.0 };
+const TEST_TIER = "building";                       // tune once, here
+
+const MV = [
+ { id:"plank", name:"Plank", pri:"must",
+   clean:"Hold a good plank, 20s. Straight line, ears to heels.",
+   fault:"Same plank, now let your hips SAG toward the floor.",
+   faultName:"sagging hips",
+   targets:[
+     {id:"hipAlign", ideal:0, tol:0.025, range:0.09, cue:"sag",
+      note:"signed: + = sagging, − = piking. A small decimal, not degrees."},
+     {id:"bodyLine", ideal:180, tol:8, range:35, cue:"(gate)"}
+   ]},
+
+ { id:"glute-bridge", name:"Glute Bridge", pri:"must",
+   clean:"10 bridges with a full squeeze at the top.",
+   fault:"A few half-height bridges that don't lock out.",
+   faultName:"no lockout",
+   targets:[{id:"hipExtend", ideal:176, tol:10, range:45, cue:"bridgehigh"}],
+   reps:true },
+
+ { id:"dead-bug", name:"Dead Bug", pri:"must",
+   clean:"8 slow dead bugs, lower back pressed flat.",
+   fault:"Let your lower back ARCH off the floor as you extend.",
+   faultName:"arching back",
+   targets:[
+     {id:"backFlat", ideal:0, tol:0.035, range:0.10, cue:"backarch", note:"signed decimal"},
+     {id:"legExtend", ideal:160, tol:25, range:70, cue:"(rep driver)"}
+   ],
+   reps:true },
+
+ { id:"bird-dog", name:"Bird Dog", pri:"must",
+   clean:"Hold a good bird dog, 20s. Arm and leg both in line with your back.",
+   fault:"Don't reach — keep the arm and leg short and low.",
+   faultName:"short reach",
+   targets:[
+     {id:"legLine", ideal:175, tol:14, range:50, cue:"reachback"},
+     {id:"armLine", ideal:172, tol:16, range:55, cue:"reachforward"},
+     {id:"backFlat", ideal:0, tol:0.035, range:0.11, cue:"backarch"}
+   ],
+   note:"⚠️ This is the bilateral test. If the arms aren't tracked it will not work at all." },
+
+ { id:"sit-to-stand", name:"Sit to Stand", pri:"should",
+   clean:"10 sit-to-stands from a chair, no hands.",
+   fault:"Do a few where you barely stand up — stop half way.",
+   faultName:"partial stand",
+   targets:[
+     {id:"hipHinge", ideal:175, tol:12, range:60, cue:"(rep driver)"},
+     {id:"torsoLean", ideal:12, tol:20, range:55, cue:"chestup"}
+   ],
+   reps:true, note:"Needs a chair, side-on." },
+
+ { id:"wall-sit", name:"Wall Sit", pri:"should",
+   clean:"Hold a wall sit, knees at 90°, 20s.",
+   fault:"Sit too high — knees barely bent.",
+   faultName:"sitting too high",
+   targets:[{id:"kneeAngle", ideal:92, tol:14, range:45, cue:"sitlower"}],
+   note:"Needs a wall, side-on." },
+
+ { id:"crunch", name:"Crunch", pri:"should",
+   clean:"10 slow crunches, hands beside your head.",
+   fault:"Yank on your neck — pull your chin to your chest.",
+   faultName:"pulling the neck",
+   targets:[
+     {id:"neck", ideal:150, tol:30, range:60, cue:"neckpull"},
+     {id:"trunk", ideal:140, tol:30, range:60, cue:"(rep driver, baseline-relative)"}
+   ],
+   reps:true },
+
+ { id:"leg-raise", name:"Leg Raise", pri:"should",
+   clean:"8 straight-leg raises, slow down.",
+   fault:"Bend your knees heavily.",
+   faultName:"bent knees",
+   targets:[
+     {id:"kneesStraight", ideal:178, tol:16, range:45, cue:"knees"},
+     {id:"hipAngle", ideal:115, tol:25, range:60, cue:"(rep driver)"}
+   ],
+   reps:true },
+
+ { id:"side-plank", name:"Side Plank", pri:"should",
+   clean:"Hold a side plank, 15s, FACING the camera.",
+   fault:"Let the bottom hip dip to the floor.",
+   faultName:"dipping hip",
+   targets:[{id:"hipAlign", ideal:0, tol:0.025, range:0.09, cue:"sagside"}] },
+
+ { id:"downward-dog", name:"Downward Dog", pri:"nice",
+   clean:"Hold a good down dog, 20s. Long spine, hips high.",
+   fault:"Let your hips drop low, back rounded.",
+   faultName:"low hips / rounded back",
+   targets:[
+     {id:"hipAngle", ideal:82, tol:20, range:55, cue:"hipshigh"},
+     {id:"spineLong", ideal:176, tol:16, range:50, cue:"longspine"}
+   ],
+   note:"Needs arms tracked." },
+
+ { id:"cobra", name:"Cobra", pri:"nice",
+   clean:"Hold cobra, 15s, shoulders down.",
+   fault:"Shrug your shoulders up to your ears.",
+   faultName:"shrugged shoulders",
+   targets:[{id:"shoulders", ideal:168, tol:22, range:55, cue:"shouldersdown"}] }
+];
+
+const state = { t:{}, s:{}, c:{}, x:{}, b:{}, r:{}, m:{}, v:{}, mv:{} };
+
+/* ── build movement cards ── */
+const list = document.getElementById("mvList");
+MV.forEach(mv => {
+  state.mv[mv.id] = { tg:{} };
+  const d = document.createElement("details");
+  d.className = "mv";
+  d.innerHTML = `
+    <summary>
+      <span>${mv.name}</span>
+      <span class="pri ${mv.pri}">${mv.pri.toUpperCase()}</span>
+      <span class="st" id="st_${mv.id}">NOT TESTED</span>
+    </summary>
+    <div class="mvb">
+      <div class="script"><b>CLEAN RUN</b>${mv.clean}</div>
+      <label class="q"><b>Corrections fired during the CLEAN run</b>
+        <span class="sub">— should be 0</span></label>
+      <input type="number" data-mv="${mv.id}" data-k="fp" placeholder="0">
+      ${mv.reps ? `
+        <div class="row" style="margin-top:8px">
+          <div><label class="q"><b>Reps you did</b></label>
+            <input type="number" data-mv="${mv.id}" data-k="actual" placeholder="10"></div>
+          <div><label class="q"><b>Reps it counted</b></label>
+            <input type="number" data-mv="${mv.id}" data-k="counted" placeholder="10"></div>
+        </div>` : ``}
+
+      <div class="script f"><b>FAULT RUN — ${mv.faultName.toUpperCase()}</b>${mv.fault}</div>
+      <label class="q"><b>Did it catch you?</b></label>
+      <div class="chips" data-mvs="${mv.id}|caught">
+        <button class="chip" data-v="Yes, fast (~1s)">Caught it fast</button>
+        <button class="chip" data-v="Yes, slow (3s+)">Caught it slowly</button>
+        <button class="chip bad" data-v="No — missed it">Missed it</button>
+      </div>
+
+      <p class="sub" style="margin:14px 0 4px">TELEMETRY — read these off the strip:</p>
+      ${mv.targets.map(t => `
+        <div class="tgt">
+          <span class="nm">${t.id}</span>
+          <span class="cur">ideal ${t.ideal} · tol ${t.tol} · cue: ${t.cue}</span>
+          ${t.note ? `<div class="sub" style="margin-top:4px">${t.note}</div>` : ``}
+          <div class="row" style="margin-top:7px">
+            <div><label class="q" style="margin:0 0 4px"><b>good run</b></label>
+              <input type="number" step="any" data-mv="${mv.id}" data-tg="${t.id}" data-k="good" placeholder="${t.ideal}"></div>
+            <div><label class="q" style="margin:0 0 4px"><b>fault run</b></label>
+              <input type="number" step="any" data-mv="${mv.id}" data-tg="${t.id}" data-k="bad" placeholder="—"></div>
+          </div>
+        </div>`).join("")}
+      ${mv.note ? `<p class="sub" style="margin-top:10px">${mv.note}</p>` : ``}
+      <label class="q"><b>Notes</b></label>
+      <textarea data-mv="${mv.id}" data-k="notes"></textarea>
+      <div class="diag" id="dg_${mv.id}" style="display:none"></div>
+    </div>`;
+  list.appendChild(d);
+});
+
+/* ── wiring ── */
+const bucket = k => ({t:state.t,s:state.s,c:state.c,x:state.x,b:state.b,r:state.r,m:state.m,v:state.v}[k[0]]);
+document.querySelectorAll("[data-s]").forEach(g => {
+  g.querySelectorAll(".chip").forEach(c => c.onclick = () => {
+    g.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x===c)));
+    bucket(g.dataset.s)[g.dataset.s] = c.dataset.v; render();
+  });
+});
+document.querySelectorAll("[data-mvs]").forEach(g => {
+  const [id,k] = g.dataset.mvs.split("|");
+  g.querySelectorAll(".chip").forEach(c => c.onclick = () => {
+    g.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x===c)));
+    state.mv[id][k] = c.dataset.v; render();
+  });
+});
+document.querySelectorAll("input[id],textarea[id],select[id]").forEach(el => {
+  const h = () => { bucket(el.id)[el.id] = el.value; render(); };
+  el.oninput = h; el.onchange = h;
+});
+document.querySelectorAll("[data-mv]").forEach(el => {
+  el.oninput = () => {
+    const m = state.mv[el.dataset.mv];
+    if(el.dataset.tg){ (m.tg[el.dataset.tg] ||= {})[el.dataset.k] = el.value; }
+    else m[el.dataset.k] = el.value;
+    render();
+  };
+});
+
+/* ── THE DIAGNOSIS ENGINE ──
+   score = 100 while |v − ideal| ≤ tol × tierScale, falling to 0 at `range`.
+   So: good must sit INSIDE the tolerance, fault must sit OUTSIDE it.
+   Put the boundary between the two numbers → suggested tol. ── */
+const scale = TIER_TOL[TEST_TIER];
+
+function diagnose(mv){
+  const d = state.mv[mv.id];
+  const out = [];
+  const fp = Number(d.fp || 0);
+
+  if(mv.reps && d.actual && d.counted){
+    const a = +d.actual, c = +d.counted;
+    if(c < a) out.push({l:"bad", m:`MISSED REPS — counted ${c} of ${a}.`,
+      f:`${mv.id} → reps → the "up" threshold is too strict. Loosen it so a smaller movement counts.`});
+    else if(c > a) out.push({l:"bad", m:`OVER-COUNTED — ${c} for ${a} real reps.`,
+      f:`${mv.id} → reps → dead band too narrow; jitter is double-counting. Widen the gap between up and down.`});
+    else out.push({l:"ok", m:`Rep counting exact (${c}/${a}).`, f:""});
+  }
+
+  if(d.fp !== undefined && d.fp !== ""){
+    if(fp === 0) out.push({l:"ok", m:"No false alarms on good form.", f:""});
+    else out.push({l: fp > 2 ? "bad" : "warn",
+      m:`${fp} correction(s) fired on GOOD form${fp>2?" — this would feel like nagging":""}.`,
+      f:`Too sensitive. Raise the tol of whichever target fired.`});
+  }
+
+  if(d.caught){
+    if(d.caught.startsWith("No")) out.push({l:"bad", m:`MISSED the ${mv.faultName}.`,
+      f:`Too permissive. Lower the tol of the target carrying that cue.`});
+    else if(d.caught.includes("slow")) out.push({l:"warn", m:`Caught the ${mv.faultName}, but slowly.`,
+      f:`Tighten tol slightly, and/or lower Tier.cueCool.`});
+    else out.push({l:"ok", m:`Caught the ${mv.faultName} quickly.`, f:""});
+  }
+
+  // the gold: two numbers bracket the correct tolerance
+  for(const t of mv.targets){
+    const tg = d.tg[t.id] || {};
+    const g = tg.good !== undefined && tg.good !== "" ? Number(tg.good) : null;
+    const b = tg.bad  !== undefined && tg.bad  !== "" ? Number(tg.bad)  : null;
+    if(g === null || b === null) continue;
+
+    const ge = Math.abs(g - t.ideal), be = Math.abs(b - t.ideal);
+    if(be <= ge){
+      out.push({l:"warn", m:`${t.id}: fault (${b}) is no further from ideal than the good run (${g}).`,
+        f:`Your fault run didn't actually move this signal — either the wrong target, or redo the test.`});
+      continue;
+    }
+    const effTol = (ge + be) / 2;              // boundary sits between them
+    const newTol = effTol / scale;             // undo the tier scaling
+    const dec = Math.abs(t.ideal) < 5 ? 3 : 1; // decimals for lineDeviation vs degrees
+    const cur = t.tol, sug = +newTol.toFixed(dec);
+    const drift = Math.abs(sug - cur) / Math.max(cur, 1e-6);
+
+    if(drift < 0.15){
+      out.push({l:"ok", m:`${t.id}: good ${g} · fault ${b} → current tol ${cur} is about right.`, f:""});
+    } else {
+      out.push({l:"warn", m:`${t.id}: good ${g} · fault ${b}.`,
+        f:`→ EDIT: <b>${mv.id} → ${t.id} → tol: ${cur} → ${sug}</b>` +
+          (be > t.range ? `  (also consider range: ${t.range} → ${(be*1.3).toFixed(dec)})` : ``)});
+    }
+  }
+  return out;
+}
+
+function status(mv){
+  const d = state.mv[mv.id];
+  const n = Object.keys(d).filter(k => k!=="tg" && d[k] !== "" && d[k] !== undefined).length
+          + Object.keys(d.tg).length;
+  if(!n) return "NOT TESTED";
+  return (d.caught && d.fp !== undefined && d.fp !== "") ? "DONE" : "PARTIAL";
+}
+
+/* ── render ── */
+function render(){
+  MV.forEach(mv => {
+    const st = document.getElementById("st_"+mv.id);
+    const s = status(mv);
+    st.textContent = s; st.className = "st" + (s==="DONE" ? " done" : "");
+    const box = document.getElementById("dg_"+mv.id);
+    const ds = diagnose(mv);
+    if(!ds.length){ box.style.display="none"; return; }
+    box.style.display = "block";
+    const worst = ds.some(x=>x.l==="bad") ? "bad" : ds.some(x=>x.l==="warn") ? "warn" : "ok";
+    box.className = "diag " + worst;
+    box.innerHTML = ds.map(x => `${x.m}${x.f?`<span class="fix">${x.f}</span>`:""}`).join("<br>");
+  });
+  document.getElementById("report").textContent = build();
+}
+
+function build(){
+  const {t,s,c,x,b,r,m,v} = state;
+  const L = [], edits = [];
+  L.push("# Form Coach v4 — test report");
+  L.push(`Date: ${new Date().toISOString().slice(0,10)} · thresholds tested at: ${TEST_TIER} (×${scale})`);
+  L.push("");
+  L.push("## Tester");
+  L.push(`- ${t.t_name||"—"} · ${t.t_height||"—"}cm · ${t.t_build||"—"}`);
+  L.push(`- Exercises? ${t.t_exp||"—"}`);
+  L.push(`- Conditions: ${t.t_room||"—"}`);
+  L.push("");
+  L.push("## Setup");
+  L.push(`- Time to tracked skeleton: ${s.s_time||"—"}s`);
+  L.push(`- ARMS tracked (new in v4): ${s.s_arms||"—"}`);
+  L.push(`- Skeleton alignment: ${s.s_orient||"—"}`);
+  if(s.s_friction) L.push(`- Friction: ${s.s_friction}`);
+  L.push("");
+  L.push("## Calibration → tier");
+  L.push(`- Held ${c.c_held||"—"}s, score ${c.c_score||"—"} → assigned **${c.c_tier||"—"}**`);
+  L.push(`- Correct? ${c.c_right||"—"}`);
+  L.push(`- Wording landed as: ${c.c_word||"—"}`);
+  L.push("");
+  L.push("## The tier experiment (the thesis)");
+  L.push(`- Difference between tiers: ${x.x_land||"—"}`);
+  L.push(`- Learning dialogue: ${x.x_learn||"—"}`);
+  L.push(`- Strong dialogue: ${x.x_strong||"—"}`);
+  if(x.x_lines) L.push(`- Bad lines: ${x.x_lines}`);
+  L.push("");
+  L.push("## The cue budget (the beginner rule)");
+  L.push(`- One-cue-only felt: ${b.b_feel||"—"}`);
+  L.push(`- Saw cues being swallowed in telemetry: ${b.b_saw||"—"}`);
+  L.push(`- Budget of 2 at Building: ${b.b_two||"—"}`);
+  if(b.b_silent) L.push(`- Silent when feedback was wanted: ${b.b_silent}`);
+  L.push("");
+  L.push("## Movements");
+  MV.forEach(mv => {
+    if(status(mv) === "NOT TESTED") return;
+    const d = state.mv[mv.id];
+    L.push(`### ${mv.name} (${mv.pri})`);
+    if(d.actual||d.counted) L.push(`- Reps: did ${d.actual||"?"}, counted ${d.counted||"?"}`);
+    if(d.fp!==undefined && d.fp!=="") L.push(`- False alarms on clean run: ${d.fp}`);
+    if(d.caught) L.push(`- Fault (${mv.faultName}): ${d.caught}`);
+    mv.targets.forEach(tt => {
+      const tg = d.tg[tt.id]||{};
+      if(tg.good||tg.bad) L.push(`- ${tt.id}: good ${tg.good??"?"} · fault ${tg.bad??"?"} (ideal ${tt.ideal}, tol ${tt.tol})`);
+    });
+    if(d.notes) L.push(`- Notes: ${d.notes}`);
+    diagnose(mv).forEach(x2 => {
+      L.push(`- ${x2.l==="ok"?"✅":x2.l==="warn"?"⚠️":"❌"} ${x2.m.replace(/<[^>]+>/g,"")}`);
+      if(x2.f) edits.push(`- [${mv.name}] ${x2.f.replace(/<[^>]+>/g,"")}`);
+    });
+    L.push("");
+  });
+  L.push("## Regression offer");
+  L.push(`- Triggered: ${r.r_fire||"—"}`);
+  L.push(`- Felt: ${r.r_feel||"—"}`);
+  if(r.r_degrade) L.push(`- Early-stop: ${r.r_degrade}`);
+  L.push("");
+  L.push("## Mobility & breath");
+  L.push(`- Cat–Cow pacing: ${m.m_breath||"—"}`);
+  L.push(`- "Guided, no claims" felt: ${m.m_guided||"—"}`);
+  if(m.m_notes) L.push(`- Notes: ${m.m_notes}`);
+  L.push("");
+  L.push("## Verdict");
+  L.push(`- Would use tomorrow: ${v.v_return||"—"}`);
+  if(v.v_magic)  L.push(`- Magic moment: ${v.v_magic}`);
+  if(v.v_delete) L.push(`- Would delete because: ${v.v_delete}`);
+  if(v.v_wrong)  L.push(`- **TOLD ME SOMETHING WRONG:** ${v.v_wrong}`);
+  L.push("");
+  L.push("## SUGGESTED EDITS");
+  if(edits.length) edits.forEach(e => L.push(e));
+  else L.push("- (none yet — fill in the movement sections)");
+  return L.join("\n");
+}
+
+document.getElementById("copyBtn").onclick = async () => {
+  const txt = build();
+  try{ await navigator.clipboard.writeText(txt); }
+  catch{ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+         ta.select(); document.execCommand("copy"); ta.remove(); }
+  const t = document.getElementById("toast");
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1500);
+};
+document.getElementById("dlBtn").onclick = () => {
+  const blob = new Blob([build()], {type:"text/markdown"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `formcoach-v4-${(state.t.t_name||"tester").replace(/\s+/g,"-")}.md`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+
+render();
+</script>
+</body>
+</html>

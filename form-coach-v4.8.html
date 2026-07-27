@@ -1,0 +1,3577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C0D0C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Form Coach v4 — tiered coaching</title>
+<!--
+  FORM COACH v4 — the coaching model, live.
+  ==========================================
+  This prototype exists to answer ONE question before we pay the Swift tax:
+  does the tiered coach actually feel like a good coach?
+
+  What's new vs v3:
+  · TIERS (Learning / Building / Strong) are the primary axis. They change:
+      - what is said        (teaching sentence → short imperative → one word)
+      - how strict we are   (toleranceScale — a beginner's best plank must not score 42)
+      - how MUCH is said    (cueBudget — Learning hears ONE correction per set, ever)
+      - how hard it is      (effortScale / restScale)
+      - whether a NUMBER is shown at all (Learning sees a bar, never a score)
+  · MULTI-TARGET POSES. A movement is a set of PoseTargets, not one angle.
+    Score = weighted mean. The coach speaks about the WORST OFFENDER only —
+    which is how "one thing at a time" falls out of the model for free.
+  · BILATERAL tracking + wrists/elbows. Bird dog and dead bug are opposite
+    arm and leg; v3 threw away half the body and couldn't see them.
+  · REGRESSIONS. If a Learning user can't hold the shape, the coach offers the
+    easier version and frames it as the right call, not a failure.
+  · GUIDED movements. Cat–cow can't be honestly scored from one 2D camera, so
+    the coach LEADS it with breath instead of pretending to judge it.
+  · CALIBRATION infers the tier. We never ask "are you a beginner?"
+
+  Watch the TELEMETRY strip: it shows every target's score AND the cues the
+  budget made the coach swallow. You can literally see it choosing to stay quiet.
+
+  Camera needs localhost or https:  python3 -m http.server
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   FORM COACH — interface
+   One rule governs everything here: COLOUR MEANS YOUR BODY.
+   Mint = right, amber = drifting, red = wrong. Nothing else on screen is
+   allowed to be saturated, so the moment a limb changes colour it is the
+   only coloured thing in view. The chrome is monochrome on purpose.
+   Second rule: this is read from three metres away, on the floor, mid-effort,
+   often sideways. Numerals are huge and tabular; labels are tiny and tracked.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --void:#0C0D0C;          /* behind everything */
+  --ground:#141614;        /* panels */
+  --ground-2:#1B1E1C;      /* raised */
+  --line:rgba(233,231,222,.13);
+  --line-2:rgba(233,231,222,.26);
+  --bone:#E9E7DE;
+  --bone-2:rgba(233,231,222,.60);
+  --bone-3:rgba(233,231,222,.34);
+  /* Two colour lanes, and they never cross.
+     IRIS  = your choices and your progress (selection, focus, the dial).
+     GOOD/WARN/BAD = your body, and nothing else may use them. */
+  --iris:#9D8DF1;
+  --iris-dim:rgba(157,141,241,.30);
+  --good:#5BD6B0;
+  --warn:#F0B429;
+  --bad:#E5484D;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --pad:clamp(14px,3vw,26px);
+  --r:14px;
+}
+*{box-sizing:border-box}
+/* The HTML `hidden` attribute hides via the UA stylesheet's `display:none`, which
+   ANY author `display` overrides — so `.ctl{display:inline-flex}` silently defeated
+   `<button hidden>`. This one !important rule restores the attribute's meaning
+   everywhere, so `el.hidden = true` can be trusted across the whole app. */
+[hidden]{ display:none !important }
+/* Native controls ship with user-agent chrome (white pills, blue autofill) that
+   ignores the theme entirely — the screenshot's white blobs were exactly this.
+   Reset once, here, so nothing ever falls through to UA styling again. */
+button{ font-family:inherit; font-size:inherit; background:transparent;
+  color:inherit; border:0; padding:0; cursor:pointer }
+input,select,textarea{
+  font-family:var(--sans); font-size:15px; color:var(--bone);
+  background:var(--ground); border:1px solid var(--line); border-radius:10px;
+  padding:11px 13px; accent-color:var(--bone);
+}
+select option{ background:var(--ground-2); color:var(--bone) }
+input::placeholder{ color:var(--bone-3) }
+/* Chromium autofill paints its own light-blue box OVER the theme; the inset
+   shadow trick is the only reliable way to keep the field dark. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px var(--ground) inset;
+  -webkit-text-fill-color:var(--bone);
+  caret-color:var(--bone);
+  border:1px solid var(--line);
+}
+html,body{height:100%}
+body{
+  margin:0; background:var(--void); color:var(--bone);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+  display:flex; flex-direction:column;
+}
+/* ── eyebrow / label voice, used everywhere ── */
+.lab,.dlabel,#priv,#tel,#bigLabel,.meta,.disc,.sup,#tierSeg button,.ctl,.chip{
+  font-family:var(--mono); text-transform:uppercase; letter-spacing:.16em;
+}
+
+/* ═══ header ═══ */
+header{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:10px var(--pad); border-bottom:1px solid var(--line);
+  background:var(--void); position:relative; z-index:30;
+}
+header h1{
+  font-size:13px; font-weight:600; margin:0 auto 0 0; letter-spacing:.02em;
+  display:flex; align-items:baseline; gap:9px;
+}
+header h1 small{
+  font-family:var(--mono); font-size:8.5px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--bone-3); font-weight:400;
+}
+/* The version stays visible at EVERY size. Loading the wrong build has cost real
+   debugging time twice, and "check the header says v4.8" is a documented step in
+   the test protocol — so mobile drops the subtitle, never the number. */
+header h1 small b{ color:var(--bone-2); font-weight:600 }
+/* the app recedes while you're working */
+body.live header{ opacity:.34; transition:opacity .5s }
+body.live header:hover,body.live header:focus-within{ opacity:1 }
+
+#tierSeg{ display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden }
+#tierSeg[hidden]{ display:none }
+#tierSeg button{
+  font-size:9px; padding:7px 11px; background:transparent; color:var(--bone-3);
+  border:0; border-right:1px solid var(--line); cursor:pointer; transition:.16s;
+}
+#tierSeg button:last-child{ border-right:0 }
+#tierSeg button:hover{ color:var(--bone-2) }
+#tierSeg button[aria-pressed="true"]{ background:var(--iris); color:var(--void); font-weight:600 }
+
+.ctl{
+  font-size:9.5px; padding:8px 12px; border-radius:9px; cursor:pointer;
+  background:transparent; color:var(--bone-2); border:1px solid var(--line);
+  display:inline-flex; align-items:center; gap:7px; transition:.16s; font-weight:500;
+}
+.ctl:hover{ border-color:var(--line-2); color:var(--bone) }
+.ctl.primary{ background:var(--bone); color:var(--void); border-color:var(--bone); font-weight:700 }
+.ctl.primary:hover{ opacity:.86 }
+.ctl.live{ border-color:var(--good); color:var(--good) }
+.ctl input{ accent-color:var(--bone); margin:0 }
+button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{ outline:2px solid var(--iris); outline-offset:2px }
+
+/* ═══ stage — the camera is the interface ═══ */
+#stage{
+  position:relative; flex:1; min-height:0; background:#000; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+#cam,#overlay{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain }
+#cam{ opacity:0 }
+#stage::after{  /* keeps white rooms from washing out the readout */
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+  background:radial-gradient(120% 78% at 50% 44%,transparent 42%,rgba(0,0,0,.62) 100%);
+}
+
+/* ═══ the readout — signature element ═══ */
+#hud{
+  position:absolute; z-index:3; left:var(--pad); bottom:var(--pad);
+  display:flex; flex-direction:column; align-items:flex-start; gap:12px;
+  pointer-events:none;
+}
+#dial{ position:relative; width:clamp(148px,26vh,232px); aspect-ratio:1 }
+#ring{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg) }
+#ring .seg-t{ fill:none; stroke:rgba(233,231,222,.16); stroke-linecap:butt }
+#ring .seg-f{ fill:none; stroke:var(--iris); stroke-linecap:butt; transition:stroke .3s }
+#dial.rest #ring .seg-f{ stroke:var(--iris-dim) }
+#readout{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px;
+}
+#big{
+  font-size:clamp(38px,7.4vh,64px); font-weight:700; letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums; line-height:1;
+  text-shadow:0 2px 22px rgba(0,0,0,.8);
+}
+#bigLabel{ font-size:8.5px; color:var(--bone-3); letter-spacing:.22em }
+/* the rep landed — a 130ms flash, the visual half of the "pop". The redesign
+   dropped this rule while the JS kept adding the class: bug #17. */
+#big.pop{ animation:pop .13s ease-out }
+@keyframes pop{ 0%{ transform:scale(1) } 42%{ transform:scale(1.13); color:var(--good) } 100%{ transform:scale(1) } }
+
+/* form: a hairline that fills, not a chart */
+#scoreCol{ display:none; width:clamp(148px,26vh,232px) }
+#scoreCol.on{ display:block }
+#scoreLab{
+  font-family:var(--mono); font-size:8px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--bone-3); margin-bottom:6px;
+}
+#scoreBar{ height:3px; background:rgba(233,231,222,.14); border-radius:2px; overflow:hidden }
+#scoreFill{ height:100%; width:100%; background:var(--bone); transition:width .25s,background .35s }
+
+/* ═══ the spoken line, made visible ═══ */
+#cue{
+  position:absolute; z-index:6; left:50%; transform:translateX(-50%);
+  bottom:calc(var(--pad) + 6px); max-width:min(74%,620px);
+  padding:13px 22px; border-radius:12px; text-align:center;
+  background:rgba(12,13,12,.86); backdrop-filter:blur(14px);
+  border:1px solid var(--line); color:var(--bone);
+  font-size:clamp(15px,2.4vh,20px); font-weight:600; letter-spacing:-.01em;
+  opacity:0; transition:opacity .22s,transform .22s; pointer-events:none;
+}
+#cue.show{ opacity:1 }
+#cue.good{ border-color:rgba(91,214,176,.5); color:var(--good) }
+#cue.teach{ font-weight:500; color:var(--bone-2) }
+#cue.breath{ font-weight:400; color:var(--bone-3); letter-spacing:.24em; text-transform:uppercase; font-size:12px }
+
+/* ═══ overlays on the stage ═══ */
+#regress,#demo,#setupBar,#msg{ position:absolute; z-index:8 }
+#regress{
+  display:none; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(420px,86%); padding:24px; border-radius:var(--r);
+  background:rgba(20,22,20,.96); backdrop-filter:blur(18px); border:1px solid var(--line-2);
+  text-align:center;
+}
+#regress.on{ display:block }
+#regress p{ margin:0 0 18px; font-size:15px; color:var(--bone-2); line-height:1.55 }
+#regress .ctl{ margin:0 4px }
+
+#demo{ display:none; right:var(--pad); top:var(--pad); border-radius:var(--r);
+  background:rgba(12,13,12,.9); border:1px solid var(--line); padding:10px; backdrop-filter:blur(14px) }
+#demo.on{ display:block }
+#demoCanvas{ display:block; width:clamp(180px,24vw,300px); height:auto; border-radius:8px }
+.dlabel{ font-size:8px; color:var(--bone-3); text-align:center; margin-top:8px }
+
+/* the cue owns the bottom-centre; the setup bar sits one shelf above it */
+#setupBar{ display:none; left:50%; transform:translateX(-50%); bottom:calc(var(--pad) + 86px); gap:8px }
+#setupBar.on{ display:flex }
+#setupBar .ctl{ background:rgba(12,13,12,.84); backdrop-filter:blur(12px) }
+
+/* NOT align-items:center. A centred flex child that overflows its container
+   overflows in BOTH directions, and the top half sits above the scroll origin
+   where no amount of scrolling can reach it. That's why "Choose a session"
+   vanished at Building (5 plans, tallest list) but survived at Learning and
+   Strong (3–4 plans, fits). margin:auto on the child centres when short and
+   scrolls honestly when tall. */
+#msg{ inset:0; display:flex;
+  background:rgba(8,9,8,.9); backdrop-filter:blur(20px); z-index:12; overflow:auto; padding:26px }
+#msg[hidden]{ display:none }
+/* When an overlay screen is up, the live instruments underneath ghost through the
+   blur as a grey smudge (the screenshot's bottom-left blob was the idle dial).
+   The stage instruments simply don't exist while an overlay does. */
+#stage:has(#msg:not([hidden])) #hud,
+#stage:has(#msg:not([hidden])) #cue,
+#stage:has(#msg:not([hidden])) #setupBar{ visibility:hidden }
+#msg .inner{ width:min(660px,100%); text-align:center; margin:auto }
+#msg h2{ font-size:clamp(21px,3.2vh,25px); font-weight:700; letter-spacing:-.02em; margin:0 0 8px }
+#msg p{ color:var(--bone-2); font-size:14.5px; line-height:1.62; margin:0 auto 16px; max-width:34em }
+#msg .ctl{ margin:5px 4px 0 }
+
+/* ═══ debrief ═══ */
+.stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:var(--r);
+  overflow:hidden; margin:20px 0 }
+.stats>div{ background:var(--ground); padding:16px 8px }
+.stats b{ display:block; font-size:26px; font-weight:700; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; margin-bottom:5px }
+.stats span{ font-family:var(--mono); font-size:8px; letter-spacing:.18em; color:var(--bone-3) }
+.headline{ font-size:16.5px; line-height:1.55; margin:20px 0; color:var(--bone) }
+.insights{ text-align:left; margin:18px 0 }
+.ins{ padding:13px 15px; border-radius:10px; background:var(--ground);
+  border-left:2px solid var(--line-2); margin-bottom:8px; font-size:14px; color:var(--bone-2) }
+.ins b{ color:var(--bone); font-weight:600 }
+.ins.fatigue{ border-left-color:var(--warn) }
+.ins.technique{ border-left-color:var(--bad) }
+.drill{ display:block; margin-top:7px; font-size:12.5px; color:var(--bone-3) }
+.phases{ text-align:left; margin:18px 0; border-top:1px solid var(--line) }
+.prow{ display:flex; justify-content:space-between; gap:14px; align-items:baseline;
+  padding:11px 2px; border-bottom:1px solid var(--line) }
+.pname{ font-size:14px }
+.pval{ font-family:var(--mono); font-size:12px; color:var(--bone-2); font-variant-numeric:tabular-nums }
+.early{ font-family:var(--mono); font-size:8px; letter-spacing:.14em; color:var(--warn);
+  text-transform:uppercase; margin-left:6px }
+.tag{ font-family:var(--mono); font-size:7.5px; letter-spacing:.14em; text-transform:uppercase;
+  padding:2px 6px; border-radius:4px; border:1px solid var(--line-2); color:var(--bone-3); margin-left:6px }
+
+/* ═══ home / plans / tiers ═══ */
+/* ── cards ──
+   Three-line grammar, always: NAME + tag · one-sentence blurb · the sequence.
+   Left-aligned inside a centred overlay: headings centre, reading matter doesn't.
+   The cramped run-on in v4.8's first cut came from the cards inheriting the
+   overlay's text-align:center and the tag sitting inline against the title. */
+.plans,.tiercards{ display:grid; gap:10px; margin:20px auto; text-align:left;
+  width:min(640px,100%) }
+.plancard,.tiercard{ padding:16px 18px; border-radius:var(--r); background:var(--ground);
+  border:1px solid var(--line); cursor:pointer; transition:.16s; text-align:left; width:100% }
+.plancard:hover,.tiercard:hover{ border-color:var(--line-2); background:var(--ground-2) }
+.plancard b{ display:flex; align-items:baseline; gap:8px; font-size:15.5px; font-weight:650;
+  letter-spacing:-.01em }
+.plancard .disc{ margin-left:auto; font-size:7.5px; padding:3px 7px; border-radius:4px;
+  border:1px solid var(--line-2); color:var(--bone-3); letter-spacing:.14em; flex:none }
+.plancard .blurb{ display:block; margin:7px 0 9px; font-size:13.5px; color:var(--bone-2);
+  line-height:1.55 }
+.plancard .seq{ display:block; font-family:var(--mono); font-size:10.5px; line-height:2;
+  letter-spacing:.07em; color:var(--bone-3); text-transform:uppercase }
+.plancard .seq b{ display:inline; font-size:inherit }
+.plancard .t,.tiercard .t{ font-size:15px; font-weight:600; margin-bottom:4px; display:block }
+/* the tier picker renders <b> + <span>, not .t — the rewrite styled a class the
+   template never used, so "Learning" and "I'm new…" set in one unbroken line */
+.tiercard{ width:100%; text-align:left }
+.tiercard b{ display:block; font-size:15px; margin-bottom:4px }
+.tiercard span{ display:block; font-size:13.5px; color:var(--bone-2); line-height:1.5 }
+/* selection is toggled via aria-pressed — bug #21's sibling */
+.tiercard[aria-pressed="true"],.plancard[aria-pressed="true"]{
+  border-color:var(--iris); background:var(--ground-2);
+  box-shadow:inset 3px 0 0 var(--iris) }
+.tiercard[aria-pressed="true"] b::after{ content:" ✓"; color:var(--iris); font-weight:400 }
+.t.meta,.meta{ font-family:var(--mono); font-size:8.5px; letter-spacing:.16em;
+  color:var(--bone-3); text-transform:uppercase }
+.disc{ font-size:8px; color:var(--bone-3); letter-spacing:.18em }
+.chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:0 0 16px }
+.lab.pick{ font-size:8px; color:var(--bone-3); letter-spacing:.2em; margin:2px 0 8px }
+.chip{ font-size:9px; padding:9px 14px; border-radius:20px; min-height:34px;
+  background:var(--ground); border:1px solid var(--line); color:var(--bone-2);
+  transition:.16s; display:inline-flex; align-items:center }
+.chip:hover{ border-color:var(--line-2); color:var(--bone) }
+/* the persona picker toggles aria-pressed, not a class — which is exactly why the
+   "every toggled class is styled" audit sailed past this gap (bug #21) */
+.chip[aria-pressed="true"]{ background:var(--iris); color:var(--void);
+  border-color:var(--iris); font-weight:700 }
+.field{ display:flex; flex-direction:column; gap:7px; text-align:left; margin:14px 0 }
+.field input,.field select{
+  background:var(--ground); border:1px solid var(--line); color:var(--bone);
+  border-radius:10px; padding:11px 13px; font-family:var(--sans); font-size:15px;
+}
+.row{ display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap }
+.sup{ font-size:8px; color:var(--bone-3); letter-spacing:.18em; margin-top:12px }
+
+/* ═══ footer instruments ═══ */
+#tel{
+  font-size:9.5px; color:var(--bone-3); padding:9px var(--pad);
+  border-top:1px solid var(--line); white-space:nowrap; overflow-x:auto;
+  scrollbar-width:none; letter-spacing:.1em; background:var(--void);
+}
+#tel::-webkit-scrollbar{ display:none }
+#tel:empty{ display:none }
+#tip{ margin:0; padding:11px var(--pad); font-size:13.5px; color:var(--bone-2);
+  border-top:1px solid var(--line); line-height:1.5 }
+#tip b{ color:var(--bone); font-weight:600 }
+#priv{ margin:0; padding:9px var(--pad) 14px; font-size:7.5px; color:var(--bone-3);
+  letter-spacing:.2em; text-align:center }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE — not a smaller desktop. The phone is PROPPED UP two to three
+   metres away and the user is on the floor, so this inverts the usual rules:
+   nothing shrinks, the readout grows, and every pixel of vertical space goes
+   to the camera. Chrome overlays the stage instead of stacking around it.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Safari's collapsing toolbar makes 100% height lie; dvh tells the truth. */
+@supports(height:100dvh){ html,body{ height:100dvh } }
+
+@media(max-width:900px){
+  :root{ --pad:12px }
+  body{ padding:env(safe-area-inset-top) env(safe-area-inset-right)
+               env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  /* the stage takes everything; chrome floats on top of it */
+  #stage{ position:fixed; inset:0; z-index:0; aspect-ratio:auto!important }
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:30; border-bottom:0;
+    padding:calc(env(safe-area-inset-top) + 8px) 12px 20px;
+    background:linear-gradient(180deg,rgba(12,13,12,.92) 30%,transparent);
+  }
+  header h1 small .subtitle{ display:none }
+  header h1{ font-size:12px }
+  #tel,#priv{ display:none }
+  /* the instruction line floats over the video and steps aside once you start */
+  #tip{
+    position:fixed; left:12px; right:12px; z-index:20; border-top:0;
+    bottom:calc(env(safe-area-inset-bottom) + 12px);
+    padding:11px 14px; border-radius:12px; text-align:center; font-size:13px;
+    background:rgba(12,13,12,.86); backdrop-filter:blur(14px);
+    border:1px solid var(--line); transition:opacity .4s;
+  }
+  #tip:empty{ display:none }
+  body.live #tip{ opacity:0; pointer-events:none }
+  /* every tapped control clears the 44px thumb target */
+  .ctl,#tierSeg button{ min-height:44px; padding-top:0; padding-bottom:0;
+    display:inline-flex; align-items:center }
+  /* 16px or iOS zooms the whole page when a field takes focus */
+  .field input,.field select{ font-size:16px }
+  #msg{ padding:calc(env(safe-area-inset-top) + 56px) 16px
+        calc(env(safe-area-inset-bottom) + 20px) }
+  /* a 300px panel beside a phone camera covers the person — take the screen instead */
+  #demo{ inset:0; right:auto; top:auto; width:100%; height:100%; padding:0;
+    border:0; border-radius:0; background:rgba(8,9,8,.95);
+    align-items:center; justify-content:center; flex-direction:column; }
+  #demo.on{ display:flex }
+  #demoCanvas{ width:min(92vw,520px) }
+  #setupBar{ bottom:calc(env(safe-area-inset-bottom) + 78px); z-index:22 }
+}
+
+/* PORTRAIT — the camera letterboxes, so the black bar below it is free real
+   estate. Put the readout there rather than over the body. */
+@media(max-width:900px) and (orientation:portrait){
+  #hud{ left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 64px);
+        flex-direction:row; align-items:center; justify-content:center; gap:18px }
+  #dial{ width:min(34vw,190px) }
+  #scoreCol{ width:min(38vw,190px) }
+  #big{ font-size:min(9vw,46px) }
+}
+
+/* PHONE LANDSCAPE — the tightest case: ~390px of height, notch on one edge. */
+@media(max-height:560px) and (orientation:landscape){
+  header{ padding:6px 12px 16px }
+  header h1{ font-size:11px }
+  .ctl,#tierSeg button{ min-height:38px; font-size:8.5px; padding-left:9px; padding-right:9px }
+  #hud{ bottom:calc(env(safe-area-inset-bottom) + 8px); left:calc(env(safe-area-inset-left) + 10px); gap:7px }
+  #dial{ width:min(30vh,132px) }
+  #big{ font-size:min(6.4vh,30px) }
+  #bigLabel{ font-size:7px }
+  #scoreCol{ width:min(30vh,132px) }
+  /* the dial owns the bottom-left in landscape, so the cue moves out of its way */
+  #cue{ bottom:calc(env(safe-area-inset-bottom) + 8px); padding:9px 16px; font-size:15px;
+        left:auto; right:calc(env(safe-area-inset-right) + 12px); transform:none; max-width:54% }
+  #tip{ font-size:12px; padding:8px 12px }
+  .stats b{ font-size:20px }
+  #msg h2{ font-size:18px }
+}
+
+/* No hover on touch, so dimmed chrome would never come back. Tap reveals it. */
+@media(hover:none){
+  body.live header{ opacity:.3 }
+  body.live.chrome header{ opacity:1 }
+}
+
+@media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Form Coach <small><b id="verTag">v4.8</b><span class="subtitle"> · tiered coaching model</span></small></h1>
+  <div class="seg" id="tierSeg" role="tablist" aria-label="Tier" hidden>
+    <button data-tier="learning" aria-pressed="false">Learning</button>
+    <button data-tier="building" aria-pressed="true">Building</button>
+    <button data-tier="strong" aria-pressed="false">Strong</button>
+  </div>
+  <label class="ctl"><input type="checkbox" id="voice" checked> Voice</label>
+  <button class="ctl" id="flipBtn" title="Flip camera" hidden>&#10227;</button>
+  <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
+  <button class="ctl" id="startBtn">Start camera</button>
+</header>
+
+<div id="stage">
+  <video id="cam" playsinline muted></video>
+  <canvas id="overlay" width="1280" height="720"></canvas>
+
+  <div id="hud">
+    <div id="dial">
+      <svg id="ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+      <div id="readout">
+        <div id="big">00:00</div>
+        <div id="bigLabel">HOLD</div>
+      </div>
+    </div>
+    <div id="scoreCol">
+      <div class="lab" id="scoreLab">FORM</div>
+      <div id="scoreBar"><div id="scoreFill"></div></div>
+    </div>
+  </div>
+
+  <div id="cue" role="status"></div>
+
+  <div id="regress">
+    <p id="regressTxt"></p>
+    <button class="ctl primary" id="regressYes">Yes, show me</button>
+    <button class="ctl" id="regressNo">Keep going</button>
+  </div>
+  <div id="demo">
+    <canvas id="demoCanvas" width="420" height="300"></canvas>
+    <div class="dlabel" id="demoLabel">Show me</div>
+  </div>
+  <div id="setupBar">
+    <button class="ctl" id="showBtn">&#9654; Show me how</button>
+    <label class="ctl"><input type="checkbox" id="ghostChk"> Ghost</label>
+  </div>
+  <div id="msg" hidden><div class="inner" id="msgInner"></div></div>
+</div>
+
+<div id="tel"></div>
+<p id="tip"></p>
+<p id="priv">Runs on-device &middot; video never leaves your browser</p>
+
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver } from
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+/* ═══════════════════════════════════════════════════════════════
+   1 · TIERS — the primary axis
+   ═══════════════════════════════════════════════════════════════ */
+const TIERS = {
+  learning: { label:"Learning", blurb:"I'm new to this — teach me the movements",
+              tol:1.9,  cueBudget:1,  cueCool:9000, effort:0.55, rest:1.6, setScale:1,   repMin:1,   showScore:false, regress:true },
+  building: { label:"Building", blurb:"I know the movements — push my quality",
+              tol:1.25, cueBudget:2,  cueCool:6000, effort:1.0,  rest:1.0, setScale:1,   repMin:1,   showScore:true,  regress:false },
+  strong:   { label:"Strong",   blurb:"I know my body — push me",
+              tol:1.0,  cueBudget:99, cueCool:4000, effort:1.5,  rest:0.7, setScale:1.5, repMin:0.6, showScore:true,  regress:false }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   2 · MOVEMENTS — each is a SET of targets, not one angle
+   metric: {k:"angle",v,a,c} | {k:"line",of,from,to} | {k:"vert",a,b}
+   agg:    camera | best | worst | mean        (bodies have two of everything)
+   ═══════════════════════════════════════════════════════════════ */
+const M = {
+  "knee-plank":{ name:"Knee Plank", kind:"hold", disc:"core", tiers:["learning"], regressionOf:"plank",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:28, range:45, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:180, tol:10, range:40, w:2, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"knee"}, ideal:0, tol:0.03, range:0.10, w:1,
+       above:"sag", below:"pike"}
+    ]},
+
+  "plank":{ name:"Plank", kind:"hold", disc:"core", tiers:["learning","building","strong"], regression:"knee-plank",
+    targets:[
+      /* ORIENTATION GATES — without these, the engine cannot tell a plank from STANDING UP.
+         angleAt(hip, shoulder, ankle) is ~180° in both, because a standing body is also a
+         straight line. verticality(shoulder→hip) is 0° standing and 90° in a plank. */
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:26, range:42, w:0, pos:true},
+      {id:"legsStraight", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"worst"}, ideal:178, tol:20, range:45, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:180, tol:8, range:35, w:2, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"ankle"}, ideal:0, tol:0.025, range:0.09, w:2,
+       above:"sag", below:"pike"},
+      {id:"neck", m:{k:"angle",v:"shoulder",a:"ear",c:"hip"}, ideal:172, tol:22, range:55, w:0.6, below:"neck"},
+      {id:"elbows", m:{k:"vert",a:"shoulder",b:"elbow"}, ideal:0, tol:14, range:45, w:0.6, above:"elbows"}
+    ]},
+
+  "side-plank-knee":{ name:"Side Plank (Knee)", kind:"hold", disc:"core", tiers:["learning"], view:"front",
+    regressionOf:"side-plank", camera:"facing",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:48, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:180, tol:12, range:40, w:2, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"knee"}, ideal:0, tol:0.03, range:0.10, w:1, above:"sagside"}
+    ]},
+
+  "side-plank":{ name:"Side Plank", kind:"hold", disc:"core", tiers:["building","strong"], view:"front",
+    regression:"side-plank-knee", camera:"facing",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:28, range:45, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:180, tol:9, range:50, w:2, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"ankle"}, ideal:0, tol:0.025, range:0.09, w:2, above:"sagside"}
+    ]},
+
+  "dead-bug":{ name:"Dead Bug", kind:"reps", disc:"core", tiers:["learning","building"],
+    breath:{in:"up", out:"down"},
+    targets:[
+      {id:"kneeTucked", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"best"}, ideal:95, tol:35, range:62, w:0, pos:true},
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true},
+      {id:"legExtend", m:{k:"angle",v:"hip",a:"shoulder",c:"knee",agg:"best"}, ideal:160, tol:25, range:70, w:1},
+      {id:"backFlat", m:{k:"line",of:"hip",from:"shoulder",to:"knee",agg:"worst"}, ideal:0, tol:0.035, range:0.10, w:2,
+       below:"backarch"}
+    ],
+    reps:{driver:"legExtend", rising:true, upAbove:150, downBelow:115, shortCue:"extendlong", minMs:1600}},
+
+  "bird-dog":{ name:"Bird Dog", kind:"hold", disc:"functional", tiers:["learning","building","strong"],
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:48, w:0, pos:true},
+      {id:"legLine", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle",agg:"best"}, ideal:175, tol:14, range:65, w:1.5,
+       gate:true, below:"reachback"},
+      {id:"armLine", m:{k:"angle",v:"shoulder",a:"wrist",c:"hip",agg:"best"}, ideal:172, tol:16, range:55, w:1.5,
+       below:"reachforward"},
+      {id:"backFlat", m:{k:"line",of:"hip",from:"shoulder",to:"knee",agg:"worst"}, ideal:0, tol:0.035, range:0.11, w:2,
+       above:"backarch"}
+    ]},
+
+  "glute-bridge":{ name:"Glute Bridge", kind:"reps", disc:"functional", tiers:["learning","building","strong"],
+    breath:{in:"down", out:"up"},
+    targets:[
+      {id:"kneesBent", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"mean"}, ideal:100, tol:32, range:58, w:0, pos:true},
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true},
+      {id:"hipExtend", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:176, tol:10, range:45, w:2}
+    ],
+    reps:{driver:"hipExtend", rising:true, upAbove:162, downBelow:140, shortCue:"bridgehigh", minMs:1200}},
+
+  "sit-to-stand":{ name:"Sit to Stand", kind:"reps", disc:"functional", tiers:["learning","building"],
+    targets:[
+      {id:"uprightTorso", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:18, tol:28, range:52, w:0, pos:true},
+      {id:"hipHinge", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:175, tol:12, range:60, w:1.5},
+      {id:"torsoLean", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:12, tol:20, range:55, w:1, above:"chestup"}
+    ],
+    reps:{driver:"hipHinge", rising:true, upAbove:160, downBelow:110, shortCue:"standtall", minMs:1400}},
+
+  "squat":{ name:"Bodyweight Squat", kind:"reps", disc:"functional", tiers:["building","strong"],
+    breath:{in:"down", out:"up"},
+    targets:[
+      {id:"uprightTorso", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:20, tol:30, range:55, w:0, pos:true},
+      {id:"kneeBend", m:{k:"angle",v:"knee",a:"hip",c:"ankle"}, ideal:175, tol:12, range:80, w:1},
+      {id:"torsoLean", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:20, tol:22, range:50, w:1.5, above:"chestup"}
+    ],
+    reps:{driver:"kneeBend", upBelow:110, downAbove:160, shortCue:"deeper", minMs:1500}},
+
+  "wall-sit":{ name:"Wall Sit", kind:"hold", disc:"functional", tiers:["learning","building","strong"],
+    targets:[
+      {id:"kneeAngle", m:{k:"angle",v:"knee",a:"hip",c:"ankle"}, ideal:92, tol:14, range:62, w:2, pos:true,
+       above:"sitlower"},
+      {id:"backFlat", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:0, tol:12, range:40, w:1, above:"backwall"}
+    ]},
+
+  "hollow-tuck":{ name:"Hollow Hold (Tucked)", kind:"hold", disc:"core", tiers:["learning","building"],
+    regressionOf:"hollow-hold",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:85, tol:32, range:50, w:0, pos:true},
+      {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:120, tol:22, range:55, w:2, gate:true, above:"kneesin"}
+    ]},
+
+  "hollow-hold":{ name:"Hollow Hold", kind:"hold", disc:"core", tiers:["building","strong"],
+    regression:"hollow-tuck",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:85, tol:32, range:50, w:0, pos:true},
+      {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:135, tol:14, range:40, w:2, gate:true,
+       above:"hollowlift", below:"hollowlow"},
+      {id:"kneesStraight", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"worst"}, ideal:178, tol:14, range:45, w:1,
+       below:"knees"}
+    ]},
+
+  "crunch":{ name:"Crunch", kind:"reps", disc:"core", tiers:["learning","building"],
+    breath:{in:"down", out:"up"},
+    targets:[
+      {id:"kneesBent", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"mean"}, ideal:95, tol:32, range:58, w:0, pos:true},
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true},
+      {id:"trunk", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:140, tol:30, range:60, w:1},
+      {id:"neck", m:{k:"angle",v:"shoulder",a:"ear",c:"hip"}, ideal:150, tol:30, range:60, w:1.5, below:"neckpull"}
+    ],
+    reps:{driver:"trunk", baseline:true, upBelow:-18, downAbove:-8, shortCue:"curlhigher", minMs:1200}},
+
+  "leg-raise-bent":{ name:"Bent-Knee Leg Raise", kind:"reps", disc:"core", tiers:["learning"],
+    regressionOf:"leg-raise",
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true},
+      {id:"kneesBent", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"mean"}, ideal:100, tol:35, range:60, w:0, pos:true},
+      {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:120, tol:25, range:60, w:1}
+    ],
+    /* downAbove was 155 — impossible with feet planted and knees bent, so no rep
+       could EVER count. Exposed when the generated demo failed its own exercise. */
+    reps:{driver:"hipAngle", upBelow:95, downAbove:120, shortCue:"liftlegs", minMs:1400}},
+
+  "leg-raise":{ name:"Leg Raise", kind:"reps", disc:"core", tiers:["building","strong"],
+    regression:"leg-raise-bent", breath:{in:"down", out:"up"},
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true},
+      /* You cannot plank without being on your toes — toe BELOW heel (~25°).
+         Lying on your back, your toes point up (~135°). It's the only difference
+         between the two that is forced by physics rather than by choice.
+         If the foot landmarks are missing/low-confidence this target is simply
+         skipped, and we fall back to torsoLevel. Safe degradation. */
+      {id:"feetUp", m:{k:"vert",a:"heel",b:"toe",agg:"mean"}, ideal:128, tol:38, range:66, w:0, pos:true},
+      {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:115, tol:25, range:60, w:1},
+      {id:"kneesStraight", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"worst"}, ideal:178, tol:16, range:45, w:1,
+       below:"knees"}
+    ],
+    reps:{driver:"hipAngle", upBelow:115, downAbove:150, shortCue:"liftlegs", minMs:1400}},
+
+  /* ── THE PUSH-UP CHAIN ──
+     wall (learning) → knee (learning/building) → full (building/strong).
+     The driver is the ELBOW angle: extended at the top (~175°), bent at the bottom.
+     Priming means resting in a plank can't score reps: the counter must first see
+     arms EXTENDED (a genuine top position) before anything counts. */
+  "wall-push-up":{ name:"Wall Push-Up", kind:"reps", disc:"functional", tiers:["learning"],
+    regressionOf:"knee-push-up",
+    targets:[
+      {id:"uprightTorso", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:14, tol:24, range:50, w:0, pos:true},
+      {id:"elbowAngle", m:{k:"angle",v:"elbow",a:"shoulder",c:"wrist"}, ideal:170, tol:60, range:120, w:0},
+      /* The first movement a beginner ever meets used to grade NOTHING — it counted
+         reps and showed a score derived from gates that meant nothing. Standing
+         side-on the body line IS measurable, and sagging hips at the wall is the
+         classic fault. An ANGLE, not a signed line: a standing body has no horizontal
+         extent, so the line metric's |dx| guard would just return 0. */
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:180, tol:9, range:40, w:2, below:"straighten"}
+    ],
+    reps:{driver:"elbowAngle", upBelow:118, downAbove:155, shortCue:"chestlower", minMs:1000}},
+
+  "knee-push-up":{ name:"Knee Push-Up", kind:"reps", disc:"functional", tiers:["learning","building"],
+    regressionOf:"push-up", regression:"wall-push-up",
+    breath:{in:"down", out:"up"},
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:50, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:178, tol:12, range:45, w:1.5, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"knee"}, ideal:0, tol:0.030, range:0.10, w:2,
+       above:"sag", below:"pike"},
+      {id:"elbowAngle", m:{k:"angle",v:"elbow",a:"shoulder",c:"wrist"}, ideal:170, tol:60, range:120, w:0}
+    ],
+    reps:{driver:"elbowAngle", upBelow:108, downAbove:150, shortCue:"chestlower", minMs:1100}},
+
+  "push-up":{ name:"Push-Up", kind:"reps", disc:"functional", tiers:["building","strong"],
+    regression:"knee-push-up",
+    breath:{in:"down", out:"up"},
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:26, range:44, w:0, pos:true},
+      {id:"legsStraight", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"worst"}, ideal:178, tol:20, range:45, w:0, pos:true},
+      {id:"bodyLine", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:180, tol:8, range:40, w:1.5, gate:true},
+      {id:"hipAlign", m:{k:"line",of:"hip",from:"shoulder",to:"ankle"}, ideal:0, tol:0.028, range:0.09, w:2,
+       above:"sag", below:"pike"},
+      {id:"elbowAngle", m:{k:"angle",v:"elbow",a:"shoulder",c:"wrist"}, ideal:170, tol:60, range:120, w:0}
+    ],
+    reps:{driver:"elbowAngle", upBelow:105, downAbove:150, shortCue:"chestlower", minMs:1200}},
+
+  /* GUIDED — honestly unscoreable from one 2D camera, so we LEAD instead of judge */
+  "cat-cow":{ name:"Cat–Cow", kind:"guided", disc:"mobility", tiers:["learning","building","strong"],
+    breath:{cycle:4.5},
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:90, tol:30, range:52, w:0, pos:true}
+    ]},
+
+  "downward-dog":{ name:"Downward Dog", kind:"hold", disc:"mobility", tiers:["learning","building","strong"],
+    targets:[
+      {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:82, tol:20, range:60, w:2, pos:true,
+       above:"hipshigh"},
+      {id:"spineLong", m:{k:"angle",v:"shoulder",a:"wrist",c:"hip"}, ideal:176, tol:16, range:50, w:1.5,
+       below:"longspine"}
+    ]},
+
+  "cobra":{ name:"Cobra", kind:"hold", disc:"mobility", tiers:["learning","building"],
+    breath:{in:"up", out:"down"},
+    targets:[
+      {id:"torsoLevel", m:{k:"vert",a:"shoulder",b:"hip"}, ideal:68, tol:30, range:50, w:0, pos:true},
+      {id:"backExtend", m:{k:"angle",v:"hip",a:"shoulder",c:"knee"}, ideal:152, tol:22, range:55, w:2, gate:true, below:"liftchest", above:"cobraeasy"},
+      {id:"shoulders", m:{k:"angle",v:"shoulder",a:"ear",c:"hip"}, ideal:168, tol:22, range:55, w:1,
+       below:"shouldersdown"}
+    ]}
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   3 · PLANS — base values; Tier scales effort and rest
+   ═══════════════════════════════════════════════════════════════ */
+const PLANS = [
+  { id:"first-steps", name:"First Steps", disc:"CORE", tiers:["learning","building"],
+    blurb:"The four movements everything else is built on.",
+    steps:[ {ex:"plank",t:20},{rest:20},{ex:"glute-bridge",t:10},{rest:20},
+            {ex:"dead-bug",t:8},{rest:20},{ex:"knee-push-up",t:8},{rest:20},{ex:"bird-dog",t:20} ]},
+
+  { id:"core-strength", name:"Core Strength", disc:"CORE", tiers:["building","strong"],
+    blurb:"Quality over quantity. Every rep earned.",
+    steps:[ {ex:"plank",t:40,sets:2},{rest:15},{ex:"crunch",t:12,sets:2},{rest:15},{ex:"leg-raise",t:10,sets:2},
+            {rest:15},{ex:"side-plank",t:25},{rest:10},{ex:"side-plank",t:25,pre:"switchsides"} ]},
+
+  { id:"full-body", name:"Full Body", disc:"FUNCTIONAL", tiers:["building","strong"],
+    blurb:"Push, squat, brace. The complete session — sets scale with your tier.",
+    steps:[ {ex:"push-up",t:10,sets:2},{rest:20},{ex:"squat",t:12,sets:2},{rest:20},
+            {ex:"plank",t:35,sets:2},{rest:20},{ex:"glute-bridge",t:12,sets:2} ]},
+
+  { id:"functional", name:"Functional Foundations", disc:"FUNCTIONAL", tiers:["learning","building","strong"],
+    blurb:"Movements that pay off outside the mat — chairs, stairs, shopping.",
+    steps:[ {ex:"sit-to-stand",t:10},{rest:20},{ex:"glute-bridge",t:12},{rest:20},
+            {ex:"bird-dog",t:25},{rest:20},{ex:"wall-sit",t:30} ]},
+
+  { id:"mobility", name:"Morning Mobility", disc:"MOBILITY", tiers:["learning","building","strong"],
+    blurb:"Slow, breath-led. The best two minutes you can give a stiff back.",
+    steps:[ {ex:"cat-cow",t:45},{rest:10},{ex:"downward-dog",t:30},{rest:10},
+            {ex:"cobra",t:25},{rest:10},{ex:"cat-cow",t:30} ]}
+];
+
+/** Expand plan steps into per-set steps, scaled by tier.
+    {ex:"plank", t:40, sets:2} at Strong (setScale 1.5) becomes:
+      set 1/3 → intra rest → set 2/3 → intra rest → set 3/3
+    Pure function — the sets system is headlessly testable. */
+function expandPlanSteps(steps, tierKey){
+  const T = TIERS[tierKey] || TIERS.building;
+  const out = [];
+  for(const st of steps){
+    if(st.ex == null){ out.push({...st}); continue; }
+    /* Tier scaling applies only to steps that DECLARE sets. A plain step is one set
+       everywhere — otherwise Strong would silently double every mobility pose too. */
+    const total = st.sets ? Math.max(1, Math.round(st.sets * (T.setScale || 1))) : 1;
+    for(let i = 1; i <= total; i++){
+      out.push({ ...st, setNo:i, setTotal:total });
+      if(i < total) out.push({ rest: st.setRest ?? 15, intra:true });
+    }
+  }
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   4 · DIALOGUE — cascade: persona[tier][key] → tier[key] → base[key]
+   ═══════════════════════════════════════════════════════════════ */
+const BASE = {
+  go:["Go.","Whenever you're ready."], rest:["Rest. {t} seconds."],
+  getset:["{x} coming up."], half:["Halfway."], twomore:["Two more."], tenleft:["Ten seconds."],
+  done:["Done."], vis:["I can't see you — step back so I can see all of you, side-on."],
+  inhale:["Inhale."], exhale:["And exhale."], breathe:["Keep breathing."],
+  getin:["Get into position — I'll start the clock when you're set."],
+  /* Framing — said before anything else, because I can't coach what I can't see. */
+  seeBack:["Step back a little — I can't see all of you."],
+  seeUp:["I'm cut off at your feet — shift up, or move the phone down a touch."],
+  seeDown:["I can't see your head — shift down, or tilt the phone up a touch."],
+  seeLeft:["Slide to your left — you're out of frame on one side."],
+  seeRight:["Slide to your right — you're out of frame on one side."],
+  tooFar:["You've got room to come closer — you'll get sharper coaching."],
+  slower:["Slower — control it, and I'll count it."],
+  /* Calibration verdict — the moment a beginner learns they're not failing. It was
+     the ONLY dynamically-composed line in the core flow, so the first thing a new
+     user heard after the warm recorded coach was a robot. Split into a spliceable
+     opener plus a fixed per-tier sentence, it's clips end to end. */
+  "calib.held":["You held {t} seconds."],
+  turnside:["Turn side-on to the camera, so I can read your form."],
+  turnfront:["Turn to face the camera for this one."],
+  rotatetip:["Tip — floor exercises work best with the phone sideways."],
+  nextset:["Set {c} of {o}."],
+  "teach.push-up":["Push-ups — {t}. Chest to the floor, body in one line."],
+  "teach.knee-push-up":["Knee push-ups — {t}."],
+  "teach.wall-push-up":["Wall push-ups — {t}."],
+  switchsides:["Other side."], fixed:["That's it."], goodhold:["Good."], goodrep:["Good."],
+  degrade:["Form's fading — let's stop there."], regress:["Let's try the easier version."],
+  encourage:["Keep going."], pr:["Personal best. {v}."],
+  /* SAFETY NET — every cue key needs a line at every tier, or the coach would
+     spot a fault and say nothing. The tier banks override these; this guarantees
+     nothing is ever swallowed silently. (A test caught exactly this at Strong tier.) */
+  sag:["Hips up."], pike:["Hips level."], sagside:["Hips up."], neck:["Neck neutral."],
+  neckpull:["Don't pull on your neck."], backarch:["Press your back flat."],
+  knees:["Straighter legs."], elbows:["Elbows under your shoulders."], chestup:["Chest up."],
+  bridgehigh:["Higher — squeeze at the top."], reachback:["Reach the leg back."],
+  /* Range cues. These fire once per SHORT rep — an attempt that came back before
+     reaching full range — never mid-rep. See Rep.update's short-range branch. */
+  deeper:["Go a bit deeper — all the way down."],
+  standtall:["All the way up — stand tall at the top."],
+  curlhigher:["A little higher — peel the shoulder blades up."],
+  liftlegs:["Higher — lift them a bit further."],
+  extendlong:["Reach it further — long and straight."],
+  chestlower:["Lower — bring your chest closer."],
+  /* Gates that used to freeze the clock in silence. */
+  kneesin:["Knees back in toward your chest."],
+  liftchest:["Lift the chest a little higher."],
+  cobraeasy:["Ease off a touch — no need to crank it."],
+  straighten:["Straight line — head to heels, no bend at the hips."],
+  backwall:["Press your back flat against the wall."],
+  reachforward:["Reach the arm forward."], sitlower:["Lower."], hipshigh:["Hips up and back."],
+  longspine:["Long spine."], shouldersdown:["Shoulders down."],
+  hollowlift:["Lift."], hollowlow:["Legs lower."]
+};
+
+const TIER_LINES = {
+  learning:{
+    start:["Hi{n}. We'll take this at your pace. Prop your phone side-on and low down, far enough back that I can see all of you."],
+    go:["Whenever you're ready — no rush.","Off you go."],
+    calibverdict:["That's a completely normal starting point — most people can't hold a clean plank at all at first. I'll teach you the movements from the ground up, one thing at a time."],
+    seeBack:["Take a step back so I can see all of you — head to heels needs to fit in the frame.",
+             "Shuffle back a bit — I can only see part of you, and I want to watch your whole body."],
+    seeUp:["Your feet are out of the picture — shift yourself up, or move the phone a little lower.",
+           "I've lost your feet — either move up, or slide the phone down so your whole body fits."],
+    seeDown:["I can't see your head — shift down a bit, or tilt the phone up slightly.",
+             "Your head's out of frame — move down, or angle the phone up a touch."],
+    seeLeft:["You've drifted out of frame — slide to your left until you're back in the middle."],
+    seeRight:["You've drifted out of frame — slide to your right until you're back in the middle."],
+    tooFar:["You're quite far away — come in closer and I'll be able to see your form much better.",
+            "Shuffle in a bit closer — the nearer you are, the more clearly I can coach you."],
+    slower:["That one was too quick for me to count — slow it right down, especially on the way back. Control is the whole point.",
+            "Slow it down — take a couple of seconds each way. Rushing it means your muscles aren't really doing the work."],
+    getin:["Take your time getting into position. I won't start the clock until you're set.",
+           "No rush — get yourself set, and I'll start counting when you're in the shape."],
+    turnside:["Turn so I see you from the side — side-on is where I can really help you."],
+    turnfront:["Turn and face the camera for this one — that's the angle I read best."],
+    rotatetip:["Quick tip — for floor exercises, turning your phone sideways gives me a much better view of you."],
+    rest:["Rest. Take {t} seconds — proper rest is part of the work."],
+    done:["Good. Rest.","That's the set. Well done."],
+    "teach.plank":["Plank. Forearms down, elbows under your shoulders, body in one straight line from your ears to your heels. It's completely normal to shake — that's the muscle working. {t} seconds."],
+    "teach.knee-plank":["Knee plank. Same shape, knees down. Straight line from your ears to your knees. {t} seconds."],
+    "teach.side-plank-knee":["Side plank on your knee. Elbow under your shoulder, lift your hips so you're straight from head to knees. {t} seconds."],
+    "teach.dead-bug":["Dead bug. On your back, arms up, knees up. Lower one arm and the opposite leg slowly, keeping your lower back pressed flat into the floor. That flat back is the whole point. {t} reps."],
+    "teach.bird-dog":["Bird dog. On all fours. Reach one arm forward and the opposite leg back, until both are in line with your back. Imagine balancing a glass of water on your lower back."],
+    "teach.glute-bridge":["Glute bridge. On your back, knees bent, feet flat. Push through your heels and lift your hips into a straight ramp. Squeeze at the top. {t} reps."],
+    "teach.sit-to-stand":["Sit to stand. From a chair, no hands. Lean your chest forward, drive through your feet, stand all the way up. Sit back down slowly — that's the hard bit. {t} reps."],
+    "teach.wall-sit":["Wall sit. Back flat against a wall, slide down until your knees are bent at about a right angle. Then just hold. {t} seconds."],
+    "teach.hollow-tuck":["Tucked hollow hold. On your back, knees pulled in, shoulders just off the floor. One job: press your lower back into the floor. {t} seconds."],
+    "teach.crunch":["Crunch. On your back, knees bent. Peel your shoulder blades off the floor with your tummy — hands beside your head, never pulling on your neck. {t} reps."],
+    "teach.leg-raise-bent":["Bent-knee leg raise. On your back, knees bent, lift them towards your chest and lower slowly. If your lower back lifts off the floor, you've gone too far. {t} reps."],
+    "teach.cat-cow":["Cat cow. On all fours. Round your back to the ceiling as you breathe out, then let it dip as you breathe in. Slow — this is a stretch, not an exercise. I'll breathe with you."],
+    "teach.downward-dog":["Downward dog. Hands and feet down, hips pushed up and back into an upside-down V. A long spine matters more than straight legs — bend your knees as much as you need."],
+    "teach.cobra":["Cobra. On your front, hands under your shoulders, gently lift your chest. Keep your shoulders down, away from your ears. This should feel good, never sharp."],
+    "teach.knee-push-up":["Knee push-up. Hands under your shoulders, knees on the floor, body straight from your head to your knees. Bend your elbows to lower your chest, then push the floor away. {t} reps."],
+    "teach.wall-push-up":["Wall push-up. Stand an arm's length from a wall, hands flat on it at shoulder height. Bend your elbows to bring your chest to the wall, then push back. This is the right place to start — every push-up begins here. {t} reps."],
+    nextset:["Set {c} of {o}. Same as before — quality first, and rest whenever you need."],
+    sag:["Your hips are dipping towards the floor. Squeeze your bum and lift them, so your body's one straight line.",
+         "Hips are sinking. Squeeze your backside and lift them back into line.",
+         "Your middle's sagging. Tighten your tummy and your bum, and lift."],
+    pike:["Your hips are up too high. Bring them down a little — flat from your shoulders to your heels."],
+    sagside:["Let your bottom hip lift towards the ceiling — don't let it sink."],
+    neck:["Let your head hang naturally. Look at the floor just in front of your hands."],
+    neckpull:["Don't pull on your neck — chin soft, lift with your tummy."],
+    backarch:["Your lower back is arching off the floor. Press it flat and make the movement smaller."],
+    knees:["Try to keep your legs a bit straighter — a soft bend is fine."],
+    elbows:["Bring your elbows underneath your shoulders."],
+    chestup:["Chest up — proud chest, look ahead."],
+    bridgehigh:["Push your hips a little higher, and squeeze at the top."],
+    deeper:["That one didn't quite get low enough for me to count — try sitting a bit further down. Depth is where the work happens.",
+            "Go a little deeper on the next one — imagine sitting back into a chair behind you."],
+    standtall:["Come all the way up to standing at the top — that's what finishes the rep."],
+    curlhigher:["Try lifting your shoulders a bit further off the floor — small movement, but a bit more of it."],
+    liftlegs:["Lift them a bit higher next time — that's what makes it count."],
+    extendlong:["Reach that leg a bit further out — long and straight as you can."],
+    chestlower:["Try bringing your chest a bit closer before you push back — that's the part that builds the strength."],
+    kneesin:["Bring your knees back in toward your chest — they've drifted out."],
+    liftchest:["Lift your chest just a little higher — gently, no strain."],
+    cobraeasy:["Ease off a touch — you don't need to push it that far."],
+    straighten:["Keep a straight line from your head to your heels — don't let the hips bend."],
+    backwall:["Press your back flat against the wall — that's what keeps it safe."],
+    reachback:["Reach that leg all the way back, until it's in line with your back."],
+    reachforward:["Reach that arm all the way forward, level with your ear."],
+    sitlower:["Slide down a bit further — aim for a right angle at the knee."],
+    hipshigh:["Push your hips up and back a little more."],
+    longspine:["Push the floor away and make your back long."],
+    shouldersdown:["Slide your shoulders down, away from your ears."],
+    hollowlift:["Lift your legs a little — keep that back pressed down."],
+    hollowlow:["Bring your legs a bit lower, as long as your back stays flat."],
+    fixed:["There — that's it. That's exactly right. Remember what that feels like.",
+           "Yes. That's the shape. Hold it there.",
+           "Perfect. Whatever you just did, do that.",
+           "That's the one. Try to memorise that feeling.",
+           "Better. Feel the difference? That's what we're after."],
+    goodhold:["That's a proper one. Learn what this feels like — that's the whole point.",
+              "Lovely. Just keep breathing.",
+              "That's textbook. Stay with it.",
+              "Really nice shape. Don't change a thing.",
+              "That's exactly right. Breathe.",
+              "Holding it beautifully."],
+    goodrep:["That's a good one.","Lovely. Same again.","Nice and controlled.",
+             "Good — same shape next time.","That's the one.","Clean. Keep going."],
+    degrade:["That was strong — let's stop there while it's still clean. Quality beats grinding it out."],
+    regress:["Let's make this easier. Same shape, less weight — that's not a step back, it's the right step."],
+    encourage:["You're doing fine. Keep breathing.","Still with you. Nearly there.",
+               "Shaking is normal — that's the muscle, not a problem.",
+               "Stay with it. You've got more than you think.",
+               "Nearly done. Breathe."],
+    pr:["That's the longest you've ever held it{n}. {v}."]
+  },
+  building:{
+    start:["Alright{n}. {p}. Set up side-on, whole body in frame."],
+    calibverdict:["And with a decent line — you know what you're doing, so I'll focus on quality rather than explaining the basics."],
+    seeBack:["Step back — fit your whole body in."], seeUp:["Feet are cut off — shift up."],
+    seeDown:["Head's cut off — shift down."], seeLeft:["Left — back in frame."],
+    seeRight:["Right — back in frame."], tooFar:["Come closer."],
+    slower:["Too fast to count — control the lowering.",
+            "Slow it down and I'll count it."],
+    getin:["Get set — I'll start when you're in position."],
+    turnside:["Side-on, please."],
+    "teach.plank":["Plank — {t} seconds. One straight line, ears to heels."],
+    "teach.knee-plank":["Knee plank — {t} seconds."],
+    "teach.side-plank":["Side plank — {t} seconds. Stack the feet, hips tall."],
+    "teach.bird-dog":["Bird dog — {t} seconds. Opposite arm and leg, hips level."],
+    "teach.dead-bug":["Dead bug — {t} reps. Back stays pinned to the floor."],
+    "teach.glute-bridge":["Glute bridges — {t}. Drive through the heels, squeeze at the top."],
+    "teach.hollow-hold":["Hollow hold — {t} seconds. Legs long and low, back pressed down."],
+    "teach.hollow-tuck":["Tucked hollow — {t} seconds."],
+    "teach.squat":["Squats — {t}. Sit back, chest proud, full depth."],
+    "teach.sit-to-stand":["Sit to stand — {t}. No hands."],
+    "teach.wall-sit":["Wall sit — {t} seconds. Ninety degrees."],
+    "teach.crunch":["Crunches — {t}. Slow up, slower down."],
+    "teach.leg-raise":["Leg raises — {t}. Straight legs, back pinned."],
+    "teach.leg-raise-bent":["Bent-knee raises — {t}."],
+    "teach.downward-dog":["Down dog — {t} seconds. Long spine, hips high."],
+    "teach.cat-cow":["Cat cow. Move with the breath."],
+    "teach.push-up":["Push-ups — {t}. One straight line, chest low, full lockout."],
+    "teach.knee-push-up":["Knee push-ups — {t}. Straight from head to knees."],
+    nextset:["Set {c} of {o}.","Round {c}. Same standard."],
+    "teach.cobra":["Cobra — {t} seconds. Shoulders down."],
+    sag:["Hips are dropping — squeeze the glutes.","Lift the hips. Long line.",
+         "Hips. Squeeze and lift.","Middle's sagging — brace."],
+    pike:["Hips are high — level them out."],
+    sagside:["Hips to the ceiling."],
+    neck:["Neck neutral. Eyes down."],
+    neckpull:["Chin off your chest — lift with the abs."],
+    backarch:["Back's arching — press it flat, shorten the range."],
+    knees:["Straighter legs."], elbows:["Elbows under shoulders."], chestup:["Chest up."],
+    bridgehigh:["Higher — full squeeze at the top."],
+    deeper:["Deeper."], standtall:["Full extension."], curlhigher:["Higher."],
+    liftlegs:["Higher."], extendlong:["Longer."], chestlower:["Chest down."],
+    kneesin:["Knees in."], liftchest:["Chest up."], cobraeasy:["Ease off."],
+    straighten:["Straight line."], backwall:["Back flat."],
+    reachback:["Reach that leg back."], reachforward:["Reach the arm forward, level."],
+    sitlower:["Lower — ninety degrees."], hipshigh:["Hips up and back."],
+    longspine:["Long spine — push the floor away."], shouldersdown:["Shoulders down."],
+    hollowlift:["Lift into the hollow."], hollowlow:["Legs lower."],
+    fixed:["There it is. Hold that.","Better. Stay there.","That's it — lock it in.",
+           "Fixed. Keep it there.","Yes. Hold."],
+    goodhold:["Solid line. Keep breathing.","Strong.","That's the shape.",
+              "Good position. Own it.","Locked in.","Clean line."],
+    goodrep:["Good.","Clean.","Nice.","That's it.","Controlled."],
+    degrade:["Form's fading. Five more, then we stop."],
+    regress:["Drop to the easier version and finish it clean."],
+    switchsides:["Other side.","Switch sides — same standard."],
+    pr:["New best{n}. {v}."]
+  },
+  strong:{
+    start:["{p}{n}. Let's work."],
+    "teach.plank":["Plank. {t}."], "teach.side-plank":["Side plank. {t}."],
+    "teach.hollow-hold":["Hollow. {t}."], "teach.squat":["Squats. {t}."],
+    "teach.bird-dog":["Bird dog. {t}."], "teach.leg-raise":["Leg raises. {t}."],
+    "teach.glute-bridge":["Bridges. {t}."], "teach.wall-sit":["Wall sit. {t}."],
+    "teach.downward-dog":["Down dog. {t}."], "teach.cat-cow":["Cat cow. Breathe."],
+    "teach.push-up":["Push-ups. {t}."],
+    nextset:["Set {c}.","Again."],
+    go:["Go."], rest:["{t}."], done:["Done."], getin:["Get set."],
+    turnside:["Side-on."], turnfront:["Face me."],
+    calibverdict:["You clearly train. I'll keep it short, and I'll push you."],
+    slower:["Control it."], 
+    sag:["Hips.","Hips up."], pike:["Level."], sagside:["Hips."], neck:["Neck."],
+    knees:["Legs."], chestup:["Chest."], bridgehigh:["Lock it out."],
+    hollowlift:["Lift."], hollowlow:["Lower."], longspine:["Lengthen."],
+    reachback:["Reach."], reachforward:["Reach."], elbows:["Elbows."],
+    backarch:["Flatten it."], sitlower:["Lower."], hipshigh:["Hips back."],
+    fixed:["Good. Hold.","That's it.","Locked."],
+    goodhold:["Hold.","Solid.","Stay."],
+    goodrep:["Yep.","Good.","Clean."],
+    degrade:["Form's gone. Five, then out."],
+    switchsides:["Other side."],
+    pr:["Best yet. {v}."]
+  }
+};
+
+const PERSONAS = {
+  /* Warm had lines only at Learning and Steady had none at all, so at Building the
+     three personas spoke IDENTICAL words — the difference lived purely in the
+     recorded voice, which made the TTS preview indistinguishable. Tone is wording
+     as much as timbre, so each persona now has a voice of its own at every tier. */
+  steady:{ label:"Steady", rate:1.0, pitch:1.0, over:{
+    building:{
+      go:["Whenever you're ready."], sag:["Hips are dropping."],
+      fixed:["That's it. Hold there."], goodhold:["Good. Stay with it."],
+      half:["Halfway."] },
+    learning:{
+      go:["Take your time — start when you're set."],
+      fixed:["That's the shape. Remember how that feels."],
+      goodhold:["That's right. Keep it steady."] },
+    strong:{ go:["Ready."], goodhold:["Solid."] }}},
+  warm:{ label:"Warm", rate:0.96, pitch:1.05, over:{
+    building:{
+      go:["Off you go, whenever you're ready."], sag:["Let's lift those hips a touch."],
+      fixed:["There you go — that's the one."], goodhold:["Lovely. Really nice."],
+      half:["Halfway there, you're doing well."] },
+    strong:{ go:["In your own time."], goodhold:["That's quality."] },
+    learning:{
+      goodhold:["Oh, that's lovely. That's exactly it.","Look at that. That's a proper one."],
+      fixed:["There you go — feel that? That's the one.","Yes! Hold it right there."],
+      encourage:["You're doing really well. Keep breathing.","Nearly there — I've got you."],
+      degrade:["That's plenty for today, and it was good work. Let's stop while it's clean."]
+    }}},
+  energy:{ label:"Energy", rate:1.12, pitch:1.06, over:{
+    building:{ go:["Let's have it!","Go go go!"], sag:["Hips up! Squeeze!"],
+               fixed:["Yes! Lock it in!"], goodhold:["Looking strong!"], half:["Halfway — you're flying!"] },
+    strong:{ go:["Let's go!"], twomore:["Two more — empty the tank!"] }}}
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   5 · GEOMETRY — bilateral, with wrists and elbows
+   ═══════════════════════════════════════════════════════════════ */
+const LM = {  // MediaPipe indices
+  left:  {ear:7,  shoulder:11, elbow:13, wrist:15, hip:23, knee:25, ankle:27, heel:29, toe:31},
+  right: {ear:8,  shoulder:12, elbow:14, wrist:16, hip:24, knee:26, ankle:28, heel:30, toe:32}
+};
+const JOINTS = ["ear","shoulder","elbow","wrist","hip","knee","ankle","heel","toe"];
+
+function buildFrame(lms, aspect = 1){
+  const side = s => {
+    const o = {};
+    for(const j of JOINTS){
+      const p = lms[LM[s][j]];
+      if(p) o[j] = {x:p.x, y:p.y, z:p.z, c:(p.visibility ?? 1)};
+    }
+    return o;
+  };
+  const L = side("left"), R = side("right");
+  const conf = f => {
+    const core = ["shoulder","hip","knee","ankle"].map(j => f[j]?.c ?? 0);
+    return core.reduce((a,b)=>a+b,0) / 4;
+  };
+  const cl = conf(L), cr = conf(R);
+
+  /* SIDENESS — how side-on is the body? Landmark z (depth) answers it: side-on, one
+     shoulder sits BEHIND the other (|Δz| large, |Δx| small) → ~90°. Facing the camera,
+     the pair separates in x, not z → ~0°. Averaged over shoulders and hips; null when
+     z is absent (headless tests) so nothing downstream changes behaviour. */
+  let sideness = null;
+  const pair = (li, ri) => {
+    const a = lms[li], b = lms[ri];
+    if(!a || !b || a.z == null || b.z == null) return null;
+    if(a.z === 0 && b.z === 0) return null;
+    const dx = Math.abs(a.x - b.x) * aspect, dz = Math.abs(a.z - b.z);
+    if(dx + dz < 0.02) return null;
+    return Math.atan2(dz, dx) * 180 / Math.PI;
+  };
+  const ps = [pair(11,12), pair(23,24)].filter(v => v != null);
+  if(ps.length) sideness = ps.reduce((a,b)=>a+b,0) / ps.length;
+
+  return { left:L, right:R, cam: cl >= cr ? "left" : "right",
+           conf: Math.max(cl,cr), aspect, sideness };
+}
+
+/* ═══ FRAMING ══════════════════════════════════════════════════════════
+   The whole "stand 2 metres back" problem, solved by looking instead of asking.
+   Every joint carries a normalised position and a visibility score already, so a
+   bounding box over the confident joints tells us whether the person is framed —
+   adapting to their actual height, room and movement, which no fixed instruction
+   can. Pure geometry on data buildFrame already has; lives in the engine so it
+   ports with everything else. Returns a verdict + which way to nudge. */
+function framingCue(f){
+  return f.verdict === "clipped"
+    ? ({ back:"seeBack", up:"seeUp", down:"seeDown", left:"seeLeft", right:"seeRight" }[f.dir] || "seeBack")
+    : "getin";
+}
+/* Which joints does this movement actually measure? Derived from the metric specs
+   themselves — the same content-as-data trick as the tint, so no new authoring.
+   A crunch doesn't grade your feet; a squat doesn't grade your wrists. Framing
+   should only insist on the parts the coaching depends on. */
+/* Joints framing must actually see. JUDGING targets only — graded targets, quality
+   gates and the rep driver. Position gates are deliberately excluded: they decide
+   whether you're set up, and if one of their joints is off-screen that gate simply
+   fails, which already prevents arming through the movement's own declared logic.
+   Including them meant a crunch demanded your ANKLES — read only by the "knees bent"
+   setup check — and refused to count reps when your feet ran off the edge. Testers
+   hit that immediately, and they were right: don't withhold coaching over a limb the
+   exercise never looks at. */
+function neededJoints(mv){
+  const add = (s, m) => {
+    if(m.k === "angle"){ [m.v, m.a, m.c].forEach(j => j && s.add(j)); }
+    else if(m.k === "line"){ [m.of, m.from, m.to].forEach(j => j && s.add(j)); }
+    else if(m.k === "vert"){ [m.a, m.b].forEach(j => j && s.add(j)); }
+    return s;
+  };
+  const judging = new Set();
+  for(const t of mv.targets) if(!t.pos) add(judging, t.m);
+  if(judging.size) return judging;
+  /* A guided movement (cat-cow) judges nothing, so it has no judging targets — and
+     an empty set falls through to "all joints" in framing(), which handed the one
+     movement that makes NO claims the strictest framing rule in the app. Fall back
+     to its own position gates instead: enough to see the torso, indifferent to limbs
+     we never look at. */
+  const setup = new Set();
+  for(const t of mv.targets) if(t.pos) add(setup, t.m);
+  return setup;
+}
+
+/* `need` = the joints this movement is actually judged on. A crunch doesn't read
+   your feet, so feet out of frame must not block it — the first cut demanded the
+   WHOLE body for every movement, and real users hit that immediately.
+   Two boxes, deliberately: CLIPPING is judged on the needed joints only, while
+   the far/near reading uses the whole visible body, because overall size in frame
+   is what indicates distance regardless of which limbs the movement reads. */
+function framing(frame, need){
+  const pts = [], all = [];
+  for(const cam of ["left","right"]){
+    const side = frame[cam]; if(!side) continue;
+    for(const j in side){
+      const p = side[j]; if(!p || (p.c ?? 1) <= 0.4) continue;
+      all.push(p);
+      if(!need || !need.size || need.has(j)) pts.push(p);
+    }
+  }
+  if(all.length < 4 || pts.length < 2) return { ok:true, verdict:"unsure" };
+
+  let minX=1,maxX=0,minY=1,maxY=0;
+  for(const p of pts){ minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x);
+                       minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y); }
+  let bX0=1,bX1=0,bY0=1,bY1=0;
+  for(const p of all){ bX0=Math.min(bX0,p.x); bX1=Math.max(bX1,p.x);
+                       bY0=Math.min(bY0,p.y); bY1=Math.max(bY1,p.y); }
+  const w = maxX-minX, h = maxY-minY;
+  const M = 0.02;   // a joint this close to an edge is being cut off
+
+  /* CLIPPED — part of the body is outside the frame. The most useful single
+     nudge names the edge that's cut, since "step back" is wrong if they're just
+     too far to one side. */
+  const clip = { left:minX<M, right:maxX>1-M, top:minY<M, bottom:maxY>1-M };
+  if(clip.left||clip.right||clip.top||clip.bottom){
+    const vBoth = clip.top && clip.bottom, hBoth = clip.left && clip.right;
+    let dir = "back";                                  // clipped on opposing edges → just too big
+    if(!vBoth && !hBoth){
+      if(clip.top) dir = "down";                       // head cut → show the head
+      else if(clip.bottom) dir = "up";                 // feet cut
+      else if(clip.left) dir = "right";                // off the left edge → move right
+      else if(clip.right) dir = "left";
+    }
+    return { ok:false, verdict:"clipped", dir, fill:Math.max(w,h) };
+  }
+
+  /* TOO FAR — the body fills so little of the frame that pose detail is coarse.
+     The long axis (max of w,h) is the body's length; under ~35% and coaching
+     quality suffers well before tracking fails. */
+  const fill = Math.max(bX1-bX0, bY1-bY0);   // whole body — the distance proxy
+  if(fill < 0.35) return { ok:true, verdict:"far", fill };
+
+  return { ok:true, verdict:"framed", fill };
+}
+
+function angleAt(b,a,c){
+  const v1={x:a.x-b.x,y:a.y-b.y}, v2={x:c.x-b.x,y:c.y-b.y};
+  const dot=v1.x*v2.x+v1.y*v2.y;
+  const mag=Math.hypot(v1.x,v1.y)*Math.hypot(v2.x,v2.y);
+  if(mag<1e-9) return null;
+  return Math.acos(Math.max(-1,Math.min(1,dot/mag)))*180/Math.PI;
+}
+
+/** Read a metric on one side. lineDeviation is SIGNED: + = below the line (sagging). */
+/* A non-finite reading must never escape. readMetric's contract is already
+   "null means unreadable" (missing joints return null), so a NaN or Infinity —
+   from corrupt landmarks, or any arithmetic that slips past the guards below —
+   joins the same path instead of poisoning the score. Without this, one NaN
+   coordinate propagates through scoreTarget to a form score that literally
+   displays "NaN" to a beginner, which is the worst possible failure for a
+   product whose whole promise is that it can see them. */
+function readMetric(m, frame, side){
+  const v = readMetricRaw(m, frame, side);
+  return (typeof v === "number" && isFinite(v)) ? v : null;
+}
+function readMetricRaw(m, frame, side){
+  const P = frame[side];
+  /* ASPECT CORRECTION. MediaPipe normalizes x by width and y by height SEPARATELY,
+     so raw normalized coords carry different physical scales per axis. Uncorrected,
+     the same physical down-dog hip angle measures 55.6° in 16:9 landscape and 109.6°
+     in 9:16 portrait (measured; see feasibility report). Scaling x by the aspect
+     restores physical angles — identical thresholds in every orientation, and live
+     capture finally agrees with the square-space tests and FK demos. Defaults to 1,
+     so synthetic test frames are unchanged. */
+  const A = frame.aspect || 1;
+  const g = j => P[j];
+  if(m.k === "angle"){
+    const b=g(m.v), a=g(m.a), c=g(m.c);
+    if(!b||!a||!c) return null;
+    return angleAt({x:b.x*A, y:b.y}, {x:a.x*A, y:a.y}, {x:c.x*A, y:c.y});
+  }
+  if(m.k === "line"){
+    const o=g(m.of), f=g(m.from), t=g(m.to);
+    if(!o||!f||!t) return null;
+    const dx = (t.x - f.x) * A;
+    if(Math.abs(dx) < 0.05) return 0;
+    const u = ((o.x - f.x) * A) / dx;
+    return o.y - (f.y + u*(t.y - f.y));
+  }
+  if(m.k === "vert"){
+    const a=g(m.a), b=g(m.b);
+    if(!a||!b) return null;
+    return Math.abs(Math.atan2((b.x-a.x)*A, b.y-a.y) * 180/Math.PI);
+  }
+  return null;
+}
+
+const scoreTarget = (t, v, tier) => {
+  const tol = t.tol * TIERS[tier].tol;
+  const err = Math.abs(v - t.ideal);
+  if(err <= tol) return 100;
+  const span = Math.max(t.range - tol, 1e-4);
+  return Math.max(0, 100 * (1 - (err - tol)/span));
+};
+const cueFor = (t, v, tier) => {
+  const tol = t.tol * TIERS[tier].tol;
+  if(v < t.ideal - tol) return t.below || null;
+  if(v > t.ideal + tol) return t.above || null;
+  return null;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   6 · FORM EVALUATOR — multi-target, worst-offender, budget-limited
+   ═══════════════════════════════════════════════════════════════ */
+/* ═══ FRAME-RATE INDEPENDENCE ═══════════════════════════════════════
+   Every smoothing filter here used to advance ONCE PER FRAME with no dt term:
+   at 60fps they converged twice as fast as at the 30fps the thresholds were
+   tuned at, and slower again on a throttled phone. Harmless in a steady-30fps
+   browser; a silent tuning-poisoner on iOS, where frame rate varies by device,
+   thermal state and capture pipeline.
+
+   Fix: alphas stay declared as "what this filter does in one frame at 30fps"
+   (readable, and the content is unchanged), and are converted per frame to the
+   time actually elapsed. Equivalent to a time-constant EMA:
+       1 - exp(-dt/tau)   with   tau = -REF_DT / ln(1-alpha)
+   and identical to the old behaviour when dt == 1/30 — which is why every
+   existing vector and suite still passes unchanged. */
+const REF_DT = 1/30;
+const emaAlpha = (alpha, dt) => {
+  if(!(dt > 0)) return 0;                       // no time passed, no update
+  if(alpha >= 1) return 1;
+  if(dt === REF_DT) return alpha;               // exact, and skips the pow
+  return 1 - Math.pow(1 - alpha, dt / REF_DT);
+};
+
+/* ═══ FORM TINT ═══════════════════════════════════════════════════════
+   Colour the body parts that need work. No new content is authored: a metric
+   spec already NAMES the joints it measures, so the segments to light up are
+   derived from the same declaration that produces the score.
+     angle {v,a,c} → the two limbs meeting at the vertex, vertex is at fault
+     line  {of,from,to} → the chain the joint should be sitting on
+     vert  {a,b} → the single segment whose uprightness is judged
+   Severity carries in THREE channels — hue, limb thickness, pulse rate — because
+   red/amber alone is invisible to roughly 1 in 12 men, and this app is aimed at
+   people exercising at home, not at people who've declared their colour vision. */
+function tintSegs(m){
+  if(m.k === "angle" && m.v) return { segs:[[m.v,m.a],[m.v,m.c]], focus:m.v };
+  if(m.k === "line"  && m.of) return { segs:[[m.from,m.of],[m.of,m.to]], focus:m.of };
+  if(m.k === "vert") return { segs:[[m.a,m.b]], focus:m.b };
+  return { segs:[], focus:null };
+}
+/* Hysteresis, for the same reason rep counting needs it: a joint sitting on a
+   band edge would otherwise strobe between amber and red every frame. */
+const TINT_IN  = [78, 52];   // enter amber / enter red
+const TINT_OUT = [86, 62];   // leave amber / leave red
+
+class Evaluator {
+  constructor(mv, tier){
+    this.mv = mv; this.tier = tier;
+    this.ema = {}; this.score = 100; this.sum = 0; this.n = 0;
+    this.hold = 0; this.corrections = {};
+    this.raised = new Set();       // cue budget: distinct keys raised THIS SET
+    this.suppressed = [];          // what the budget made us swallow (for telemetry)
+    this.lastCueAt = -1e9;
+    this.outOfPose = 0;
+    /* WHEN a correction fired, not just how many. This is what lets the debrief tell
+       FATIGUE ("held for 20s, then the hips went") from TECHNIQUE ("wrong from rep one").
+       Same data, opposite advice. It's the most trainer-like thing in the app. */
+    this.log = [];                 // [{key, at}] — set-relative seconds
+    this.scoreTrace = [];          // [{t, s}] — the form curve across the set
+    this.lastTraceBucket = -1;     // clock-bucket sampling, not frame-count
+    this.sev = {};                 // per-target tint severity, hysteresis-latched
+    this.need = neededJoints(mv);  // joints framing must actually see for THIS movement
+    this.armedAt = null;
+    this.rep = mv.reps ? new Rep(mv.reps) : null;
+  }
+
+  smooth(id, v, alpha=0.35, dt=REF_DT){
+    this.ema[id] = this.ema[id] == null ? v : this.ema[id] + emaAlpha(alpha, dt)*(v - this.ema[id]);
+    return this.ema[id];
+  }
+
+  read(t, frame){
+    const agg = t.m.agg || "camera";
+    if(agg === "camera") return readMetric(t.m, frame, frame.cam);
+    const l = readMetric(t.m, frame, "left"), r = readMetric(t.m, frame, "right");
+    if(l == null) return r;
+    if(r == null) return l;
+    if(agg === "mean") return (l + r)/2;
+    const sl = scoreTarget(t, l, this.tier), sr = scoreTarget(t, r, this.tier);
+    if(agg === "best")  return sl >= sr ? l : r;   // bird dog: the EXTENDED limb
+    if(agg === "worst") return sl <= sr ? l : r;   // both knees must be straight
+    return l;
+  }
+
+  evaluate(frame, dt, now){
+    const out = { readings:[], cue:null, inPose:false, inPosition:false, blocking:[],
+                  score:null, rep:null, reps:this.rep ? this.rep.display() : 0,
+                  ok:true, regress:false, suppressed:[] };
+
+    out.framing = framing(frame, this.need);
+    if(frame.conf < 0.5){ out.ok = false; return out; }
+
+    /* GUIDED — we check you're in the right POSITION (gates), but make no claims
+       about the QUALITY of a pose we cannot honestly measure. */
+    if(this.mv.kind === "guided"){
+      for(const t of this.mv.targets){
+        const raw = this.read(t, frame);
+        if(raw == null) continue;
+        const v = this.smooth(t.id, raw, t.m.sm || 0.35, dt);
+        out.readings.push({ t, v, s: scoreTarget(t, v, this.tier), cue: null });
+      }
+      const gates = out.readings.filter(r => r.t.pos || r.t.gate);
+      out.inPose = gates.length ? gates.every(r => r.s > 0) : true;
+      out.inPosition = out.inPose;
+      out.blocking = gates.filter(r => r.s <= 0).map(r => r.t.id);
+      if(out.inPose) this.hold += dt;
+      out.guided = true;
+      return out;
+    }
+
+    for(const t of this.mv.targets){
+      const raw = this.read(t, frame);
+      if(raw == null) continue;
+      const v = this.smooth(t.id, raw, t.m.sm || 0.35, dt);
+      out.readings.push({ t, v, s: scoreTarget(t, v, this.tier), cue: cueFor(t, v, this.tier) });
+    }
+    if(!out.readings.length){ out.ok = false; return out; }
+
+    /* POSITION gates ("are you on the floor, on your side, knees bent?") decide whether
+       the set can START. QUALITY gates ("is the shape actually good?") decide only
+       whether the hold clock runs.
+       Gating the START on quality was a design error: a sagging side plank failed the
+       bodyLine gate, never armed, and the coach stayed silent — withholding coaching
+       from precisely the person who needed it. */
+    const posGates = out.readings.filter(r => r.t.pos);
+    out.inPosition = posGates.length ? posGates.every(r => r.s > 0) : true;
+    const qGates   = out.readings.filter(r => r.t.gate);
+    out.inPose     = out.inPosition && (qGates.length ? qGates.every(r => r.s > 0) : true);
+    out.blocking   = [...posGates, ...qGates].filter(r => r.s <= 0).map(r => r.t.id);
+    /* A clipped body can't be assessed and mustn't arm a set — otherwise the coach
+       says "step back, I can't see all of you" and starts the clock in the same
+       breath. "far" still arms (a quality nudge only); "clipped" does not. */
+    if(out.framing && out.framing.verdict === "clipped"){
+      out.inPosition = false;
+      out.inPose = false;
+      if(!out.blocking.includes("framing")) out.blocking = [...out.blocking, "framing"];
+    }
+
+    /* VIEW AWARENESS — never grade silently from an angle we can't read.
+       sideness: 90 = side-on, 0 = facing the camera (null in headless tests).
+       Aligned <25°: block arming and ask them to turn. 25–50°: coach the
+       view-invariant subset only (straight lines, sag/pike sign, verticality,
+       rep cycles — all measured stable off-axis) and suppress depth judgements,
+       which drift badly past ~40°. Facing movements mirror the logic. */
+    out.sideness = frame.sideness;
+    if(frame.sideness != null){
+      const wantsFront = this.mv.view === "front";
+      const aligned = wantsFront ? (90 - frame.sideness) : frame.sideness;
+      if(aligned < 25){
+        out.inPosition = false;
+        out.inPose = false;
+        out.blocking = [...out.blocking, "view"];
+        out.viewCue = wantsFront ? "turnfront" : "turnside";
+      } else if(aligned < 50){
+        out.viewLimited = true;
+      }
+    }
+
+    // weighted form score
+    /* w:0 targets (rep drivers, position gates) must not enter the pool — a movement
+       whose only graded target is w:0 divided by ~zero and scored garbage. If nothing
+       weighted remains, grade the QUALITY gates: they ARE the shape. (Found by the
+       demo self-check: hollow-tuck scored 1 while being held perfectly.) */
+    const wOf = r => r.t.w ?? 1;
+    let pool = out.readings.filter(r => !r.t.gate && wOf(r) > 0);
+    if(!pool.length) pool = out.readings.filter(r => r.t.gate && !r.t.pos);
+    if(!pool.length) pool = out.readings;
+    const tw = pool.reduce((a,r) => a + Math.max(wOf(r), 0.001), 0);
+    const raw = pool.reduce((a,r) => a + r.s * Math.max(wOf(r), 0.001), 0) / tw;
+    this.score += emaAlpha(0.1, dt)*(raw - this.score);
+    this.sum += this.score; this.n++;
+    out.score = Math.round(this.score);
+    /* 5 Hz on the CLOCK, by sample INDEX. Frame counting sampled twice as often at
+       60fps, skewing the trace the insight engine reads to classify fatigue vs
+       technique; a naive `now - last >= 0.2` then drifted on float accumulation
+       (53 samples at 30fps vs 58 at 60fps). The bucket index is exact at any rate. */
+    if(this.armedAt != null){
+      const bucket = Math.floor((now - this.armedAt) / 0.2);
+      if(bucket > this.lastTraceBucket){
+        this.lastTraceBucket = bucket;
+        this.scoreTrace.push({ t: +(now - this.armedAt).toFixed(1), s: Math.round(this.score) });
+      }
+    }
+
+    if(this.mv.kind === "hold"){
+      if(out.inPose){ this.hold += dt; this.outOfPose = 0; }
+      else { this.outOfPose += dt; }
+      // Can't hold the shape at all? Don't nag — offer the easier version.
+      if(this.outOfPose > 6 && this.mv.regression && TIERS[this.tier].regress) out.regress = true;
+    }
+
+    if(this.rep){
+      const driver = out.readings.find(r => r.t.id === this.mv.reps.driver);
+      if(driver){
+        const ev = this.rep.update(driver.v, now, dt, TIERS[this.tier]?.repMin ?? 1);
+        if(ev){ if(ev.rejected) out.tooFast = ev; else if(ev.short) out.short = ev; else out.rep = ev; }
+        out.reps = this.rep.display();
+        out.state = this.rep.state;
+      }
+    }
+
+    /* THE ONE CUE — worst offender, budget-limited, cooldown-limited. */
+    let offenders = out.readings.filter(r => r.cue).sort((a,b) => a.s - b.s);
+    let viewDropped = [];
+    if(out.viewLimited){
+      const depth = r => r.t.m.k === "angle" && r.t.ideal < 168;   // depth judgements drift off-axis
+      viewDropped = offenders.filter(depth).map(r => "view⊘" + r.cue);
+      offenders = offenders.filter(r => !depth(r));
+    }
+    this.suppressed = [...viewDropped, ...offenders.slice(1).map(r => r.cue)];
+    out.suppressed = this.suppressed;
+
+    /* ── which parts to colour ──
+       Cue-budget suppression means "measured, trustworthy, not worth SAYING" — those
+       still get coloured, because colour is ambient and speech is scarce. View
+       suppression means "this reading isn't trustworthy at this angle" — those must
+       NOT be coloured, or we'd be showing an artefact of the camera position. */
+    const unreliable = new Set();
+    if(out.viewLimited)
+      for(const r of out.readings)
+        if(r.t.m.k === "angle" && r.t.ideal < 168) unreliable.add(r.t.id);
+
+    /* Only the targets the SCORE is built from, so the two channels agree. A limb
+       glowing red while the FORM bar reads 77 is a trust problem, not a feature.
+       Quality gates join in only when they're actually blocking (score 0) — then
+       something visible IS happening (the clock has stopped) and colour explains it. */
+    const judged = out.readings.filter(r =>
+      !r.t.pos && !unreliable.has(r.t.id) &&
+      ((!r.t.gate && (r.t.w ?? 1) > 0) || (r.t.gate && r.s <= 0)));
+    let worst = null;
+    for(const r of judged){
+      const prev = this.sev[r.t.id] || 0;
+      let lvl = prev;
+      if(r.s < TINT_IN[1]) lvl = 2;
+      else if(r.s < TINT_IN[0]) lvl = Math.max(1, prev === 2 && r.s < TINT_OUT[1] ? 2 : 1);
+      else if(r.s > TINT_OUT[0]) lvl = 0;
+      else if(prev === 2 && r.s > TINT_OUT[1]) lvl = 1;
+      this.sev[r.t.id] = lvl;
+      if(lvl > 0 && (!worst || r.s < worst.s)) worst = r;
+    }
+    /* Learning tier shows ONE part, amber only. The cue budget already limits this
+       tier to a single spoken correction so beginners aren't buried; lighting four
+       limbs red would undo that decision silently — and this is the tier where the
+       numeric score is deliberately hidden. */
+    const solo = TIERS[this.tier].cueBudget === 1;
+    const segs = [];
+    for(const r of judged){
+      const lvl = this.sev[r.t.id];
+      if(!lvl) continue;
+      if(solo && (!worst || r.t.id !== worst.t.id)) continue;
+      const { segs:pair } = tintSegs(r.t.m);
+      for(const [a,b] of pair){
+        if(!a || !b) continue;
+        const sev = solo ? 1 : lvl;
+        const hit = segs.find(g => (g.a===a && g.b===b) || (g.a===b && g.b===a));
+        if(hit) hit.sev = Math.max(hit.sev, sev);        // one entry per limb, worst wins
+        else segs.push({ a, b, sev });
+      }
+    }
+    out.tint = { segs, focus: worst ? tintSegs(worst.t.m).focus : null };
+
+    if(offenders.length){
+      const key = offenders[0].cue;
+      const isNew = !this.raised.has(key);
+      const budget = TIERS[this.tier].cueBudget;
+
+      if(isNew && this.raised.size >= budget){
+        out.suppressed = [key, ...out.suppressed];    // over budget — swallowed entirely
+      } else if((now - this.lastCueAt)*1000 >= TIERS[this.tier].cueCool){
+        this.lastCueAt = now;
+        this.raised.add(key);
+        this.corrections[key] = (this.corrections[key] || 0) + 1;
+        if(this.armedAt != null) this.log.push({ key, at: +(now - this.armedAt).toFixed(1) });
+        out.cue = key;
+      }
+    }
+    return out;
+  }
+
+  /** Called the moment the set actually STARTS. Everything measured while the person was
+      walking in, kneeling down or listening to the intro is discarded. */
+  arm(now){
+    this.hold = 0; this.sum = 0; this.n = 0; this.score = 100;
+    this.raised.clear(); this.lastCueAt = -1e9; this.outOfPose = 0;
+    this.corrections = {};
+    this.log = []; this.scoreTrace = []; this.armedAt = (now ?? null);
+    this.lastTraceBucket = -1;
+    this.sev = {};                 /* tint latched while they shuffled into position
+                                      must not carry into the set — bug #18 */
+    this.ema = {};                 /* …and neither must the SMOOTHED READINGS. arm()
+                                      documents itself as discarding everything measured
+                                      during setup, but the per-target EMAs were surviving
+                                      it, so the first frames of every set were judged on
+                                      the posture someone had while getting into position. */
+    if(this.rep){
+      this.rep.reps = 0; this.rep.state = "down"; this.rep.last = null;
+      this.rep.base = null; this.rep.primed = false; this.rep.pMax = 0;
+    }
+  }
+
+  avg(){ return this.n ? Math.round(this.sum/this.n) : null; }
+  top(){ const e = Object.entries(this.corrections).sort((a,b)=>b[1]-a[1])[0]; return e ? e[0] : null; }
+}
+
+class Rep {
+  constructor(s){
+    this.s=s; this.state="down"; this.reps=0; this.peak=0; this.last=null; this.base=null;
+    this.durations = [];
+    this.rushed = 0;              // reps rejected for tempo — surfaced in the debrief
+    this.short = 0;               // attempts that never reached full range
+    this.pMax = 0;                // furthest progress toward the threshold this cycle           // ms per rep — lets the debrief spot a rushed back half
+    /* PRIMED: has this counter ever seen the body in a genuine RESTING position?
+       Until it has, nothing counts.
+
+       Why this exists: a plank is geometrically identical to the TOP of a glute bridge —
+       angle(hip, shoulder, knee) is ~180° in both. Resting in a plank left the counter
+       sitting in state "up", so simply COMING OUT of the plank was credited as a rep.
+       Priming makes that impossible for every rep movement, not just this one:
+       you cannot score a rep you never started. */
+    this.primed = false;
+  }
+  update(v, now, dt = REF_DT, minScale = 1){
+    const s = this.s;
+    if(s.baseline){
+      if(this.base == null) this.base = v;
+      /* Drift only when genuinely AT rest (near the baseline). Drifting during the
+         movement made the up-threshold chase the rep downward, so slow, shallow reps
+         — the beginner pattern — could never cross it. Found when the generated
+         crunch demo failed its own counter. */
+      else if(this.state === "down" && Math.abs(v - this.base) < 6)
+        this.base += emaAlpha(0.02, dt)*(v - this.base);
+    }
+    let up, down;
+    if(s.rising){ up = s.upAbove; down = s.downBelow; }
+    else { const b = s.baseline ? this.base : 0; up = b + s.upBelow; down = b + s.downAbove; }
+
+    if(!this.primed){
+      const atRest = s.rising ? v < down : v > down;
+      if(!atRest) return null;          // still arriving from somewhere else — ignore entirely
+      this.primed = true;
+    }
+
+    if(this.state === "down"){
+      /* Progress toward the up threshold: 0 at rest, 1 at the threshold. */
+      const span = up - down;
+      const prog = span === 0 ? 0 : (v - down) / span;
+      this.pMax = Math.max(this.pMax, prog);
+      if(s.rising ? v > up : v < up){ this.state = "up"; this.peak = v; this.pMax = 0; return null; }
+      /* SHORT RANGE. They left rest, got part of the way, and came back without ever
+         reaching the threshold: no rep counted, the score dropped, and the coach said
+         NOTHING — the app simply looked broken. A per-frame cue on the driver cannot
+         express this: it would fire at the bottom of every GOOD rep, which is exactly
+         what glute-bridge's did (bug #16). It has to be judged over the whole cycle. */
+      if(prog < 0.15 && this.pMax >= 0.4 && this.pMax < 1){
+        const reached = this.pMax; this.pMax = 0; this.short++;
+        return { short:true, reached };
+      }
+      return null;
+    }
+    this.peak = s.rising ? Math.max(this.peak,v) : Math.min(this.peak,v);
+    if(s.rising ? v < down : v > down){
+      const dur = this.last ? (now - this.last)*1000 : null;
+      /* MINIMUM REP DURATION. Declared on every rep movement since v4 and — until
+         now — never read: a bounced, momentum-driven rep counted the same as a
+         controlled one. Enforced, but never silently: a rep the person definitely
+         performed is rejected AND reported, so the coach teaches tempo instead of
+         appearing broken. The floor scales by tier (Strong 0.6x): a trained body
+         may legitimately move faster, a beginner is learning control. */
+      const floor = (s.minMs || 0) * minScale;
+      if(dur != null && floor && dur < floor){
+        this.state = "down"; this.last = now; this.rushed++;
+        return { rejected:true, dur };
+      }
+      this.state = "down"; this.reps++; this.pMax = 0;
+      this.last = now;
+      if(dur) this.durations.push(Math.round(dur));
+      return { n:this.reps, peak:this.peak, dur };
+    }
+    return null;
+  }
+  display(){ return this.reps * (this.s.mult || 1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INSIGHT ENGINE
+   A form score tells you WHAT happened. Timestamps tell you WHY — and why is the
+   only part that changes what you should do next time.
+
+       sag at 22s of a 30s plank   → fatigue   → hold shorter sets, perfectly
+       sag at 2s  of a 30s plank   → technique → fix the setup before adding time
+
+   Same correction. Same count. Opposite advice. No competitor does this.
+   ═══════════════════════════════════════════════════════════════ */
+const FOCUS = {
+  sag:"hips dropping", pike:"hips riding high", sagside:"the bottom hip sinking",
+  neck:"the head dropping", neckpull:"pulling on the neck", backarch:"the lower back arching",
+  knees:"bent legs", elbows:"elbow position", chestup:"the chest dropping",
+  bridgehigh:"not locking out at the top", reachback:"a short reach with the leg",
+  reachforward:"a short reach with the arm", sitlower:"not sitting low enough",
+  hipshigh:"the hips not lifting", longspine:"a rounded back",
+  shouldersdown:"shrugged shoulders", hollowlift:"the legs sitting too low",
+  hollowlow:"the legs riding too high"
+};
+const DRILL = {
+  sag:"Squeeze your glutes before you even lift into it — a braced plank doesn't sag.",
+  pike:"Think about pushing your heels backwards, not your hips upwards.",
+  sagside:"Push the bottom elbow hard into the floor — that's what lifts the hip.",
+  neck:"Put a spot on the floor a hand's length in front of you and stare at it.",
+  neckpull:"Rest your fingertips behind your ears instead of lacing them — you can't pull.",
+  backarch:"Make the movement smaller. Range means nothing if the back lifts.",
+  knees:"Point your toes — it switches the whole leg on.",
+  bridgehigh:"Pause for a full second at the top of every rep.",
+  chestup:"Pick a spot at eye level and keep looking at it the whole way down."
+};
+
+/** Read one phase's history and say the most useful true thing about it. */
+function phaseInsight(o){
+  const dur = o.kind === "reps" ? (o.repMs.length || 1) : Math.max(o.achieved, 1);
+  const top = Object.entries(
+    o.log.reduce((a,c) => (a[c.key] = (a[c.key]||0)+1, a), {})
+  ).sort((a,b) => b[1]-a[1])[0];
+
+  // ── rep tempo: did the back half get rushed? ──
+  if(o.kind === "reps" && o.repMs.length >= 4){
+    const h = Math.floor(o.repMs.length/2);
+    const early = o.repMs.slice(0,h).reduce((a,b)=>a+b,0)/h;
+    const late  = o.repMs.slice(h).reduce((a,b)=>a+b,0)/(o.repMs.length-h);
+    if(late < early * 0.72)
+      return { kind:"tempo",
+        text:`Your first ${h} reps were controlled, then you started rushing. The back half is where the work is — slow those down.` };
+  }
+
+  if(!top) return null;
+  const [key, n] = top;
+  const first = o.log.find(c => c.key === key).at;
+  const what  = FOCUS[key] || "form breaking down";
+
+  // ── WHEN did it start? (fraction of the set) ──
+  const frac = o.kind === "reps"
+    ? (o.log.find(c => c.key === key).at / Math.max(o.achieved * 3, 1))   // ≈3s per rep
+    : first / Math.max(o.achieved, 1);
+
+  if(frac > 0.55)
+    return { kind:"fatigue",
+      text:`Your form held for the first ${Math.round(first)} seconds — ${what} only started once you tired. That's endurance, not technique. Hold shorter sets with a perfect shape and the time will come.` };
+
+  if(frac < 0.25)
+    return { kind:"technique", drill:DRILL[key],
+      text:`${what[0].toUpperCase()+what.slice(1)} was there from the very start — so it's a setup problem, not a fitness one.` };
+
+  return { kind:"mixed", drill:DRILL[key],
+    text:`${what[0].toUpperCase()+what.slice(1)} crept in about halfway through.` };
+}
+
+/** The whole session, in the coach's voice. */
+function sessionInsights(out){
+  const res = [];
+  for(const o of out){
+    if(o.kind === "guided") continue;
+    const i = phaseInsight(o);
+    if(i) res.push({ movement:o.name, ...i });
+  }
+  return res;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   8b · SESSION CORE — the state machine, headless.
+   The DOM/coach/TelLog never appear here: every side effect is EMITTED as a
+   tagged object, in the exact order the legacy code performed it, and the thin
+   shell below replays them 1:1. This is what makes the Session vector-testable —
+   and therefore what makes the Swift port of it a red/green loop instead of a
+   leap of faith. env = { speaking(), portrait(), hasDemo(id) }.
+   ═══════════════════════════════════════════════════════════════ */
+/* Standing movements frame well in portrait; floor work wants landscape. Advice only. */
+const PORTRAIT_OK = new Set(["squat","sit-to-stand","wall-sit","wall-push-up"]);
+
+function resolveMovementCore(id, tierId){
+  const mv = M[id];
+  if(!mv) return null;
+  if(!mv.tiers.includes(tierId) && mv.regression && M[mv.regression]?.tiers.includes(tierId))
+    return { id: mv.regression, mv: M[mv.regression] };
+  if(!mv.tiers.includes(tierId) && mv.regressionOf && M[mv.regressionOf]?.tiers.includes(tierId))
+    return { id: mv.regressionOf, mv: M[mv.regressionOf] };
+  return { id, mv };
+}
+const scaledCore = (v, isRest, tierId) => Math.max(isRest ? 8 : 5,
+  Math.round(v * (isRest ? TIERS[tierId].rest : TIERS[tierId].effort)));
+
+class SessionCore {
+  constructor(plan, tierId, env){
+    this.plan = plan; this.tierId = tierId; this.env = env;
+    this.steps = expandPlanSteps(plan.steps, tierId);
+    this.i = -1;
+    this.ev = null; this.mv = null; this.mvId = null;
+    this.restLeft = 0; this.marks = new Set(); this.degraded = false;
+    this.pendingFix = null; this.regressOffered = false;
+    this.breathT = 0; this.breathIn = true;
+    this.state = "setup";
+    this.portraitTipped = false;
+    this.armT = 0;
+    this.out = []; this.bestHold = 0; this.reps = 0;
+    this.scoreSum = 0; this.scoreN = 0; this.corr = {};
+    this.done = false;
+    this.lastSaid = {}; this._now = 0;
+  }
+
+  /* ── COOLDOWNS AT THE SOURCE ──
+     Legacy pushed cooled lines EVERY frame and let the Coach swallow them. Audibly
+     identical — the Coach keys its cooldown on the same (key, cool) — but the effect
+     stream carried ~30 duplicate entries per second. That was invisible when effects
+     were direct DOM calls; now that the effect list is the artefact the Swift port is
+     verified against, it made session vectors enormous and their diffs unreadable.
+     Same rule, same keys, applied once at the boundary. */
+  cooled(E){
+    const out = [];
+    for(const e of E){
+      if(e.t === "say" && e.cool > 0){
+        const last = this.lastSaid[e.key];
+        if(last != null && this._now - last < e.cool/1000) continue;
+        this.lastSaid[e.key] = this._now;
+      }
+      out.push(e);
+    }
+    return out;
+  }
+
+  start(){ return this.cooled(this.startRaw()); }
+  tick(frame, dt, now){ this._now = now; return this.cooled(this.tickRaw(frame, dt, now)); }
+  retier(tierId){ return this.cooled(this.retierRaw(tierId)); }
+  swapToRegression(){ return this.cooled(this.swapToRegressionRaw()); }
+
+  startRaw(){
+    const E = [];
+    E.push({t:"reset"});
+    E.push({t:"say", key:"start", vars:{p:this.plan.name}, pri:3, style:"teach"});
+    this.next(E);
+    return E;
+  }
+
+  next(E){
+    this.i++;
+    this.marks = new Set(); this.degraded = false; this.pendingFix = null;
+    this.lastSaid = {};   /* a new movement is a new context: "get into position"
+                             shouldn't be muted because the last one just said it */
+    this.regressOffered = false; E.push({t:"regressHide"});
+
+    if(this.i >= this.steps.length){ this.finish(E); return; }
+    const st = this.steps[this.i];
+
+    if(st.rest != null){
+      this.mv = null; this.ev = null;
+      this.restLeft = scaledCore(st.rest, true, this.tierId);
+      E.push({t:"bigLabel", s:"REST"});
+      E.push({t:"bigTime", secs:this.restLeft});
+      E.push({t:"scoreCol", on:false});
+      E.push({t:"say", key:"rest", vars:{t:this.restLeft}, pri:3});
+      return;
+    }
+
+    const res = resolveMovementCore(st.ex, this.tierId);
+    if(!res){ this.next(E); return; }
+    this.mvId = res.id; this.mv = res.mv;
+    this.ev = new Evaluator(this.mv, this.tierId);
+    this.target = scaledCore(st.t, false, this.tierId);
+
+    this.state = "setup"; this.armT = 0;
+    E.push({t:"bigLabel", s:"GET SET"});
+    E.push(this.mv.kind === "reps" ? {t:"bigReps", n:0, tgt:this.target} : {t:"bigTime", secs:0});
+    E.push({t:"scoreCol", on:this.mv.kind !== "guided"});
+    E.push({t:"scoreLab", s:"FORM"});
+    const camLine = this.mv.camera === "facing"
+      ? "turn to FACE the camera" : "camera side-on, whole body in frame";
+
+    if((st.setNo || 1) > 1){
+      E.push({t:"tip", html:`<b>${this.mv.name}</b> · set ${st.setNo}/${st.setTotal}`});
+      E.push({t:"say", key:"nextset", vars:{c:st.setNo, o:st.setTotal}, pri:3, style:"teach"});
+    } else {
+      let tip = `<b>${this.mv.name}</b> — ${camLine}`;
+      if(st.setTotal > 1) tip += ` · set 1/${st.setTotal}`;
+      E.push({t:"tip", html:tip});
+      if(st.pre) E.push({t:"say", key:st.pre, pri:3});
+      E.push({t:"say", key:`teach.${this.mvId}`, vars:{t:this.target}, pri:3, style:"teach"});
+      if(this.env.portrait() && !PORTRAIT_OK.has(this.mvId) && !this.portraitTipped){
+        this.portraitTipped = true;
+        E.push({t:"say", key:"rotatetip", pri:1, style:"teach"});
+      }
+    }
+  }
+
+  tryArm(inPose, dt, now, E){
+    if(inPose) this.armT += dt; else this.armT = 0;
+    if(this.env.speaking()) return false;
+    if(this.armT < 1.2) return false;
+    this.state = "active";
+    E.push({t:"setupBar", on:false});
+    E.push({t:"demoOff"});
+    this.ev.arm(now);
+    E.push({t:"log", force:true, row:{ phase:"set", movement:this.mvId, state:"active", event:"armed",
+      cue:"", reps:"", form_score:"", in_position:true, in_pose:"", blocked_by:"", targets:{} }});
+    E.push({t:"bigLabel", s:this.mv.kind === "reps" ? "REPS" : "HOLD"});
+    E.push({t:"say", key:"go", pri:3});
+    return true;
+  }
+
+  tickRaw(frame, dt, now){
+    const E = [];
+    if(this.done) return E;
+    const st = this.steps[this.i];
+    if(!st) return E;
+
+    if(st.rest != null){
+      this.restLeft -= dt;
+      E.push({t:"bigTime", secs:Math.max(0, this.restLeft)});
+      const nxName = this.steps[this.i+1]?.ex ? M[this.steps[this.i+1].ex]?.name : "—";
+      E.push({t:"telRest", next:nxName});
+      if(!this.marks.has("restlog")){
+        this.marks.add("restlog");
+        E.push({t:"log", force:true, row:{ phase:"rest", movement:"", state:"rest", event:"rest_start",
+          cue:"", reps:"", form_score:"", in_position:"", in_pose:"", blocked_by:"", targets:{} }});
+      }
+      const nx = this.steps[this.i+1];
+      if(this.restLeft <= 10 && !this.marks.has("gs") && nx?.ex){
+        this.marks.add("gs");
+        if((nx.setNo || 1) > 1){ /* intra-set: the round is announced by next(), not here */ }
+        else {
+          const r = resolveMovementCore(nx.ex, this.tierId);
+          E.push({t:"say", key:"getset", vars:{x: r ? r.mv.name.toLowerCase() : ""}, pri:3});
+        }
+      }
+      /* One number per second, on the second — "Three. Two. One." spoken as a single
+         line arrived all at once and stopped meaning anything. The num effect plays
+         the recorded number clips (falling back to TTS if one is missing). */
+      for(const n of [3,2,1])
+        if(this.restLeft <= n + 0.4 && !this.marks.has("cd"+n)){
+          this.marks.add("cd"+n); E.push({t:"num", n, pri:3});
+        }
+      if(this.restLeft <= 0) this.next(E);
+      return E;
+    }
+
+    if(!frame){ E.push({t:"say", key:"vis", pri:2, cool:7000}); return E; }
+    const r = this.ev.evaluate(frame, dt, now);
+    if(!r.ok){ E.push({t:"say", key:"vis", pri:2, cool:7000}); E.push({t:"telText", s:"tracking lost"}); return E; }
+
+    E.push({t:"telem", r, state:this.state});
+
+    const snap = ev2 => ({ phase:"set", movement:this.mvId, state:this.state,
+      event: ev2 || "", cue: ev2 === "cue" ? r.cue : "",
+      reps: r.reps ?? "", form_score: r.score ?? "",
+      in_position: r.inPosition ?? "", in_pose: r.inPose ?? "",
+      view: r.sideness != null ? Math.round(r.sideness) : "",
+      blocked_by: (r.blocking || []).join("|"),
+      targets: Object.fromEntries((r.readings || []).map(x =>
+        [x.t.id, +x.v.toFixed(Math.abs(x.v) < 1 ? 4 : 1)])) });
+    E.push({t:"log", row:snap()});
+
+    if(this.state === "setup"){
+      E.push(this.mv.kind === "reps" ? {t:"bigReps", n:0, tgt:this.target} : {t:"bigTime", secs:0});
+      E.push({t:"setupBar", on:this.env.hasDemo(this.mvId)});
+      if(!this.tryArm(r.inPosition, dt, now, E)){
+        if(r.viewCue && !this.env.speaking()) E.push({t:"say", key:r.viewCue, pri:2, cool:8000, style:"teach"});
+        else if(r.framing && !r.framing.ok && !this.env.speaking())
+          E.push({t:"say", key:framingCue(r.framing), pri:2, cool:6000, style:"teach"});
+        else if(r.framing && r.framing.verdict === "far" && !this.env.speaking())
+          E.push({t:"say", key:"tooFar", pri:1, cool:9000, style:"teach"});
+        else if(!r.inPosition && !this.env.speaking()) E.push({t:"say", key:"getin", pri:2, cool:6000, style:"teach"});
+        else if(r.inPosition && !this.env.speaking()) E.push({t:"banner", text:"Hold it there…", style:"good"});
+      }
+      return E;
+    }
+
+    if(r.viewLimited && !this.marks.has("viewtip")){
+      this.marks.add("viewtip");
+      E.push({t:"say", key:this.mv.view === "front" ? "turnfront" : "turnside", pri:1, style:"teach"});
+    }
+
+    if(this.mv.kind === "guided"){
+      this.breathT += dt;
+      const cyc = this.mv.breath?.cycle || 4.5;
+      if(this.breathT >= cyc){
+        this.breathT = 0; this.breathIn = !this.breathIn;
+        E.push({t:"say", key:this.breathIn ? "inhale" : "exhale", pri:1, style:"breath"});
+      }
+      E.push({t:"bigTime", secs:this.ev.hold});
+      if(this.ev.hold >= this.target) this.endPhase(E);
+      return E;
+    }
+
+    if(r.score != null){
+      this.scoreSum += r.score; this.scoreN++;
+      E.push({t:"scoreFill", pct:r.score});
+      E.push({t:"scoreLab", s:TIERS[this.tierId].showScore ? `FORM ${r.score}` : "FORM"});
+    }
+
+    if(r.regress && !this.regressOffered){
+      this.regressOffered = true;
+      const easier = M[this.mv.regression];
+      E.push({t:"regressShow", text:`This one's tough right now. Want to try the ${easier.name.toLowerCase()} instead? Same shape, less weight.`});
+      E.push({t:"say", key:"regress", pri:3, style:"teach"});
+    }
+
+    if(r.cue){
+      E.push({t:"log", force:true, row:snap("cue")});
+      E.push({t:"say", key:r.cue, pri:2});
+      this.pendingFix = {key:r.cue, at:now, low:r.score ?? 100};
+      this.corr[r.cue] = (this.corr[r.cue] || 0) + 1;
+    } else if(this.pendingFix){
+      /* BUG #15 (found by the headless trace). The old test read the SLOW score EMA
+         (α = 0.1) on the very next frame — still 97 one frame after the sag cue — so
+         "there, that's it" fired ~30ms after the correction, while the fault was
+         still happening, and the REAL fix a second later went unpraised. The praise
+         moment is the product's core promise, so it must be earned: the score has to
+         have actually DIPPED since the cue (≤78) before recovering (>80). */
+      this.pendingFix.low = Math.min(this.pendingFix.low, r.score ?? 100);
+      if(now - this.pendingFix.at >= 6) this.pendingFix = null;
+      else if(this.pendingFix.low <= 78 && r.score > 80){
+        E.push({t:"say", key:"fixed", pri:2, cool:8000, style:"good"});
+        this.pendingFix = null;
+      }
+    } else if(r.score > 85){
+      E.push({t:"say", key:"goodhold", pri:0, cool:this.tierId === "learning" ? 11000 : 15000, style:"good"});
+    }
+
+    if(this.mv.kind === "hold"){
+      E.push({t:"bigTime", secs:this.ev.hold});
+      const h = this.ev.hold, t = this.target;
+      if(!this.marks.has("half") && h >= t/2){ this.marks.add("half"); E.push({t:"say", key:"half", pri:1}); }
+      if(t >= 20 && !this.marks.has("ten") && h >= t-10){ this.marks.add("ten"); E.push({t:"say", key:"tenleft", pri:1}); }
+      for(const n of [3,2,1])
+        if(!this.marks.has("cd"+n) && h >= t - n - 0.4){
+          this.marks.add("cd"+n); E.push({t:"num", n, pri:3});
+        }
+      if(!this.degraded && r.score < 55 && h > 6 && h < t-6){
+        this.degraded = true; this.target = Math.round(h + 5);
+        E.push({t:"say", key:"degrade", pri:3});
+      }
+      /* endPhase → next() may enter a REST step (mv = null). Legacy fell through
+         into the reps check below and threw ONCE PER COMPLETED HOLD — invisible
+         live only because the rAF handle was already scheduled. Bug ledger #14,
+         surfaced the first time this state machine ran headlessly. */
+      if(h >= this.target){ this.endPhase(E); return E; }
+    }
+
+    if(this.mv && this.mv.kind === "reps" && r.short && this.mv.reps.shortCue){
+      /* Range too short — the counterpart to the tempo cue. Between them, both ways a
+         rep can fail to count now have a voice. */
+      E.push({t:"say", key:this.mv.reps.shortCue, pri:2, cool:6000, style:"teach"});
+    }
+
+    if(this.mv && this.mv.kind === "reps" && r.tooFast){
+      /* Rejected for tempo — say why. Silence here would read as a broken counter,
+         which is the one impression this product cannot afford. */
+      E.push({t:"say", key:"slower", pri:2, cool:5000, style:"teach"});
+    }
+
+    if(this.mv && this.mv.kind === "reps" && r.rep){
+      E.push({t:"log", force:true, row:snap("rep")});
+      E.push({t:"pop"});
+      const n = r.reps;
+      E.push({t:"bigReps", n, tgt:this.target});
+      if(this.mv.breath && this.tierId === "learning"){
+        E.push({t:"say", key:r.state === "up" ? "exhale" : "inhale", pri:1, cool:2500, style:"breath"});
+      }
+      if(n >= this.target){ this.endPhase(E); return E; }
+      if(!this.marks.has("half") && n >= Math.ceil(this.target/2)){ this.marks.add("half"); E.push({t:"say", key:"half", pri:1}); }
+      else if(!this.marks.has("two") && n >= this.target-2){ this.marks.add("two"); E.push({t:"say", key:"twomore", pri:1}); }
+      else if(this.tierId === "learning") E.push({t:"say", key:"goodrep", pri:2, cool:3000, style:"good"});
+      /* Rep counts at Strong were TTS ("seven") while num clips 1–120 sat rendered
+         and unused — a mid-set voice swap on every single rep. */
+      else E.push({t:"num", n, pri:2});
+    }
+    return E;
+  }
+
+  retierRaw(tierId){
+    const E = [];
+    this.tierId = tierId;
+    if(this.ev) this.ev.tier = tierId;
+    const st = this.steps[this.i];
+    if(st?.ex && this.mv) this.target = scaledCore(st.t, false, tierId);
+    E.push({t:"scoreCol", on:!!this.mv && this.mv.kind !== "guided"});
+    return E;
+  }
+
+  swapToRegressionRaw(){
+    const E = [];
+    const id = this.mv.regression;
+    if(!id || !M[id]) return E;
+    this.mvId = id; this.mv = M[id];
+    this.ev = new Evaluator(this.mv, this.tierId);
+    this.target = scaledCore(this.steps[this.i].t, false, this.tierId);
+    E.push({t:"regressHide"});
+    this.state = "setup"; this.armT = 0;
+    E.push({t:"bigLabel", s:"GET SET"});
+    E.push(this.mv.kind === "reps" ? {t:"bigReps", n:0, tgt:this.target} : {t:"bigTime", secs:0});
+    E.push({t:"tip", html:`<b>${this.mv.name}</b> — camera side-on, whole body in frame`});
+    E.push({t:"say", key:`teach.${this.mvId}`, vars:{t:this.target}, pri:3, style:"teach"});
+    return E;
+  }
+
+  endPhase(E){
+    const ev = this.ev;
+    if(ev){
+      const achieved = this.mv.kind === "reps" ? ev.rep?.display() ?? 0 : ev.hold;
+      const st = this.steps[this.i];
+      const setLabel = st && st.setTotal > 1 ? ` (set ${st.setNo}/${st.setTotal})` : "";
+      this.out.push({ id:this.mvId, name:this.mv.name + setLabel, kind:this.mv.kind,
+                      target:this.target, achieved, score:ev.avg(), early:this.degraded,
+                      log: ev.log.slice(), trace: ev.scoreTrace.slice(),
+                      repMs: ev.rep ? ev.rep.durations.slice() : [] });
+      if(this.mv.kind === "hold" || this.mv.kind === "guided") this.bestHold = Math.max(this.bestHold, ev.hold);
+      else this.reps += achieved;
+      for(const [k,v] of Object.entries(ev.corrections)) this.corr[k] = (this.corr[k]||0) + v;
+    }
+    E.push({t:"say", key:"done", pri:3});
+    this.next(E);
+  }
+
+  finish(E){
+    this.done = true;
+    const avg = this.scoreN ? Math.round(this.scoreSum/this.scoreN) : 0;
+    const insights = sessionInsights(this.out);
+    const fatigue   = insights.find(i => i.kind === "fatigue");
+    const technique = insights.find(i => i.kind === "technique");
+    const tempo     = insights.find(i => i.kind === "tempo");
+    const lead      = fatigue || technique || tempo || insights[0];
+    const nothingWrong = !lead;
+    const headline = nothingWrong
+      ? (this.tierId === "learning"
+          ? "Nothing to fix — you held the shapes well. That's real progress, and it's rarer than you'd think."
+          : "Nothing major to fix. Time to make it harder.")
+      : lead.text;
+    E.push({t:"finish", payload:{ avg, insights, headline, nothingWrong,
+      bestHold:this.bestHold, reps:this.reps, out:this.out, tierId:this.tierId }});
+  }
+}
+
+class CalibrationCore {
+  constructor(env){
+    this.env = env;
+    this.ev = new Evaluator(M["plank"], "building");
+    this.t = 0; this.max = 30; this.done = false;
+    this.armed = false; this.armT = 0;
+    this.lastSaid = {}; this._now = 0;
+  }
+
+  /* ── COOLDOWNS AT THE SOURCE ──
+     Legacy pushed cooled lines EVERY frame and let the Coach swallow them. Audibly
+     identical — the Coach keys its cooldown on the same (key, cool) — but the effect
+     stream carried ~30 duplicate entries per second. That was invisible when effects
+     were direct DOM calls; now that the effect list is the artefact the Swift port is
+     verified against, it made session vectors enormous and their diffs unreadable.
+     Same rule, same keys, applied once at the boundary. */
+  cooled(E){
+    const out = [];
+    for(const e of E){
+      if(e.t === "say" && e.cool > 0){
+        const last = this.lastSaid[e.key];
+        if(last != null && this._now - last < e.cool/1000) continue;
+        this.lastSaid[e.key] = this._now;
+      }
+      out.push(e);
+    }
+    return out;
+  }
+
+  /* Lives HERE because CalibrationCore is what calls it — it was mistakenly defined
+     on SessionCore, so every calibration tick where the user was visible but not yet
+     in position threw. That is the normal state for the first seconds of a new user's
+     very first session. */
+  framingKey(frame){
+    const f = framing(frame, neededJoints(M["plank"]));
+    if(!f.ok) return framingCue(f);
+    if(f.verdict === "far") return "tooFar";
+    return "getin";
+  }
+
+  tick(frame, dt, now){ this._now = now; return this.cooled(this.tickRaw(frame, dt, now)); }
+
+  tickRaw(frame, dt, now){
+    const E = [];
+    if(!frame){ E.push({t:"say", key:"vis", pri:2, cool:7000}); return E; }
+    const r = this.ev.evaluate(frame, dt, now);
+    if(!r.ok) return E;
+    E.push({t:"telem", r, state:this.armed ? "active" : "setup"});
+    E.push({t:"log", row:{ phase:"calibration", movement:"plank", state:this.armed ? "active" : "setup",
+      event:"", cue:"", reps:"", form_score: r.score ?? "",
+      in_position: r.inPosition ?? "", in_pose: r.inPose ?? "",
+      view: r.sideness != null ? Math.round(r.sideness) : "",
+      blocked_by: (r.blocking || []).join("|"),
+      targets: Object.fromEntries((r.readings || []).map(x =>
+        [x.t.id, +x.v.toFixed(Math.abs(x.v) < 1 ? 4 : 1)])) }});
+    if(r.score != null) E.push({t:"scoreFill", pct:r.score});
+
+    if(!this.armed){
+      E.push({t:"bigLabel", s:"GET SET"});
+      E.push({t:"bigTime", secs:0});
+      if(r.inPosition) this.armT += dt; else this.armT = 0;
+      if(!this.env.speaking() && this.armT >= 1.2){
+        this.armed = true;
+        this.ev.arm(now);
+        E.push({t:"log", force:true, row:{ phase:"calibration", movement:"plank", state:"active", event:"armed",
+          cue:"", reps:"", form_score:"", in_position:true, in_pose:"", blocked_by:"", targets:{} }});
+        E.push({t:"bigLabel", s:"HOLD"});
+        E.push({t:"say", key:"go", pri:3});
+      } else if(r.viewCue && !this.env.speaking()){
+        E.push({t:"say", key:r.viewCue, pri:2, cool:8000, style:"teach"});
+      } else if(!r.inPosition && !this.env.speaking()){
+        E.push({t:"say", key:this.framingKey(frame), pri:2, cool:6000, style:"teach"});
+      }
+      return E;
+    }
+
+    E.push({t:"bigTime", secs:this.ev.hold});
+    if(this.ev.hold >= this.max || (this.ev.hold > 5 && this.ev.outOfPose > 2.5)) this.finishCore(E);
+    this.t += dt;
+    return E;
+  }
+  finishCore(E){
+    if(this.done) return;
+    this.done = true;
+    const held = this.ev.hold, score = this.ev.avg() ?? 0;
+    let t;
+    if(held < 15 || score < 60) t = "learning";
+    else if(held >= 28 && score >= 85) t = "strong";
+    else t = "building";
+    const copy = {
+      learning: `You held ${Math.round(held)} seconds. That's a completely normal starting point — most people can't hold a clean plank at all at first. I'll teach you the movements from the ground up, one thing at a time.`,
+      building: `You held ${Math.round(held)} seconds with a decent line. You know what you're doing — I'll focus on quality rather than explaining the basics.`,
+      strong:   `${Math.round(held)} seconds, form score ${score}. You clearly train. I'll keep it short and push you.`
+    }[t];
+    E.push({t:"calibFinish", payload:{ held, score, tierId:t, copy }});
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEMONSTRATION — "show me how"
+
+   Asked for on day one and never built: the coach DESCRIBES the movement but never
+   SHOWS it. A beginner cannot act on a description of a shape they've never held.
+
+   The elegant answer, given we already have a pose engine and a skeleton renderer:
+   demonstrate with a SKELETON, not a video.
+     · no filming, no illustrator, no hosting, no licensing
+     · tiny (a few hundred numbers per movement)
+     · it is literally the shape you will be judged against — no ambiguity
+     · works offline
+
+   Two sources:
+     1. hand-authored keyframes below (crude but immediate), and
+     2. the RECORDER — perform the movement well once and the app captures it,
+        which replaces the crude version with a real human performance. Yours.
+
+   And the GHOST: draw the reference faintly behind the live skeleton so the user
+   can literally match the shape.
+   ═══════════════════════════════════════════════════════════════ */
+/* Generated by the FK rig (gen-refs.mjs): every pose authored as joint ANGLES on a
+   skeleton with fixed segment lengths, then validated by the engine itself —
+   each demo must pass its own exercise (holds arm + score; rep demos count reps
+   on their own thresholds). Do not hand-edit coordinates; re-generate. */
+const REF = {
+  "plank": {"loop":true,"fps":5,"labels":["From all fours\u2026","One straight line \u2014 ears to heels","\u2026and breathe"],"frames":[{"hip":[0.463,0.548],"shoulder":[0.234,0.487],"ear":[0.164,0.481],"elbow":[0.234,0.621],"wrist":[0.234,0.748],"knee":[0.463,0.746],"ankle":[0.653,0.746],"heel":[0.633,0.78],"toe":[0.712,0.78]},{"hip":[0.463,0.548],"shoulder":[0.226,0.556],"ear":[0.155,0.559],"elbow":[0.226,0.691],"wrist":[0.1,0.691],"knee":[0.661,0.555],"ankle":[0.85,0.562],"heel":[0.886,0.578],"toe":[0.9,0.656]},{"hip":[0.463,0.548],"shoulder":[0.227,0.565],"ear":[0.156,0.567],"elbow":[0.227,0.699],"wrist":[0.1,0.699],"knee":[0.661,0.555],"ankle":[0.85,0.562],"heel":[0.886,0.578],"toe":[0.9,0.656]}]},
+  "knee-plank": {"loop":true,"fps":5,"labels":["From all fours\u2026","Straight from ears to knees","\u2026and breathe"],"frames":[{"hip":[0.504,0.496],"shoulder":[0.249,0.428],"ear":[0.17,0.421],"elbow":[0.249,0.577],"wrist":[0.249,0.718],"knee":[0.504,0.716],"ankle":[0.715,0.716],"heel":[0.693,0.754],"toe":[0.781,0.754]},{"hip":[0.504,0.496],"shoulder":[0.241,0.469],"ear":[0.163,0.463],"elbow":[0.241,0.618],"wrist":[0.101,0.618],"knee":[0.717,0.549],"ankle":[0.822,0.732],"heel":[0.856,0.704],"toe":[0.9,0.78]},{"hip":[0.504,0.496],"shoulder":[0.241,0.478],"ear":[0.162,0.472],"elbow":[0.241,0.627],"wrist":[0.1,0.627],"knee":[0.717,0.549],"ankle":[0.822,0.732],"heel":[0.856,0.704],"toe":[0.9,0.78]}]},
+  "side-plank-knee": {"loop":true,"fps":5,"labels":["Lying on your side\u2026","Lift the hips \u2014 straight to the knees","Hold and breathe"],"frames":[{"hip":[0.548,0.382],"shoulder":[0.266,0.332],"ear":[0.181,0.32],"elbow":[0.252,0.494],"wrist":[0.1,0.507],"knee":[0.765,0.483],"ankle":[0.745,0.711],"heel":[0.714,0.747],"toe":[0.804,0.78]},{"hip":[0.548,0.382],"shoulder":[0.263,0.412],"ear":[0.178,0.421],"elbow":[0.263,0.574],"wrist":[0.111,0.574],"knee":[0.782,0.431],"ankle":[0.841,0.653],"heel":[0.81,0.689],"toe":[0.9,0.722]},{"hip":[0.548,0.382],"shoulder":[0.265,0.422],"ear":[0.179,0.431],"elbow":[0.265,0.584],"wrist":[0.112,0.584],"knee":[0.782,0.431],"ankle":[0.841,0.653],"heel":[0.81,0.689],"toe":[0.9,0.722]}]},
+  "side-plank": {"loop":true,"fps":5,"labels":["Lying on your side\u2026","Hips up \u2014 one long line","Hold and breathe"],"frames":[{"hip":[0.472,0.612],"shoulder":[0.238,0.571],"ear":[0.167,0.561],"elbow":[0.226,0.705],"wrist":[0.1,0.716],"knee":[0.668,0.64],"ankle":[0.856,0.666],"heel":[0.876,0.701],"toe":[0.896,0.777]},{"hip":[0.472,0.612],"shoulder":[0.236,0.637],"ear":[0.165,0.645],"elbow":[0.236,0.772],"wrist":[0.109,0.772],"knee":[0.67,0.616],"ankle":[0.86,0.619],"heel":[0.88,0.653],"toe":[0.9,0.73]},{"hip":[0.472,0.612],"shoulder":[0.237,0.645],"ear":[0.166,0.653],"elbow":[0.237,0.78],"wrist":[0.11,0.78],"knee":[0.67,0.616],"ankle":[0.86,0.619],"heel":[0.88,0.653],"toe":[0.9,0.73]}]},
+  "dead-bug": {"loop":true,"fps":5,"labels":["Arms up, knees up","Reach away \u2014 back stays flat"],"frames":[{"hip":[0.551,0.755],"shoulder":[0.336,0.755],"ear":[0.271,0.755],"elbow":[0.325,0.633],"wrist":[0.315,0.519],"knee":[0.557,0.575],"ankle":[0.563,0.748],"heel":[0.528,0.754],"toe":[0.569,0.695]},{"hip":[0.551,0.755],"shoulder":[0.336,0.755],"ear":[0.271,0.755],"elbow":[0.215,0.772],"wrist":[0.1,0.78],"knee":[0.725,0.712],"ankle":[0.894,0.676],"heel":[0.859,0.682],"toe":[0.9,0.623]}]},
+  "bird-dog": {"loop":true,"fps":5,"labels":["On all fours\u2026","Reach \u2014 arm and leg in line","Hips level, and breathe"],"frames":[{"hip":[0.527,0.581],"shoulder":[0.33,0.528],"ear":[0.269,0.523],"elbow":[0.33,0.643],"wrist":[0.33,0.752],"knee":[0.527,0.751],"ankle":[0.69,0.751],"heel":[0.673,0.78],"toe":[0.741,0.78]},{"hip":[0.527,0.581],"shoulder":[0.325,0.556],"ear":[0.264,0.552],"elbow":[0.21,0.544],"wrist":[0.101,0.536],"knee":[0.696,0.593],"ankle":[0.859,0.604],"heel":[0.876,0.633],"toe":[0.899,0.697]},{"hip":[0.527,0.581],"shoulder":[0.324,0.563],"ear":[0.263,0.559],"elbow":[0.209,0.555],"wrist":[0.1,0.551],"knee":[0.697,0.587],"ankle":[0.86,0.592],"heel":[0.877,0.622],"toe":[0.9,0.686]}]},
+  "glute-bridge": {"loop":true,"fps":5,"labels":["Heels close, arms down","Drive up \u2014 squeeze at the top"],"frames":[{"hip":[0.591,0.41],"shoulder":[0.254,0.41],"ear":[0.153,0.41],"elbow":[0.444,0.427],"wrist":[0.623,0.442],"knee":[0.752,0.18],"ankle":[0.638,0.424],"heel":[0.583,0.434],"toe":[0.647,0.342]},{"hip":[0.591,0.41],"shoulder":[0.278,0.284],"ear":[0.178,0.271],"elbow":[0.465,0.323],"wrist":[0.643,0.348],"knee":[0.847,0.524],"ankle":[0.738,0.77],"heel":[0.682,0.78],"toe":[0.747,0.688]}]},
+  "sit-to-stand": {"loop":true,"fps":5,"labels":["Chest forward\u2026","Drive through the feet \u2014 stand tall"],"props":{"chair":true},"frames":[{"hip":[0.401,0.436],"shoulder":[0.462,0.249],"ear":[0.477,0.192],"elbow":[0.518,0.345],"wrist":[0.616,0.381],"knee":[0.565,0.424],"ankle":[0.559,0.581],"heel":[0.536,0.605],"toe":[0.601,0.6]},{"hip":[0.401,0.436],"shoulder":[0.401,0.239],"ear":[0.401,0.18],"elbow":[0.401,0.35],"wrist":[0.401,0.455],"knee":[0.407,0.599],"ankle":[0.407,0.757],"heel":[0.384,0.78],"toe":[0.449,0.775]}]},
+  "squat": {"loop":true,"fps":5,"labels":["Stand tall","Sit back \u2014 chest proud, full depth"],"frames":[{"hip":[0.354,0.436],"shoulder":[0.354,0.239],"ear":[0.354,0.18],"elbow":[0.354,0.35],"wrist":[0.354,0.455],"knee":[0.354,0.6],"ankle":[0.354,0.757],"heel":[0.331,0.78],"toe":[0.396,0.775]},{"hip":[0.354,0.436],"shoulder":[0.458,0.269],"ear":[0.486,0.217],"elbow":[0.566,0.24],"wrist":[0.669,0.225],"knee":[0.516,0.413],"ankle":[0.494,0.569],"heel":[0.471,0.592],"toe":[0.536,0.587]}]},
+  "wall-sit": {"loop":true,"fps":5,"labels":["Back on the wall\u2026","Slide to ninety \u2014 and hold","Breathe"],"props":{"wallBehind":true},"frames":[{"hip":[0.409,0.436],"shoulder":[0.409,0.239],"ear":[0.409,0.18],"elbow":[0.409,0.35],"wrist":[0.409,0.455],"knee":[0.409,0.6],"ankle":[0.409,0.757],"heel":[0.385,0.78],"toe":[0.451,0.775]},{"hip":[0.409,0.436],"shoulder":[0.415,0.239],"ear":[0.418,0.18],"elbow":[0.419,0.35],"wrist":[0.423,0.455],"knee":[0.572,0.43],"ankle":[0.572,0.587],"heel":[0.549,0.61],"toe":[0.615,0.606]},{"hip":[0.409,0.436],"shoulder":[0.415,0.239],"ear":[0.418,0.18],"elbow":[0.419,0.35],"wrist":[0.423,0.455],"knee":[0.572,0.43],"ankle":[0.572,0.587],"heel":[0.549,0.61],"toe":[0.615,0.606]}]},
+  "hollow-tuck": {"loop":true,"fps":5,"labels":["Back pressed down","Knees in, shoulders just off"],"frames":[{"hip":[0.685,0.737],"shoulder":[0.235,0.737],"ear":[0.1,0.737],"elbow":[0.489,0.759],"wrist":[0.728,0.78],"knee":[0.9,0.43],"ankle":[0.748,0.756],"heel":[0.674,0.769],"toe":[0.76,0.646]},{"hip":[0.685,0.737],"shoulder":[0.255,0.605],"ear":[0.132,0.548],"elbow":[0.501,0.671],"wrist":[0.737,0.713],"knee":[0.825,0.389],"ankle":[0.732,0.737],"heel":[0.658,0.75],"toe":[0.744,0.627]}]},
+  "hollow-hold": {"loop":true,"fps":5,"labels":["Back pressed down\u2026","Legs long and low \u2014 hold","Keep breathing"],"frames":[{"hip":[0.454,0.754],"shoulder":[0.182,0.754],"ear":[0.1,0.754],"elbow":[0.336,0.767],"wrist":[0.48,0.78],"knee":[0.678,0.714],"ankle":[0.893,0.677],"heel":[0.848,0.684],"toe":[0.9,0.61]},{"hip":[0.454,0.754],"shoulder":[0.192,0.679],"ear":[0.118,0.644],"elbow":[0.345,0.7],"wrist":[0.49,0.713],"knee":[0.668,0.676],"ankle":[0.873,0.602],"heel":[0.828,0.61],"toe":[0.88,0.535]},{"hip":[0.454,0.754],"shoulder":[0.19,0.688],"ear":[0.115,0.656],"elbow":[0.343,0.709],"wrist":[0.488,0.722],"knee":[0.669,0.68],"ankle":[0.875,0.609],"heel":[0.83,0.617],"toe":[0.883,0.542]}]},
+  "crunch": {"loop":true,"fps":5,"labels":["Down \u2014 chin soft, inhale","Down \u2014 chin soft, inhale","Peel the shoulder blades up \u2014 exhale"],"frames":[{"hip":[0.71,0.752],"shoulder":[0.312,0.752],"ear":[0.193,0.752],"elbow":[0.1,0.674],"wrist":[0.263,0.538],"knee":[0.9,0.48],"ankle":[0.765,0.768],"heel":[0.7,0.78],"toe":[0.776,0.671]},{"hip":[0.71,0.752],"shoulder":[0.312,0.752],"ear":[0.193,0.752],"elbow":[0.101,0.671],"wrist":[0.262,0.532],"knee":[0.9,0.48],"ankle":[0.765,0.768],"heel":[0.7,0.78],"toe":[0.776,0.671]},{"hip":[0.71,0.752],"shoulder":[0.355,0.571],"ear":[0.256,0.504],"elbow":[0.16,0.458],"wrist":[0.31,0.308],"knee":[0.9,0.48],"ankle":[0.765,0.768],"heel":[0.7,0.78],"toe":[0.776,0.671]}]},
+  "leg-raise-bent": {"loop":true,"fps":5,"labels":["Knees bent, back flat","Lift toward your chest \u2014 lower slow"],"frames":[{"hip":[0.685,0.737],"shoulder":[0.235,0.737],"ear":[0.1,0.737],"elbow":[0.489,0.759],"wrist":[0.728,0.78],"knee":[0.9,0.43],"ankle":[0.748,0.756],"heel":[0.674,0.769],"toe":[0.76,0.646]},{"hip":[0.685,0.737],"shoulder":[0.235,0.737],"ear":[0.1,0.737],"elbow":[0.489,0.759],"wrist":[0.728,0.78],"knee":[0.652,0.363],"ankle":[0.745,0.711],"heel":[0.672,0.724],"toe":[0.758,0.601]}]},
+  "leg-raise": {"loop":true,"fps":5,"labels":["Legs long, back pinned","Up to vertical \u2014 slow on the way down"],"frames":[{"hip":[0.452,0.754],"shoulder":[0.181,0.754],"ear":[0.1,0.754],"elbow":[0.334,0.767],"wrist":[0.478,0.78],"knee":[0.677,0.73],"ankle":[0.893,0.708],"heel":[0.848,0.716],"toe":[0.9,0.642]},{"hip":[0.452,0.754],"shoulder":[0.181,0.754],"ear":[0.1,0.754],"elbow":[0.334,0.767],"wrist":[0.478,0.78],"knee":[0.46,0.528],"ankle":[0.468,0.312],"heel":[0.423,0.319],"toe":[0.475,0.245]}]},
+  "cat-cow": {"loop":true,"fps":4,"labels":["Round it up \u2014 exhale","Let it dip \u2014 inhale"],"frames":[{"hip":[0.534,0.44],"shoulder":[0.198,0.35],"ear":[0.113,0.29],"elbow":[0.198,0.547],"wrist":[0.198,0.732],"knee":[0.534,0.73],"ankle":[0.813,0.73],"heel":[0.784,0.78],"toe":[0.9,0.78],"spine":[0.366,0.313]},{"hip":[0.534,0.44],"shoulder":[0.198,0.35],"ear":[0.1,0.385],"elbow":[0.198,0.547],"wrist":[0.198,0.732],"knee":[0.534,0.73],"ankle":[0.813,0.73],"heel":[0.784,0.78],"toe":[0.9,0.78],"spine":[0.366,0.458]}]},
+  "downward-dog": {"loop":true,"fps":5,"labels":["From all fours\u2026","Hips up and back \u2014 long spine","Heels reach down"],"frames":[{"hip":[0.551,0.431],"shoulder":[0.306,0.366],"ear":[0.231,0.359],"elbow":[0.306,0.509],"wrist":[0.306,0.644],"knee":[0.551,0.642],"ankle":[0.753,0.642],"heel":[0.732,0.679],"toe":[0.816,0.679]},{"hip":[0.551,0.431],"shoulder":[0.338,0.569],"ear":[0.276,0.612],"elbow":[0.218,0.647],"wrist":[0.105,0.721],"knee":[0.702,0.578],"ankle":[0.846,0.721],"heel":[0.819,0.753],"toe":[0.9,0.775]},{"hip":[0.551,0.431],"shoulder":[0.336,0.565],"ear":[0.273,0.608],"elbow":[0.214,0.641],"wrist":[0.1,0.713],"knee":[0.7,0.58],"ankle":[0.841,0.726],"heel":[0.813,0.758],"toe":[0.895,0.78]}]},
+  "cobra": {"loop":true,"fps":5,"labels":["Lying flat\u2026","Gently lift the chest \u2014 shoulders down","This should feel good"],"frames":[{"hip":[0.459,0.649],"shoulder":[0.25,0.649],"ear":[0.188,0.652],"elbow":[0.21,0.761],"wrist":[0.1,0.78],"knee":[0.633,0.649],"ankle":[0.8,0.649],"heel":[0.831,0.635],"toe":[0.9,0.647]},{"hip":[0.459,0.649],"shoulder":[0.273,0.555],"ear":[0.22,0.522],"elbow":[0.214,0.657],"wrist":[0.167,0.556],"knee":[0.633,0.649],"ankle":[0.8,0.649],"heel":[0.831,0.635],"toe":[0.9,0.647]},{"hip":[0.459,0.649],"shoulder":[0.27,0.561],"ear":[0.215,0.53],"elbow":[0.211,0.664],"wrist":[0.16,0.564],"knee":[0.633,0.649],"ankle":[0.8,0.649],"heel":[0.831,0.635],"toe":[0.9,0.647]}]},
+  "wall-push-up": {"loop":true,"fps":5,"labels":["Arms long on the wall","Chest to the wall \u2014 push back"],"props":{"wallFront":true},"frames":[{"hip":[0.42,0.435],"shoulder":[0.399,0.239],"ear":[0.397,0.18],"elbow":[0.51,0.231],"wrist":[0.615,0.224],"knee":[0.425,0.599],"ankle":[0.431,0.757],"heel":[0.408,0.78],"toe":[0.473,0.775]},{"hip":[0.42,0.435],"shoulder":[0.389,0.24],"ear":[0.385,0.181],"elbow":[0.484,0.3],"wrist":[0.566,0.235],"knee":[0.431,0.599],"ankle":[0.442,0.756],"heel":[0.419,0.779],"toe":[0.484,0.775]}]},
+  "knee-push-up": {"loop":true,"fps":5,"labels":["Straight head to knees","Chest low \u2014 push the floor away"],"frames":[{"hip":[0.504,0.386],"shoulder":[0.197,0.332],"ear":[0.104,0.322],"elbow":[0.197,0.508],"wrist":[0.197,0.674],"knee":[0.744,0.483],"ankle":[0.808,0.724],"heel":[0.848,0.69],"toe":[0.9,0.78]},{"hip":[0.504,0.386],"shoulder":[0.193,0.364],"ear":[0.1,0.361],"elbow":[0.332,0.473],"wrist":[0.221,0.596],"knee":[0.744,0.483],"ankle":[0.808,0.724],"heel":[0.848,0.69],"toe":[0.9,0.78]}]},
+  "push-up": {"loop":true,"fps":5,"labels":["One straight line","Chest low \u2014 full lockout"],"frames":[{"hip":[0.431,0.526],"shoulder":[0.178,0.5],"ear":[0.101,0.497],"elbow":[0.178,0.644],"wrist":[0.178,0.78],"knee":[0.643,0.548],"ankle":[0.845,0.57],"heel":[0.884,0.588],"toe":[0.899,0.671]},{"hip":[0.431,0.526],"shoulder":[0.176,0.522],"ear":[0.1,0.523],"elbow":[0.295,0.605],"wrist":[0.199,0.701],"knee":[0.643,0.541],"ankle":[0.847,0.555],"heel":[0.885,0.573],"toe":[0.9,0.657]}]},
+};
+
+/** Recorded references override the hand-authored ones. */
+const RECORDED = {};
+
+function refFor(id){ return RECORDED[id] || REF[id] || null; }
+/* Recordings persist in localStorage (this file runs from your own server, not
+   inside claude.ai, so storage works). Export/import keeps them portable. */
+function loadSavedRefs(){
+  try{
+    const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
+    Object.assign(RECORDED, saved);
+  }catch(e){}
+}
+function saveRef(id, ref){
+  RECORDED[id] = ref;
+  try{
+    const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
+    saved[id] = ref;
+    localStorage.setItem("fc_refs", JSON.stringify(saved));
+  }catch(e){}
+}
+
+/** Interpolate a reference at time t (seconds). Returns a joint→[x,y] map. */
+function refPose(ref, t){
+  const F = ref.frames;
+  if(F.length === 1) return F[0];
+  const per = 1 / (ref.fps / 6);                    // slow, deliberate — it's a demo
+  const span = per * (F.length - 1) * 2;            // out and back
+  let u = (t % span) / per;
+  let i = Math.floor(u), f = u - i;
+  if(i >= F.length - 1){ i = F.length - 1 - (i - (F.length - 1)); f = 1 - f; }
+  f = f * f * (3 - 2 * f);                          // smoothstep — ease each keyframe blend
+  i = Math.max(0, Math.min(i, F.length - 1));
+  const a = F[i];
+  const b = F[Math.min(i + 1, F.length - 1)];
+  const out = {};
+  for(const j of JOINTS){
+    if(!a[j] || !b[j]) continue;
+    out[j] = [a[j][0] + (b[j][0]-a[j][0])*f, a[j][1] + (b[j][1]-a[j][1])*f];
+  }
+  if(a.spine && b.spine)
+    out.spine = [a.spine[0]+(b.spine[0]-a.spine[0])*f, a.spine[1]+(b.spine[1]-a.spine[1])*f];
+  else { const sp = (f < .5 ? a : b).spine; if(sp) out.spine = sp; }
+  out._label = (ref.labels || [])[f < .5 ? i : Math.min(i+1, F.length-1)] || null;
+  return out;
+}
+
+/** Draw a reference figure. `ghost` = faint, behind the live one.
+    Not a wire skeleton: capsule limbs, a filled torso and a head, so it reads
+    as a person at a glance. */
+function drawRef(ctx, pose, W, H, ghost){
+  if(!pose) return;
+  const P = j => pose[j] ? [pose[j][0]*W, pose[j][1]*H] : null;
+  const scale = (() => {                       // body size on screen → limb thickness
+    const sh = P("shoulder"), hp = P("hip");
+    return sh && hp ? Math.max(Math.hypot(hp[0]-sh[0], hp[1]-sh[1]), 40) : 120;
+  })();
+  const col = a => ghost ? `rgba(111,168,220,${a*.32})` : `rgba(111,168,220,${a})`;
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+  // ground line under the lowest contact point
+  const low = Math.max(...["ankle","heel","toe","wrist","knee"].map(j => P(j)?.[1] ?? 0));
+  if(low > 0 && !ghost){
+    ctx.strokeStyle = "rgba(237,234,226,.12)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W*.06, low + scale*.06); ctx.lineTo(W*.94, low + scale*.06); ctx.stroke();
+  }
+
+  // torso: a thick capsule shoulder→hip
+  const sh = P("shoulder"), hp = P("hip");
+  if(sh && hp){
+    ctx.strokeStyle = col(.85); ctx.lineWidth = scale * .34;
+    ctx.beginPath(); ctx.moveTo(sh[0], sh[1]);
+    if(pose.spine){
+      // pass THROUGH the spine point: control = 2·spine − midpoint
+      const sx = pose.spine[0]*W, sy = pose.spine[1]*H;
+      ctx.quadraticCurveTo(2*sx - (sh[0]+hp[0])/2, 2*sy - (sh[1]+hp[1])/2, hp[0], hp[1]);
+    } else ctx.lineTo(hp[0], hp[1]);
+    ctx.stroke();
+  }
+
+  // limbs: capsules, thicker near the body
+  const limb = (a, b, w) => {
+    const pa = P(a), pb = P(b);
+    if(!pa || !pb) return;
+    ctx.strokeStyle = col(.9); ctx.lineWidth = scale * w;
+    ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke();
+  };
+  limb("shoulder","elbow",.15); limb("elbow","wrist",.12);
+  limb("hip","knee",.18);       limb("knee","ankle",.14);
+  limb("ankle","heel",.10);     limb("heel","toe",.09);
+
+  // head: a circle just beyond the ear, along the shoulder→ear line
+  const er = P("ear");
+  if(er && sh){
+    const dx = er[0]-sh[0], dy = er[1]-sh[1], d = Math.hypot(dx,dy) || 1;
+    const r = scale * .21;
+    ctx.fillStyle = col(.9);
+    ctx.beginPath();
+    ctx.arc(er[0] + dx/d * r*.4, er[1] + dy/d * r*.4, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUDIOBANK — how the coach stops sounding like a robot.
+
+   speechSynthesis is concatenative TTS. It has a hard quality ceiling; no amount of
+   tuning gets it to sound like a person. But we don't need general speech — the coach's
+   lines are a FINITE, KNOWN SET (~300).
+
+   So: render each line ONCE with a neural TTS (ElevenLabs / Cartesia), ship the audio,
+   play local files.
+     · cost      one-off, ~£10–30. NOT per-user. Zero running cost survives.
+     · latency   lower than TTS — it's a local file.
+     · quality   actually human.
+     · offline   yes.
+     · size      ~300 clips × 25KB ≈ 8MB.
+
+   Dynamic values are handled by SPLICING, exactly as satnavs do:
+       "plank"  +  "forty"  +  "seconds"
+   Rep counts are the most robotic thing in the app today and the easiest to fix.
+
+   Drop MP3s next to this file as:
+       voice/<persona>/<tier>/<key>_<variant>.mp3     e.g. voice/steady/learning/sag_0.mp3
+       voice/num/<n>.mp3                              e.g. voice/num/40.mp3
+   Anything missing simply falls back to TTS, so you can add clips one at a time.
+   ═══════════════════════════════════════════════════════════════ */
+const AudioBank = {
+  enabled: false,          // flipped on automatically if a manifest is found
+  manifest: new Set(),
+  cache: new Map(),
+
+  stamp: "",               // changes whenever the bank is re-rendered
+
+  async init(){
+    try{
+      const res = await fetch("voice/manifest.json", { cache:"no-store" });
+      if(!res.ok) return;
+      /* CACHE-BUSTING. A plain static server sends no Cache-Control on mp3s, so
+         browsers apply HEURISTIC caching and can serve a days-old clip without
+         ever revalidating. Re-render the bank and the app keeps playing the old
+         voice, with no network request to show for it. The manifest is rewritten
+         by every render, so its Last-Modified is a free version stamp — appending
+         it to each clip URL makes a re-render produce new URLs. */
+      const lm = res.headers.get("last-modified") || "";
+      this.stamp = lm ? String(Math.abs([...lm].reduce((h,c)=>((h<<5)-h+c.charCodeAt(0))|0,0))) : "";
+      const list = await res.json();
+      this.manifest = new Set(list);
+      this.enabled = this.manifest.size > 0;
+      console.log(`AudioBank: ${this.manifest.size} clips found — using recorded voice.`,
+                  this.stamp ? `(bank ${this.stamp})` : "");
+      /* init() is async and fire-and-forget, so the welcome screen renders BEFORE
+         the manifest lands and decides there are no recordings. Tell it again. */
+      if(typeof onBankReady === "function") onBankReady();
+    }catch(e){ /* no bank — TTS fallback, which is fine */ }
+  },
+
+  url(p){ return this.stamp ? `${p}?v=${this.stamp}` : p; },
+
+  path(key, variant){ return `voice/${persona}/${tier}/${key}_${variant}.mp3`; },
+  /* Numbers must be in the SAME VOICE as the sentence they're spliced into.
+     Originally every persona shared one voice/num/ folder rendered in the steady
+     voice, so on Warm or Energy you heard "Plank —" (your coach) "forty" (a
+     DIFFERENT person) "seconds" (your coach) — mid-sentence trainer swap, and rep
+     counts made it constant. Per-persona now, with the old shared folder kept as a
+     fallback so an un-re-rendered bank still works. */
+  numPath(n, personaId){
+    const own = `voice/${personaId || persona}/num/${n}.mp3`;
+    return this.has(own) ? own : `voice/num/${n}.mp3`;
+  },
+
+  has(p){ return this.enabled && this.manifest.has(p); },
+
+  /** Returns an <audio> ready to play, or null. */
+  get(p){
+    if(!this.has(p)) return null;
+    if(!this.cache.has(p)){
+      const a = new Audio(this.url(p));
+      a.preload = "auto";
+      this.cache.set(p, a);
+    }
+    return this.cache.get(p);
+  },
+
+  /** Play a sequence of clips back to back. Resolves when done. */
+  play(paths, onEnd){
+    const queue = paths.map(p => this.get(p)).filter(Boolean);
+    if(!queue.length){ onEnd?.(); return false; }
+    let i = 0;
+    const next = () => {
+      if(i >= queue.length){ onEnd?.(); return; }
+      const a = queue[i++];
+      a.currentTime = 0;
+      a.onended = next;
+      a.play().catch(() => next());
+    };
+    next();
+    return true;
+  },
+
+  stop(){ for(const a of this.cache.values()){ try{ a.pause(); }catch(e){} } }
+};
+AudioBank.init();
+loadSavedRefs();
+
+/* ═══════════════════════════════════════════════════════════════
+   7 · COACH VOICE — cascade lookup, priority queue
+   ═══════════════════════════════════════════════════════════════ */
+const VERSION = "4.8";
+console.log(`Form Coach v${VERSION}`);
+document.getElementById("verTag").textContent = `v${VERSION}`;   // one source of truth
+const $ = id => document.getElementById(id);
+const cueEl=$("cue"), voiceChk=$("voice");
+let persona = "steady", userName = "", tier = "building";
+/* The name is typed by the user and interpolated into markup. A double quote
+   breaks out of value="…" and mangles the field; anything angle-bracketed is
+   parsed as HTML. Local single-user app, so the security surface is small — but
+   the field corruption is real, the fix is four lines, and it costs nothing. */
+const esc = t => String(t).replace(/[&<>"']/g, c =>
+  ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+const lastPick = {};
+let lastVariant = 0;
+
+/** The bank phrase() will draw from — persona override → tier → base. */
+function bankFor(key){
+  const p = PERSONAS[persona];
+  return (p.over[tier] && p.over[tier][key]) || (TIER_LINES[tier] && TIER_LINES[tier][key]) || BASE[key];
+}
+
+const slugTok = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+/** Resolve a line to a clip sequence, or null → TTS.
+    PURE (has() injected) so it's headlessly testable — the previous version had a
+    gating bug that sent every line containing a number to TTS: it required the
+    whole-line clip to exist before it would try the spliced halves, and spliced
+    lines never HAVE a whole-line clip. */
+function clipPlanFor(personaId, tierId, key, variant, vars, tmpl, has){
+  const P   = (k, v) => `voice/${personaId}/${tierId}/${k}_${v}.mp3`;
+  const NUM = n => {
+    const own = `voice/${personaId}/num/${n}.mp3`;
+    return has(own) ? own : `voice/num/${n}.mp3`;
+  };
+  const TOK = t => `voice/${personaId}/tok/${slugTok(t)}.mp3`;
+
+  const tokens = tmpl.match(/\{[tpx]\}/g) || [];
+  if(tokens.length === 0){
+    const base = P(key, variant);
+    return has(base) ? [base] : null;
+  }
+  if(tokens.length > 1) return null;                       // multi-token line → TTS
+
+  let mid;
+  if(tokens[0] === "{t}"){ if(vars.t == null) return null; mid = NUM(vars.t); }
+  else { const val = tokens[0] === "{p}" ? vars.p : vars.x; if(!val) return null; mid = TOK(val); }
+  if(!has(mid)) return null;                               // can't say the middle → say it all in TTS
+
+  const seq = [P(key + ".a", variant), mid, P(key + ".b", variant)]
+    .filter(q => q === mid || has(q));
+  return seq.length ? seq : null;
+}
+function phrase(key, vars={}){
+  const bank = bankFor(key);
+  if(!bank || !bank.length) return null;
+  let i = Math.floor(Math.random()*bank.length);
+  if(bank.length > 1 && i === lastPick[key]) i = (i+1) % bank.length;
+  lastPick[key] = i;
+  lastVariant = i;                                   // so the Coach can find the matching clip
+  let s = bank[i]
+    .replace("{n}", userName ? ", " + userName : "")
+    .replace("{p}", vars.p || "")
+    .replace("{x}", vars.x || "")
+    .replace("{v}", vars.v || "")
+    .replace("{c}", vars.c != null ? String(vars.c) : "")
+    .replace("{o}", vars.o != null ? String(vars.o) : "")
+    .replace(/\{t\}/g, vars.t != null ? String(vars.t) : "");
+  return s.replace(/\{[a-z]\}/g, "").replace(/\s+/g," ").trim();
+}
+
+/* REAL-TIME COACHING.
+   The old queue was a FIFO: a correction generated at t=2s could be spoken at t=14s,
+   after a long teaching line finished — by which time it was no longer true.
+   A coach who tells you your hips dropped twelve seconds ago is worse than a silent one.
+
+   New rules:
+   · Every utterance carries a TTL. If it can't be spoken in time, it is DROPPED, not queued.
+   · Higher priority INTERRUPTS lower priority — it does not wait behind it.
+   · At most ONE thing pending. New speech replaces pending speech; it doesn't stack.
+
+   pri 3 = session control (never expires) · 2 = corrections & counts · 1 = milestones · 0 = ambient */
+const TTL = { 3: Infinity, 2: 1500, 1: 2500, 0: 1200 };
+
+class Coach {
+  constructor(){
+    this.cur = null; this.pending = null; this.last = {};
+    this.watchdog = null; this.voice = null;
+  }
+
+  speaking(){ return !!this.cur; }
+
+  /* The browser hands us whatever voice it feels like — usually the worst one it has.
+     Rank them: premium/enhanced first, then Google's remote voices (markedly better
+     than the local ones), then anything. This alone is most of the "it sounds like a
+     robot" complaint. */
+  pickVoice(){
+    const vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+    if(!vs.length) return null;
+    const score = v =>
+      (/premium|enhanced|natural|siri/i.test(v.name) ? 100 : 0) +
+      (!v.localService ? 50 : 0) +
+      (/google/i.test(v.name) ? 30 : 0) +
+      (/daniel|serena|samantha|karen|moira/i.test(v.name) ? 10 : 0);
+    return vs.slice().sort((a,b) => score(b) - score(a))[0];
+  }
+
+  say(key, {vars={}, pri=1, cool=0, style="", ttl=null} = {}){
+    const text = phrase(key, vars);
+    if(!text) return;
+    const now = performance.now();
+    if(cool && this.last[key] && now - this.last[key] < cool) return;
+    this.last[key] = now;
+    banner(text, style);
+    if(!voiceChk.checked) return;
+
+    /* Splice: "plank" + "forty" + "seconds" — how satnavs handle dynamic values.
+       Numbers come from voice/num/, plan and movement names from voice/<persona>/tok/. */
+    let clips = null;
+    if(AudioBank.enabled){
+      const tmpl = (bankFor(key) || [])[lastVariant] || "";
+      clips = clipPlanFor(persona, tier, key, lastVariant, vars, tmpl, q => AudioBank.has(q));
+      if(!clips) console.log(`AudioBank: TTS fallback — ${key}: "${text}"`);
+    }
+    this.push({ text, clips, pri, at: now, ttl: ttl ?? TTL[pri] ?? 1500 });
+  }
+
+  /** Raw text (rep counts). Must be instant or not at all — "seven" said late is just wrong. */
+  raw(text, pri = 2, ttl = 800){
+    if(!voiceChk.checked || !text) return;
+    const n = Number(text);
+    const clips = (!isNaN(n) && AudioBank.has(AudioBank.numPath(n)))
+      ? [AudioBank.numPath(n)] : null;
+    this.push({ text, clips, pri, at: performance.now(), ttl });
+  }
+
+  push(item){
+    if(!this.cur){ this.start(item); return; }
+    if(item.pri > this.cur.pri){          // interrupt — don't wait behind lower-priority chatter
+      this.cur = null;
+      clearTimeout(this.watchdog);
+      AudioBank.stop();
+      try{ speechSynthesis.cancel(); }catch(e){}
+      this.start(item);
+      return;
+    }
+    // Otherwise hold it as the single pending item, if it beats what's already waiting.
+    if(!this.pending || item.pri > this.pending.pri) this.pending = item;
+  }
+
+  start(item){
+    this.cur = item;
+    clearTimeout(this.watchdog);
+
+    const finish = () => {
+      if(this.cur !== item) return;
+      clearTimeout(this.watchdog);
+      this.cur = null;
+      this.drain();
+    };
+
+    /* Recorded clip first — a real human voice, instantly, from a local file.
+       Only fall back to robot-TTS if we don't have this line recorded. */
+    if(item.clips && AudioBank.play(item.clips, finish)){
+      this.watchdog = setTimeout(finish, 25000);
+      return;
+    }
+
+    /* THE WATCHDOG. Chrome frequently fails to fire onend on long utterances, and after
+       certain cancel sequences. When that happens this.cur never clears, speaking() is
+       true forever, and tryArm() can never proceed — the set silently never starts.
+       So we time the utterance ourselves and force-clear it if it overruns. */
+    const rate  = PERSONAS[persona].rate || 1;
+    const words = item.text.split(/\s+/).filter(Boolean).length;
+    const estMs = (words / (2.6 * rate)) * 1000 + 900;      // ~2.6 words/sec, plus slack
+    this.watchdog = setTimeout(finish, Math.min(estMs * 1.9, 22000));
+
+    try{
+      if(!this.voice){
+        this.voice = (chosenVoiceName &&
+          speechSynthesis.getVoices().find(v => v.name === chosenVoiceName)) || this.pickVoice();
+      }
+      const u = new SpeechSynthesisUtterance(item.text);
+      u.rate  = 1.0 * rate;
+      u.pitch = PERSONAS[persona].pitch;
+      if(this.voice) u.voice = this.voice;
+      u.onend = u.onerror = finish;
+      speechSynthesis.speak(u);
+    }catch(e){ finish(); }
+  }
+
+  drain(){
+    const p = this.pending;
+    this.pending = null;
+    if(!p) return;
+    if(performance.now() - p.at > p.ttl) return;   // STALE — late coaching is wrong coaching
+    this.start(p);
+  }
+
+  reset(){
+    clearTimeout(this.watchdog);
+    this.cur = null; this.pending = null; this.last = {};
+    AudioBank.stop();
+    try{ speechSynthesis.cancel(); }catch(e){}
+  }
+}
+const coach = new Coach();
+
+/* The browser never picks a good voice by itself. Rank what's installed, let the
+   person override, remember nothing — it's one dropdown. */
+let chosenVoiceName = null;
+/* Called by AudioBank.init() once the manifest resolves — the welcome screen is
+   already on screen by then and has drawn the wrong conclusion. */
+function onBankReady(){
+  if(!msgEl.hidden && $("voiceSel")) fillVoices();
+}
+
+function fillVoices(){
+  const sel = $("voiceSel");
+  if(!sel) return;
+  /* Brave's fingerprint shielding farbles getVoices() — it can legitimately return
+     nothing, and voiceschanged may never fire. The picker is only the TTS fallback,
+     so when the platform offers no choices, the row says so instead of sitting empty. */
+  const vs = (speechSynthesis.getVoices() || []).filter(v => (v.lang || "").startsWith("en"));
+  const note = $("voiceNote");
+  /* With the bank present the picker is dead weight — the recordings ARE the voice.
+     It only appears when we've genuinely fallen back to the browser's synthesiser. */
+  if(AudioBank.enabled){
+    sel.hidden = true;
+    if(note) note.textContent = "recorded coach voice";
+    return;
+  }
+  if(!vs.length){
+    sel.hidden = true;
+    if(note) note.textContent = "browser voice — the recorded coach voices ship with the app";
+    return;
+  }
+  sel.hidden = false;
+  if(note) note.textContent = "browser voice (fallback) — the real coach voices are recordings";
+  const best = coach.pickVoice();
+  sel.innerHTML = vs
+    .sort((a,b) => (b.name === best?.name) - (a.name === best?.name))
+    .map(v => `<option ${chosenVoiceName ? (v.name===chosenVoiceName?"selected":"")
+                                         : (best && v.name===best.name?"selected":"")}>${v.name}</option>`).join("");
+}
+try{ speechSynthesis.onvoiceschanged = fillVoices; }catch(e){}
+
+/* ── TELEMETRY LOG → CSV ──────────────────────────────────────────────
+   For threshold tuning from screen recordings. The trick is a SHARED CLOCK:
+   the ⏱ in the on-screen telemetry strip and the clock_s column in this log
+   are the same number. So: scrub the video to the frame where form went bad,
+   read the clock off the screen, find that row in the CSV — exact values,
+   no squinting at compressed pixels.
+
+   · one snapshot every ~100ms (10Hz — EMA-smoothed signals don't move faster)
+   · cue / rep / armed / set_start events logged the INSTANT they happen
+   · long sessions stay small: 10 min ≈ 6k rows ≈ a few hundred KB
+   csv() is DOM-free so it stays headlessly testable. */
+const TelLog = {
+  rows: [], keys: [], t0: 0, active: false, lastAt: -1,
+
+  start(){ this.rows = []; this.keys = []; this.t0 = performance.now();
+           this.lastAt = -1; this.active = true; },
+  stop(){ this.active = false; },
+  clock(){ return (performance.now() - this.t0) / 1000; },
+
+  /** o = {phase, movement, state, event, cue, blocked_by, reps, form_score,
+           in_position, in_pose, targets:{id:value}} · force=true bypasses the throttle */
+  log(o, force = false){
+    if(!this.active) return;
+    const t = this.clock();
+    if(!force){
+      if(this.lastAt >= 0 && t - this.lastAt < 0.1) return;
+      this.lastAt = t;
+    }
+    for(const k of Object.keys(o.targets || {}))
+      if(!this.keys.includes(k)) this.keys.push(k);
+    this.rows.push({ clock_s: +t.toFixed(2), ...o });
+  },
+
+  csv(){
+    const head = ["clock_s","phase","movement","state","event","reps","form_score",
+                  "in_position","in_pose","view","cue","blocked_by", ...this.keys];
+    const lines = [head.join(",")];
+    for(const r of this.rows){
+      lines.push(head.map(h => {
+        const v = this.keys.includes(h) ? (r.targets ? r.targets[h] : "") : r[h];
+        return v === undefined || v === null ? "" : String(v);
+      }).join(","));
+    }
+    return lines.join("\n");
+  }
+};
+
+function downloadTelemetry(){
+  if(!TelLog.rows.length) return;
+  const blob = new Blob([TelLog.csv()], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const d = new Date(), z = n => String(n).padStart(2, "0");
+  a.download = `formcoach-telemetry-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+$("csvBtn").onclick = downloadTelemetry;
+const clockTag = () => TelLog.active
+  ? `<span class="t meta">&#9201; <b>${TelLog.clock().toFixed(1)}</b></span>` : "";
+// voices load async in Chrome
+if(typeof speechSynthesis !== "undefined"){
+  speechSynthesis.onvoiceschanged = () => { coach.voice = coach.pickVoice(); };
+}
+
+const POSITIVE = new Set(["fixed","goodhold","goodrep","pr","half","twomore","done","encourage"]);
+function banner(text, style=""){
+  cueEl.textContent = text;
+  cueEl.className = "show" + (style ? " " + style : "");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   8 · SESSION ENGINE
+   ═══════════════════════════════════════════════════════════════ */
+const bigEl=$("big"), bigLabel=$("bigLabel"), scoreCol=$("scoreCol"), scoreFill=$("scoreFill"),
+      scoreLab=$("scoreLab"), telEl=$("tel"), tipEl=$("tip"), msgEl=$("msg"), msgInner=$("msgInner"),
+      regBox=$("regress"), regTxt=$("regressTxt");
+
+/** A plan step's movement, resolved for the user's tier (auto-regress if not offered). */
+let sess = null;
+
+/* ── SESSION SHELL — replays SessionCore effects onto the DOM/coach/TelLog, in
+      order, verbatim. All behaviour lives in the headless core; this is plumbing,
+      and it is deliberately too thin to contain a bug. ── */
+
+/* ── THE DIAL ──
+   Holds draw one continuous arc; reps split it into one segment per required
+   rep, so "3 of 8" is legible from across the room without reading a number.
+   Same component, two modes, and it needs no new engine data: the effects
+   already carry n/tgt for reps, and the core knows the target for holds. */
+const ringEl = $("ring"), dialEl = $("dial");
+let ringN = -1;
+function buildRing(n){
+  if(n === ringN) return;
+  ringN = n;
+  const C = 2*Math.PI*84, gap = n > 1 ? Math.min(7, C/n*0.16) : 0;
+  const seg = C/n - gap;
+  let h = "";
+  for(let i=0;i<n;i++){
+    const off = -(i*(C/n));
+    h += `<circle class="seg-t" cx="100" cy="100" r="84" stroke-width="7"
+            stroke-dasharray="${seg} ${C-seg}" stroke-dashoffset="${off}"/>`;
+  }
+  for(let i=0;i<n;i++){
+    const off = -(i*(C/n));
+    h += `<circle class="seg-f" data-i="${i}" cx="100" cy="100" r="84" stroke-width="7"
+            stroke-dasharray="0 ${C}" stroke-dashoffset="${off}"/>`;
+  }
+  ringEl.innerHTML = h;
+}
+function setRing(frac, total){
+  const n = Math.max(1, Math.min(40, total|0 || 1));
+  buildRing(n);
+  const C = 2*Math.PI*84, gap = n > 1 ? Math.min(7, C/n*0.16) : 0, seg = C/n - gap;
+  frac = Math.max(0, Math.min(1, frac || 0));
+  const fills = ringEl.querySelectorAll(".seg-f");
+  for(let i=0;i<n;i++){
+    const local = Math.max(0, Math.min(1, frac*n - i));
+    fills[i].setAttribute("stroke-dasharray", `${seg*local} ${C-seg*local}`);
+  }
+}
+let ringMode = "", ringPeak = 0;
+let lastTint = null;
+const shellEnv = {
+  speaking: () => coach.speaking(),
+  portrait: () => canvas.height > canvas.width,
+  hasDemo:  id => !!refFor(id),
+};
+
+function applyFx(host, E){
+  for(const e of E){
+    switch(e.t){
+      case "reset": coach.reset(); break;
+      case "say": coach.say(e.key, {vars:e.vars || {}, pri:e.pri, cool:e.cool ?? 0, style:e.style || ""}); break;
+      /* coach.raw() already resolves a numeric string to its clip AND routes it
+         through the speech queue with priority, TTL and interruption. Playing the
+         clip directly skipped all of that, so "3 · 2 · 1" fired on top of whatever
+         the coach was mid-sentence on instead of waiting its turn — arriving as a
+         jumble rather than a countdown. The TTL matters here too: a "3" delivered
+         late is worse than no "3" at all. */
+      case "num": coach.raw(String(e.n), e.pri, 900); break;
+      case "banner": banner(e.text, e.style); break;
+      case "bigLabel":
+        if(e.s !== "HOLD" && e.s !== "REPS") lastTint = null;
+        ringMode = e.s; ringPeak = 0;
+        dialEl.classList.toggle("rest", e.s === "REST");
+        if(e.s === "GET SET") setRing(0, 1);
+        bigLabel.textContent = e.s; break;
+      case "bigTime": {
+        setBig(clock(e.secs));
+        const tgt = host.core && (host.core.target ?? host.core.max);
+        if(ringMode === "REST"){ ringPeak = Math.max(ringPeak, e.secs);
+          setRing(ringPeak ? e.secs/ringPeak : 0, 1); }        /* drains as it counts down */
+        else setRing(tgt ? e.secs/tgt : 0, 1);
+        break; }
+      case "bigReps": setBig(`${e.n}/${e.tgt}`); setRing(e.tgt ? e.n/e.tgt : 0, e.tgt); break;
+      case "scoreCol": scoreCol.classList.toggle("on", e.on); break;
+      case "scoreLab": scoreLab.textContent = e.s; break;
+      case "scoreFill":
+        scoreFill.style.width = e.pct + "%";
+        /* same bands as the body tint, so the two channels can never disagree */
+        scoreFill.style.background = e.pct < 52 ? "var(--bad)" : e.pct < 78 ? "var(--warn)" : "var(--bone)";
+        break;
+      case "tip": tipEl.innerHTML = e.html; break;
+      case "telem": lastTint = e.r.tint || null; renderTelemetry(e.r, host.core.ev, e.state); break;
+      case "telText": telEl.textContent = e.s; break;
+      case "telRest":
+        telEl.innerHTML = clockTag() + `<span class="meta">resting · next: ${e.next}</span>`;
+        break;
+      case "setupBar": setupBar.classList.toggle("on", e.on); break;
+      case "demoOff": demoBox.classList.remove("on"); demoOn = false;
+                      document.body.classList.add("live"); break;
+      case "regressShow": regTxt.textContent = e.text; regBox.classList.add("on"); break;
+      case "regressHide": regBox.classList.remove("on"); break;
+      case "pop": pop(); break;
+      case "log": TelLog.log(e.row, !!e.force); break;
+      case "finish": renderFinish(e.payload); break;
+      case "calibFinish": renderCalibFinish(e.payload); break;
+    }
+  }
+}
+
+class Session {
+  constructor(plan){ this.core = new SessionCore(plan, tier, shellEnv); }
+  get mvId(){ return this.core.mvId; }
+  get mv(){ return this.core.mv; }
+  get done(){ return this.core.done; }
+  get ev(){ return this.core.ev; }
+  start(){ applyFx(this, this.core.start()); }
+  tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
+  retier(){ applyFx(this, this.core.retier(tier)); }
+  swapToRegression(){ applyFx(this, this.core.swapToRegression()); }
+}
+
+function renderFinish(p){
+  running = false;
+  tierSegEl.hidden = false;
+  document.body.classList.remove("live");
+  setupBar.classList.remove("on");
+  demoBox.classList.remove("on");
+  demoOn = false;
+  startBtn.textContent = "Start camera";
+  startBtn.classList.remove("live");
+  stopCam();
+
+  const rows = p.out.map(o => {
+    const i = p.insights.find(x => x.movement === o.name);
+    const badge = i ? `<span class="tag ${i.kind}">${i.kind}</span>` : "";
+    return `
+      <div class="prow">
+        <div class="pname">${o.name}${o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}</div>
+        <div class="pval">${o.kind === "reps" ? `${o.achieved}/${o.target}`
+                                              : `${Math.round(o.achieved)}s`}${
+          o.score != null && TIERS[p.tierId].showScore ? ` · ${o.score}` : ""}</div>
+      </div>`;
+  }).join("");
+
+  const detail = p.insights.length ? `
+      <div class="insights">
+        ${p.insights.map(i => `
+          <div class="ins ${i.kind}">
+            <b>${i.movement}</b> ${i.text}
+            ${i.drill ? `<span class="drill">Try this: ${i.drill}</span>` : ""}
+          </div>`).join("")}
+      </div>` : "";
+
+  msgInner.innerHTML = `
+      <h2>Session complete</h2>
+      <div class="stats">
+        <div><b>${clock(p.bestHold)}</b><span>BEST HOLD</span></div>
+        <div><b>${p.reps}</b><span>TOTAL REPS</span></div>
+        <div><b>${TIERS[p.tierId].showScore ? p.avg : "—"}</b><span>AVG FORM</span></div>
+      </div>
+      <div class="headline">${p.headline}</div>
+      ${detail}
+      <div class="phases">${rows}</div>
+      <button class="ctl primary" id="againBtn">Done</button>
+      <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;
+  msgEl.hidden = false;
+  TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
+  $("againBtn").onclick = () => showHome();
+  $("csvDlBtn").onclick = downloadTelemetry;
+
+  if(voiceChk.checked){
+    setTimeout(() => coach.raw(
+      `${p.tierId === "learning" ? "That's the session" : "Done"}${userName ? ", " + userName : ""}. ${p.headline}`,
+      3, 30000), 500);
+  }
+  banner(p.headline, "good");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   9 · TELEMETRY — the debug instrument. You can SEE the coach staying quiet.
+   ═══════════════════════════════════════════════════════════════ */
+function renderTelemetry(r, ev, state){
+  if(!r.readings.length){ telEl.innerHTML = clockTag() + '<span class="meta">guided — no form claims made</span>'; return; }
+  if(r.guided){
+    const g = r.readings.map(x => `<span class="t ${x.s<=0?"bad":"ok"}">⊘${x.t.id} <b>${Math.round(x.v)}</b></span>`).join("");
+    telEl.innerHTML = clockTag() + g + `<span class="t meta">guided — position checked, <b>no form claims made</b></span>`;
+    return;
+  }
+  const parts = r.readings.map(x => {
+    const isGate = x.t.pos || x.t.gate;
+    const failing = isGate && x.s <= 0;
+    const cls = failing ? "bad" : (x.s >= 85 ? "ok" : (x.cue ? "bad" : ""));
+    const v = Math.abs(x.v) < 1 ? x.v.toFixed(3) : Math.round(x.v);
+    const mark = x.t.pos ? "◆" : (x.t.gate ? "⊘" : "");   // ◆ position · ⊘ quality
+    return `<span class="t ${cls}">${mark}${x.t.id} <b>${v}</b> ` +
+           `<span class="meta">${Math.round(x.s)}</span></span>`;
+  }).join("");
+  const sup = r.suppressed.length
+    ? `<span class="sup">↓ swallowed: ${r.suppressed.join(", ")} (budget ${TIERS[tier].cueBudget})</span>` : "";
+  const st = state === "setup"
+    ? `<span class="t" style="color:var(--bone-2)">state <b style="color:var(--bone-2)">${
+        r.inPosition ? "IN POSITION — arming"
+                     : "WAITING · blocked by: " + (r.blocking.join(", ") || "?")}</b></span>` : "";
+  const vw = r.sideness != null
+    ? `<span class="t ${(r.blocking||[]).includes("view") ? "bad" : (r.viewLimited ? "sup" : "meta")}">view <b>${Math.round(r.sideness)}°</b>${r.viewLimited ? " · reduced coaching" : ""}</span>`
+    : "";
+  telEl.innerHTML = clockTag() + parts + st + vw +
+    `<span class="t meta">tier <b>${tier}</b> ×${TIERS[tier].tol}</span>` + sup;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   10 · CALIBRATION — infer the tier. We never ask "are you a beginner?"
+   ═══════════════════════════════════════════════════════════════ */
+let calib = null;
+let plankKnown = true;
+let calibMv = null;   // movement id during calibration, so demo/ghost can find its reference   // did the user say they can plank? drives auto-demo in calibration
+class Calibration {
+  constructor(){ this.core = new CalibrationCore(shellEnv); }
+  get ev(){ return this.core.ev; }
+  get armed(){ return this.core.armed; }
+  tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
+}
+
+function renderCalibFinish(p){
+  calibMv = null; setupBar.classList.remove("on");
+  document.body.classList.remove("live");
+  setTier(p.tierId);
+  calib = null;
+  running = false; stopCam();
+  TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
+  startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+
+  msgInner.innerHTML = `
+      <h2>${TIERS[p.tierId].label}</h2>
+      <p>${p.copy}</p>
+      <p style="font-size:12.5px">You can change this any time — it just sets how much I explain, how strict I am, and how hard the sessions are.</p>
+      <button class="ctl primary" id="okBtn">Sounds right</button>
+      <button class="ctl" id="chgBtn">Change it</button>`;
+  msgEl.hidden = false;
+  tierSegEl.hidden = false;   /* the verdict has landed — changing it is now a real choice */
+  /* The screen shows the full copy (with the score); the voice speaks the same
+     verdict as clips: "You held" + <num> + "seconds." + the per-tier sentence.
+     setTier() ran above, so the key resolves in the tier they just earned. */
+  if(p.held >= 1) coach.say("calib.held", { vars:{t:Math.round(p.held)}, pri:3 });
+  coach.say("calibverdict", { pri:3, style:"teach" });
+  $("okBtn").onclick = () => showHome();
+  $("chgBtn").onclick = () => showTierPicker();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   11 · SCREENS
+   ═══════════════════════════════════════════════════════════════ */
+function setTier(t){
+  tier = t;
+  document.querySelectorAll("#tierSeg button")
+    .forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tier === t)));
+}
+/* The header control is a mirror of TIERS, not a second copy of it — labels are
+   written from content at boot so renaming a tier is a three-string edit. */
+document.querySelectorAll("#tierSeg button").forEach(b => { b.textContent = TIERS[b.dataset.tier].label; });
+
+/* The control exists to CHANGE a tier you already have. During calibration it
+   would answer the exact question the app is about to answer by watching —
+   so it appears only after the verdict, or when the person chooses to skip. */
+const tierSegEl = document.getElementById("tierSeg");
+document.querySelectorAll("#tierSeg button").forEach(b => b.onclick = () => {
+  setTier(b.dataset.tier);
+  if(sess && running) sess.retier();       // flipping tier mid-set must not leave a stale target
+  else if(!running) showHome();
+});
+
+function showWelcome(){
+  tierSegEl.hidden = true;
+  msgEl.hidden = false;
+  msgInner.innerHTML = `
+    <h2>A coach that actually watches</h2>
+    <p>Prop your phone <b>side-on</b>, low down — about shin height, against a bottle
+       or a stack of books — a couple of metres back so it can see all of you. Standing
+       exercises want it higher and a little further; I'll tell you if I can't see you.<br>
+       Nothing is uploaded — the video never leaves this browser.</p>
+    <div class="lab pick">Do you know how to plank?</div>
+    <div class="chips" id="plankKnow">
+      <button class="chip" data-know="yes" aria-pressed="${plankKnown}">Yes, I've got it</button>
+      <button class="chip" data-know="no" aria-pressed="${!plankKnown}">Show me first</button>
+    </div>
+    <div class="field"><input id="nameIn" placeholder="What should I call you?" maxlength="20" value="${esc(userName)}"></div>
+    <div class="lab pick">Coach style</div>
+    <div class="chips">${Object.entries(PERSONAS).map(([k,p]) =>
+      `<button class="chip" data-p="${k}" aria-pressed="${k===persona}">${p.label}</button>`).join("")}</div>
+    <div class="row">
+      <button class="chip" id="voicePrev">&#9654; Hear it</button>
+      <select id="voiceSel" style="max-width:210px" hidden></select>
+    </div>
+    <div id="voiceNote" class="lab pick" style="margin:8px 0 16px;letter-spacing:.08em;text-transform:none"></div>
+    <p style="font-size:13px">To find your level, I'll watch you hold a <b>plank</b> for up to 30 seconds.</p>
+    <button class="ctl primary" id="calBtn">Start calibration</button>
+    <button class="ctl" id="skipBtn">Skip — pick my level</button>`;
+  msgInner.querySelectorAll("#plankKnow .chip, .chips:not(#plankKnow) .chip").forEach(() => {});
+  /* two independent single-select chip groups on one screen — scope each toggle to
+     its own container so choosing a coach doesn't clear the plank answer */
+  msgInner.querySelectorAll(".chips:not(#plankKnow) .chip").forEach(c => c.onclick = () => {
+    persona = c.dataset.p;
+    c.parentElement.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x===c)));
+  });
+  msgInner.querySelectorAll("#plankKnow .chip").forEach(c => c.onclick = () => {
+    plankKnown = c.dataset.know === "yes";
+    c.parentElement.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x===c)));
+  });
+  $("nameIn").oninput = e => { userName = e.target.value.trim(); };
+  fillVoices();
+  $("voiceSel").onchange = e => { chosenVoiceName = e.target.value; coach.voice = null; };
+  $("voicePrev").onclick = () => {
+    try{
+      speechSynthesis.cancel(); AudioBank.stop();
+      /* Preview the RECORDED voice for the selected persona when the bank exists —
+         the dropdown TTS voice only matters as the fallback. */
+      /* was hardcoded to building — on Learning or Strong it previewed a clip from
+         a tier the user isn't in. Try their tier first, then any tier that exists. */
+      for(const t of [tier, "building", "learning", "strong"]){
+        const clip = `voice/${persona}/${t}/fixed_0.mp3`;
+        if(AudioBank.has(clip)){ AudioBank.play([clip]); return; }
+      }
+      /* Speak the persona's ACTUAL line — Steady, Warm and Energy differ in words
+         even when the platform gives us one voice — with a light per-persona
+         delivery so the choice is audible, honestly approximated. */
+      /* prefer a key this persona actually overrides at the current tier, so the
+         preview can never be identical between two personas by accident */
+      const over = (PERSONAS[persona].over[tier] || {});
+      const bank = over.fixed || over.goodhold || over.go
+                || (TIER_LINES[tier] || {}).fixed || BASE.fixed;
+      const line = bank[0];
+      const u = new SpeechSynthesisUtterance(line.replace(/\{n\}/g, ""));
+      const v = speechSynthesis.getVoices().find(x => x.name === $("voiceSel").value);
+      if(v) u.voice = v;
+      const style = { steady:{rate:.92,pitch:.95}, warm:{rate:1.0,pitch:1.0},
+                      energy:{rate:1.12,pitch:1.08} }[persona] || {};
+      u.rate = style.rate ?? 1; u.pitch = style.pitch ?? 1;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  };
+  $("calBtn").onclick = () => beginCalibration();   // uses plankKnown, set above
+  $("skipBtn").onclick = () => showTierPicker();
+}
+
+function showTierPicker(){
+  tierSegEl.hidden = false;
+  msgEl.hidden = false;
+  msgInner.innerHTML = `
+    <h2>Where are you starting from?</h2>
+    <div class="tiercards">${Object.entries(TIERS).map(([k,t]) => `
+      <button class="tiercard" data-t="${k}" aria-pressed="${k===tier}">
+        <b>${t.label}</b><span>${t.blurb}</span>
+      </button>`).join("")}</div>
+    <button class="ctl primary" id="goBtn">Continue</button>`;
+  msgInner.querySelectorAll(".tiercard").forEach(c => c.onclick = () => {
+    setTier(c.dataset.t);
+    msgInner.querySelectorAll(".tiercard").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === c)));
+  });
+  $("goBtn").onclick = () => showHome();
+}
+
+function showHome(){
+  tierSegEl.hidden = false;
+  msgEl.hidden = false;
+  const avail = PLANS.filter(p => p.tiers.includes(tier));
+  msgInner.innerHTML = `
+    <h2>${userName ? `Hi, ${esc(userName)}` : "Choose a session"}</h2>
+    <p><b style="color:var(--good)">${TIERS[tier].label}</b> — ${TIERS[tier].blurb.toLowerCase()}<br>
+       <span style="font-size:12px">${TIERS[tier].cueBudget === 99 ? "Full running commentary" :
+         `Max ${TIERS[tier].cueBudget} correction${TIERS[tier].cueBudget>1?"s":""} per set`} ·
+         ${TIERS[tier].showScore ? "form score shown" : "no score shown — just a bar"} ·
+         effort ×${TIERS[tier].effort}</span></p>
+    <div class="plans">${avail.map(p => {
+      const seq = p.steps.filter(s => s.ex).map(s => {
+        const r = resolveMovementCore(s.ex, tier);
+        if(!r) return null;
+        const t = scaledCore(s.t, false, tier);
+        return `${r.mv.name.toUpperCase()} ${r.mv.kind === "reps" ? "×"+t : t+"s"}`;
+      }).filter(Boolean).join(" · ");
+      return `<button class="plancard" data-plan="${p.id}">
+        <b>${p.name}</b><span class="disc">${p.disc}</span>
+        <span class="blurb">${p.blurb}</span>
+        <span class="seq">${seq}</span></button>`;
+    }).join("")}</div>`;
+  msgInner.querySelectorAll(".plancard").forEach(c => c.onclick = () => {
+    const plan = PLANS.find(p => p.id === c.dataset.plan);
+    beginSession(plan);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   12 · CAMERA + LOOP
+   ═══════════════════════════════════════════════════════════════ */
+const video=$("cam"), canvas=$("overlay"), ctx=canvas.getContext("2d"), startBtn=$("startBtn");
+let landmarker=null, running=false, lastVideoTime=-1, lastT=0, pending=null;
+
+async function initModel(){
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  return PoseLandmarker.createFromOptions(vision, {
+    baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                  delegate:"GPU" },
+    runningMode:"VIDEO", numPoses:1 });
+}
+
+let camFacing = "user", wakeLock = null;
+function showCamChrome(on){ flipBtn.hidden = !on; }   /* flip only matters with a live feed */
+async function openCamera(){
+  msgInner.innerHTML = "<h2>Requesting camera…</h2>";
+  msgEl.hidden = false;
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+  video.srcObject = stream;
+  await video.play();
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+  try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){}   // phones sleep mid-plank otherwise
+  if(!landmarker){
+    msgInner.innerHTML = "<h2>Loading pose model…</h2><p>First run takes a few seconds.</p>";
+    landmarker = await initModel();
+  }
+  msgEl.hidden = true;
+  running = true; lastT = 0; lastVideoTime = -1;
+  startBtn.textContent = "Stop"; startBtn.classList.add("live"); showCamChrome(true);
+  requestAnimationFrame(loop);
+}
+function stopCam(){
+  if(video.srcObject){ video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+  try{ wakeLock?.release(); }catch(e){} wakeLock = null;
+  coach.reset();
+}
+
+$("flipBtn").onclick = async () => {
+  camFacing = camFacing === "user" ? "environment" : "user";
+  $("flipBtn").style.color = camFacing === "environment" ? "var(--good)" : "";
+  if(!video.srcObject) return;                    // takes effect next start
+  try{
+    video.srcObject.getTracks().forEach(t => t.stop());
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+    video.srcObject = stream;
+    await video.play();
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+  }catch(e){ camFacing = camFacing === "user" ? "environment" : "user"; }
+};
+
+async function beginCalibration(){
+  tierSegEl.hidden = true;
+  pending = "calibrate";
+  try{ await openCamera(); }catch(e){ camError(); return; }
+  calib = new Calibration(); sess = null;
+  TelLog.start(); $("csvBtn").hidden = true;
+  bigLabel.textContent = "HOLD";
+  scoreCol.classList.add("on");
+  scoreLab.textContent = "FORM";
+  tipEl.innerHTML = "<b>Calibration plank</b> — hold as long as you comfortably can, up to 30 seconds.";
+  /* The setup bar (Show me / Ghost) used to appear only inside a Session, so a
+     beginner met the plank with no visual guide at all. Calibration has a demo
+     (hasDemo('plank') is true) — surface it. */
+  calibMv = "plank";
+  setupBar.classList.toggle("on", hasDemo("plank"));
+  /* raw() speaks literal text and never touches the clip bank; say() routes through
+     the resolver so calibration uses the recorded coach like everything else. */
+  coach.say("teach.plank", { vars:{t:30}, pri:3, style:"teach" });
+  /* If they told us they don't know the movement, don't make them hunt for the
+     button — play the demonstration straight away. */
+  if(!plankKnown) startDemo();
+}
+async function beginSession(plan){
+  tierSegEl.hidden = true;   /* changing difficulty mid-set isn't a real choice — it
+                                returns at the debrief, where it is */
+  pending = "session";
+  try{ await openCamera(); }catch(e){ camError(); return; }
+  calib = null;
+  TelLog.start(); $("csvBtn").hidden = true;
+  sess = new Session(plan);
+  sess.start();
+}
+function camError(){
+  running = false;
+  msgEl.hidden = false;
+  msgInner.innerHTML = `<h2>Camera unavailable</h2>
+    <p>Browsers only allow camera access on <code>localhost</code> or https.<br><br>
+    Save this file, then run:<br><code>python3 -m http.server 8000</code><br><br>
+    and open <code>http://localhost:8000/form-coach-v4.html</code></p>
+    <button class="ctl" id="backBtn">Back</button>`;
+  $("backBtn").onclick = () => showHome();
+}
+
+startBtn.onclick = () => {
+  if(running){
+    running = false; stopCam(); sess = null; calib = null; calibMv = null; recMode = null;
+    TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
+    startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+    document.body.classList.remove("live");     /* else the header stays dimmed */
+    showCamChrome(false);
+    showHome();
+  } else showHome();
+};
+$("regressYes").onclick = () => sess?.swapToRegression();
+$("regressNo").onclick  = () => { regBox.classList.remove("on"); };
+
+const BONES = [["ear","shoulder"],["shoulder","elbow"],["elbow","wrist"],
+               ["shoulder","hip"],["hip","knee"],["knee","ankle"],
+               ["ankle","heel"],["heel","toe"]];
+
+/* ── "Show me how" panel + the ghost overlay ── */
+const demoBox = $("demo"), demoCanvas = $("demoCanvas"), demoLabel = $("demoLabel"),
+      setupBar = $("setupBar"), showBtn = $("showBtn"), ghostChk = $("ghostChk");
+const dctx = demoCanvas.getContext("2d");
+let demoOn = false, demoT = 0;
+
+demoCanvas.width = 480; demoCanvas.height = 340;
+/* Touch has no hover: tapping the stage brings the chrome back for a few
+   seconds, then it steps out of the way again. Without this the header would
+   sit at 30% for the rest of the session on every phone. */
+(() => {
+  const stageEl = document.getElementById("stage");
+  let chromeT = 0;
+  const reveal = () => {
+    if(!document.body.classList.contains("live")) return;
+    document.body.classList.add("chrome");
+    clearTimeout(chromeT);
+    chromeT = setTimeout(() => document.body.classList.remove("chrome"), 4500);
+  };
+  stageEl.addEventListener("pointerdown", reveal, {passive:true});
+  /* Rotating the phone changes the track geometry. Re-read it, or every angle
+     the engine measures is computed against a stale aspect ratio. */
+  const syncCanvas = () => {
+    if(!video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    stageEl.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+  };
+  addEventListener("orientationchange", () => setTimeout(syncCanvas, 320));
+  addEventListener("resize", () => { clearTimeout(chromeT); setTimeout(syncCanvas, 200); });
+})();
+
+function startDemo(){
+  const mvId = (sess && sess.mvId) || calibMv;
+  if(!mvId || !refFor(mvId)) return;
+  demoOn = true; demoBox.classList.add("on"); demoT = 0;
+  demoLabel.textContent = "Show me how";
+}
+showBtn.onclick = () => {
+  demoOn = !demoOn;
+  demoBox.classList.toggle("on", demoOn);
+  showBtn.textContent = demoOn ? "✕ Hide demo" : "▶ Show me how";
+  demoT = 0;
+};
+
+function drawDemo(dt){
+  const mvId = (sess && sess.mvId) || calibMv;
+  if(!demoOn || !mvId) return;
+  const ref = refFor(mvId);
+  if(!ref){ demoBox.classList.remove("on"); return; }
+  demoT += dt;
+  const W = demoCanvas.width, H = demoCanvas.height;
+  dctx.clearRect(0,0,W,H);
+  dctx.fillStyle = "#0C1116"; dctx.fillRect(0,0,W,H);
+  const pose = refPose(ref, demoT);
+  if(ref.props){
+    dctx.strokeStyle = "rgba(237,234,226,.28)"; dctx.lineWidth = 3; dctx.lineCap = "round";
+    const xs = ref.frames.flatMap(fr => Object.entries(fr)
+      .filter(([k]) => k !== "spine").map(([,v]) => v[0]));
+    if(ref.props.wallBehind || ref.props.wallFront){
+      const wx = (ref.props.wallFront ? Math.max(...xs) + .045 : Math.min(...xs) - .045) * W;
+      dctx.beginPath(); dctx.moveTo(wx, H*.08); dctx.lineTo(wx, H*.84); dctx.stroke();
+    }
+    if(ref.props.chair){
+      const f0 = ref.frames[0], hx = f0.hip[0]*W, hy = f0.hip[1]*H;
+      dctx.beginPath();
+      dctx.moveTo(hx - .15*W, hy + .012*H); dctx.lineTo(hx + .04*W, hy + .012*H);
+      dctx.moveTo(hx - .13*W, hy + .012*H); dctx.lineTo(hx - .13*W, H*.82);
+      dctx.moveTo(hx + .02*W, hy + .012*H); dctx.lineTo(hx + .02*W, H*.82);
+      dctx.stroke();
+    }
+  }
+  drawRef(dctx, pose, W, H, false);
+  demoLabel.textContent = `${sess.mv.name.toUpperCase()} — ${(pose._label || "this is the shape").toUpperCase()}`;
+}
+
+/* ── REFERENCE RECORDER ──
+   Perform the movement once, well. We capture the landmark stream (~15fps, 6s)
+   and replay it as the demo + ghost. The "Show me how" animation stops being my
+   hand-drawn keyframes and becomes an actual human — you. */
+let recMode = null;   // {id, phase:"getready"|"recording", t, frames}
+
+function recTick(frame, dt){
+  if(!recMode) return;
+  recMode.t += dt;
+
+  if(recMode.phase === "getready"){
+    banner(`Get into position — recording in ${Math.ceil(5 - recMode.t)}…`, "teach");
+    if(recMode.t >= 5){
+      recMode.phase = "recording"; recMode.t = 0; recMode.frames = [];
+      banner("● RECORDING — do the movement, slowly and well", "good");
+    }
+    return;
+  }
+  // recording: ~15fps
+  if(frame && (!recMode.frames.length || recMode.t - recMode.lastAt >= 1/15)){
+    recMode.lastAt = recMode.t;
+    const P = frame[frame.cam], f = {};
+    for(const j of JOINTS){ if(P[j]) f[j] = [+P[j].x.toFixed(3), +P[j].y.toFixed(3)]; }
+    recMode.frames.push(f);
+  }
+  if(recMode.t >= 6){
+    const ref = { loop:true, fps:15, frames:recMode.frames, recorded:true };
+    saveRef(recMode.id, ref);
+    const id = recMode.id;
+    recMode = null;
+    running = false; stopCam();
+    startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+    msgEl.hidden = false;
+    msgInner.innerHTML = `
+      <h2>Saved</h2>
+      <p>"Show me how" and the ghost overlay for <b>${M[id]?.name || id}</b> now replay
+         <b>your</b> movement — ${ (RECORDED[id]?.frames||[]).length } frames of it.</p>
+      <button class="ctl primary" id="recMore">Record another</button>
+      <button class="ctl" id="recDone">Done</button>`;
+    $("recMore").onclick = () => showRecPicker();
+    $("recDone").onclick = () => showHome();
+  }
+}
+
+async function beginRefRecording(id){
+  try{ await openCamera(); }catch(e){ camError(); return; }
+  calib = null; sess = null;
+  recMode = { id, phase:"getready", t:0, lastAt:-1, frames:[] };
+  bigLabel.textContent = "DEMO";
+  setBig("● REC");
+  scoreCol.classList.remove("on");
+  tipEl.innerHTML = `<b>Recording reference: ${M[id]?.name}</b> — side-on, whole body in frame. One slow, perfect rep cycle (or a clean hold).`;
+  coach.raw("Get into position. Recording starts in five seconds, and lasts six. Do it slowly, and do it well.", 3);
+}
+
+function showRecPicker(){
+  msgEl.hidden = false;
+  msgInner.innerHTML = `
+    <h2>Record demo references</h2>
+    <p>Perform each movement once, well — "Show me how" and the ghost then replay
+       <b>your real movement</b> instead of a stick-figure guess.<br>
+       <span style="font-size:12px">Saved in this browser. Export to keep them or move them.</span></p>
+    <div class="plans" style="max-height:300px;overflow:auto">${Object.entries(M).map(([id,mv]) => `
+      <button class="plancard" data-rec="${id}">
+        <b>${mv.name}</b><span class="disc">${RECORDED[id] ? "✓ RECORDED" : "stick figure"}</span>
+      </button>`).join("")}</div>
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <button class="ctl" id="refExport">Export refs</button>
+      <label class="ctl" style="cursor:pointer">Import refs<input type="file" id="refImport" accept=".json" hidden></label>
+      <button class="ctl" id="recBack">Back</button>
+    </div>`;
+  msgInner.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => beginRefRecording(b.dataset.rec));
+  $("refExport").onclick = () => {
+    const blob = new Blob([JSON.stringify(RECORDED)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "formcoach-refs.json";
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  $("refImport").onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const data = JSON.parse(r.result);
+        for(const [id, ref] of Object.entries(data)) saveRef(id, ref);
+        showRecPicker();
+      }catch(err){ alert("Not a valid refs file."); }
+    };
+    r.readAsText(f);
+  };
+  $("recBack").onclick = () => showHome();
+}
+
+function loop(t){
+  if(!running) return;
+  requestAnimationFrame(loop);
+  try{ loopBody(t); }
+  catch(e){ reportLoopError(e); }
+}
+
+/* Bug #14 hid here for months. requestAnimationFrame is scheduled BEFORE the work,
+   so a throw inside the frame killed only that frame's tail and the loop sailed on:
+   no console noise, no user signal, no crash — just a coach quietly doing less than
+   it should. Never again. One console.error every time, one banner per distinct
+   fault so a per-frame throw can't spam. */
+const loopErrs = new Set();
+function reportLoopError(e){
+  console.error("Form Coach loop error:", e);
+  const key = String((e && e.message) || e);
+  if(loopErrs.has(key)) return;
+  loopErrs.add(key);
+  banner("Something went wrong — stop and start the camera again.");
+}
+
+function loopBody(t){
+  if(video.currentTime === lastVideoTime) return;
+  lastVideoTime = video.currentTime;
+  const dt = Math.min(lastT ? (t - lastT)/1000 : 0, 0.1);
+  lastT = t;
+  const now = performance.now()/1000;
+
+  const res = landmarker.detectForVideo(video, performance.now());
+  const lms = res.landmarks && res.landmarks[0];
+  /* Tracking lost: the evaluator early-returns before computing a tint AND the session
+     stops emitting telemetry, so lastTint would keep its final value and repaint one
+     stale frame the moment tracking recovers. Clear it at the source. (Review #2, D.) */
+  if(!lms) lastTint = null;
+
+  ctx.save();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(camFacing === "user"){ ctx.translate(canvas.width,0); ctx.scale(-1,1); }   // mirror selfie view only
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  if(lms){
+    const f = buildFrame(lms, canvas.width / Math.max(1, canvas.height));
+    /* form tint — severity by hue AND thickness AND pulse rate, so it still reads
+       for anyone with red/green colour deficiency (and in bright sunlight). */
+    const tint = lastTint, tnow = performance.now();
+    const sevOf = (a,b) => {
+      if(!tint) return 0;
+      let m = 0;
+      for(const g of tint.segs)
+        if((g.a===a && g.b===b) || (g.a===b && g.b===a)) m = Math.max(m, g.sev);
+      return m;
+    };
+    const TINT = [null, {c:"#F0B429", w:7,  p:1400}, {c:"#E5484D", w:10, p:700}];
+    for(const s of ["left","right"]){
+      const on = s === f.cam;
+      for(const [a,b] of BONES){
+        const pa = f[s][a], pb = f[s][b];
+        if(!pa || !pb) continue;
+        const sev = on ? sevOf(a,b) : 0;
+        const t = TINT[sev];
+        if(t){
+          const pulse = 0.78 + 0.22*Math.sin(tnow/t.p*Math.PI*2);
+          ctx.strokeStyle = t.c;
+          ctx.lineWidth = t.w * pulse;
+          ctx.shadowColor = t.c; ctx.shadowBlur = 12*pulse;
+        } else {
+          ctx.strokeStyle = on ? "rgba(237,234,226,.92)" : "rgba(237,234,226,.28)";
+          ctx.lineWidth = on ? 4 : 2;
+          ctx.shadowBlur = 0;
+        }
+        ctx.beginPath();
+        ctx.moveTo(pa.x*canvas.width, pa.y*canvas.height);
+        ctx.lineTo(pb.x*canvas.width, pb.y*canvas.height);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+      /* a ring on the joint actually at fault — the "look here" marker */
+      if(on && tint && tint.focus && f[s][tint.focus]){
+        const p = f[s][tint.focus];
+        const r = 11 + 3*Math.sin(tnow/700*Math.PI*2);
+        ctx.strokeStyle = TINT[2].c; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(p.x*canvas.width, p.y*canvas.height, r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = on ? "#E9E7DE" : "rgba(233,231,222,.30)";   /* joints are chrome, not feedback — bone, not mint */
+      for(const j of JOINTS){
+        const p = f[s][j];
+        if(!p) continue;
+        ctx.beginPath();
+        ctx.arc(p.x*canvas.width, p.y*canvas.height, on ? 5 : 3, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+
+  /* THE GHOST — the reference skeleton, faint, behind you. Match the shape. */
+  const ghostMv = (sess && sess.mvId) || calibMv;
+  if(ghostChk.checked && ghostMv){
+    const ref = refFor(ghostMv);
+    if(ref){
+      ctx.save();
+      if(camFacing === "user"){ ctx.translate(canvas.width,0); ctx.scale(-1,1); }
+      drawRef(ctx, refPose(ref, t/1000), canvas.width, canvas.height, true);
+      ctx.restore();
+    }
+  }
+  drawDemo(dt);
+
+  const frame = lms ? buildFrame(lms, canvas.width / Math.max(1, canvas.height)) : null;
+  if(recMode) recTick(frame, dt);
+  else if(calib) calib.tick(frame, dt, now);
+  else if(sess) sess.tick(frame, dt, now);
+}
+
+const clock = s => { s = Math.max(0,s);
+  return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`; };
+const setBig = v => { bigEl.textContent = v; };
+const pop = () => { bigEl.classList.add("pop"); setTimeout(()=>bigEl.classList.remove("pop"),130); };
+
+setTier("building");
+showWelcome();
+</script>
+</body>
+</html>

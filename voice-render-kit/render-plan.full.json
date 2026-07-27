@@ -1,0 +1,3634 @@
+[
+ {
+  "path": "voice/steady/learning/go_0.mp3",
+  "text": "Whenever you're ready — no rush."
+ },
+ {
+  "path": "voice/steady/learning/go_1.mp3",
+  "text": "Off you go."
+ },
+ {
+  "path": "voice/steady/learning/rest.a_0.mp3",
+  "text": "Rest. Take"
+ },
+ {
+  "path": "voice/steady/learning/rest.b_0.mp3",
+  "text": "seconds — proper rest is part of the work."
+ },
+ {
+  "path": "voice/steady/learning/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/steady/learning/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/steady/learning/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/steady/learning/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/steady/learning/done_0.mp3",
+  "text": "Good. Rest."
+ },
+ {
+  "path": "voice/steady/learning/done_1.mp3",
+  "text": "That's the set. Well done."
+ },
+ {
+  "path": "voice/steady/learning/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/steady/learning/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/steady/learning/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/steady/learning/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/steady/learning/getin_0.mp3",
+  "text": "Take your time getting into position. I won't start the clock until you're set."
+ },
+ {
+  "path": "voice/steady/learning/getin_1.mp3",
+  "text": "No rush — get yourself set, and I'll start counting when you're in the shape."
+ },
+ {
+  "path": "voice/steady/learning/turnside_0.mp3",
+  "text": "Turn so I see you from the side — side-on is where I can really help you."
+ },
+ {
+  "path": "voice/steady/learning/turnfront_0.mp3",
+  "text": "Turn and face the camera for this one — that's the angle I read best."
+ },
+ {
+  "path": "voice/steady/learning/rotatetip_0.mp3",
+  "text": "Quick tip — for floor exercises, turning your phone sideways gives me a much better view of you."
+ },
+ {
+  "path": "voice/steady/learning/nextset_0.mp3",
+  "text": "Set {c} of {o}. Same as before — quality first, and rest whenever you need."
+ },
+ {
+  "path": "voice/steady/learning/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/steady/learning/teach.push-up.b_0.mp3",
+  "text": ". Chest to the floor, body in one line."
+ },
+ {
+  "path": "voice/steady/learning/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-up. Hands under your shoulders, knees on the floor, body straight from your head to your knees. Bend your elbows to lower your chest, then push the floor away."
+ },
+ {
+  "path": "voice/steady/learning/teach.knee-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-up. Stand an arm's length from a wall, hands flat on it at shoulder height. Bend your elbows to bring your chest to the wall, then push back. This is the right place to start — every push-up begins here."
+ },
+ {
+  "path": "voice/steady/learning/teach.wall-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/steady/learning/fixed_0.mp3",
+  "text": "There — that's it. That's exactly right. Remember what that feels like."
+ },
+ {
+  "path": "voice/steady/learning/fixed_1.mp3",
+  "text": "Yes. That's the shape. Hold it there."
+ },
+ {
+  "path": "voice/steady/learning/fixed_2.mp3",
+  "text": "Perfect. Whatever you just did, do that."
+ },
+ {
+  "path": "voice/steady/learning/fixed_3.mp3",
+  "text": "That's the one. Try to memorise that feeling."
+ },
+ {
+  "path": "voice/steady/learning/fixed_4.mp3",
+  "text": "Better. Feel the difference? That's what we're after."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_0.mp3",
+  "text": "That's a proper one. Learn what this feels like — that's the whole point."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_1.mp3",
+  "text": "Lovely. Just keep breathing."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_2.mp3",
+  "text": "That's textbook. Stay with it."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_3.mp3",
+  "text": "Really nice shape. Don't change a thing."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_4.mp3",
+  "text": "That's exactly right. Breathe."
+ },
+ {
+  "path": "voice/steady/learning/goodhold_5.mp3",
+  "text": "Holding it beautifully."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_0.mp3",
+  "text": "That's a good one."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_1.mp3",
+  "text": "Lovely. Same again."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_2.mp3",
+  "text": "Nice and controlled."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_3.mp3",
+  "text": "Good — same shape next time."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_4.mp3",
+  "text": "That's the one."
+ },
+ {
+  "path": "voice/steady/learning/goodrep_5.mp3",
+  "text": "Clean. Keep going."
+ },
+ {
+  "path": "voice/steady/learning/degrade_0.mp3",
+  "text": "That was strong — let's stop there while it's still clean. Quality beats grinding it out."
+ },
+ {
+  "path": "voice/steady/learning/regress_0.mp3",
+  "text": "Let's make this easier. Same shape, less weight — that's not a step back, it's the right step."
+ },
+ {
+  "path": "voice/steady/learning/encourage_0.mp3",
+  "text": "You're doing fine. Keep breathing."
+ },
+ {
+  "path": "voice/steady/learning/encourage_1.mp3",
+  "text": "Still with you. Nearly there."
+ },
+ {
+  "path": "voice/steady/learning/encourage_2.mp3",
+  "text": "Shaking is normal — that's the muscle, not a problem."
+ },
+ {
+  "path": "voice/steady/learning/encourage_3.mp3",
+  "text": "Stay with it. You've got more than you think."
+ },
+ {
+  "path": "voice/steady/learning/encourage_4.mp3",
+  "text": "Nearly done. Breathe."
+ },
+ {
+  "path": "voice/steady/learning/sag_0.mp3",
+  "text": "Your hips are dipping towards the floor. Squeeze your bum and lift them, so your body's one straight line."
+ },
+ {
+  "path": "voice/steady/learning/sag_1.mp3",
+  "text": "Hips are sinking. Squeeze your backside and lift them back into line."
+ },
+ {
+  "path": "voice/steady/learning/sag_2.mp3",
+  "text": "Your middle's sagging. Tighten your tummy and your bum, and lift."
+ },
+ {
+  "path": "voice/steady/learning/pike_0.mp3",
+  "text": "Your hips are up too high. Bring them down a little — flat from your shoulders to your heels."
+ },
+ {
+  "path": "voice/steady/learning/sagside_0.mp3",
+  "text": "Let your bottom hip lift towards the ceiling — don't let it sink."
+ },
+ {
+  "path": "voice/steady/learning/neck_0.mp3",
+  "text": "Let your head hang naturally. Look at the floor just in front of your hands."
+ },
+ {
+  "path": "voice/steady/learning/neckpull_0.mp3",
+  "text": "Don't pull on your neck — chin soft, lift with your tummy."
+ },
+ {
+  "path": "voice/steady/learning/backarch_0.mp3",
+  "text": "Your lower back is arching off the floor. Press it flat and make the movement smaller."
+ },
+ {
+  "path": "voice/steady/learning/knees_0.mp3",
+  "text": "Try to keep your legs a bit straighter — a soft bend is fine."
+ },
+ {
+  "path": "voice/steady/learning/elbows_0.mp3",
+  "text": "Bring your elbows underneath your shoulders."
+ },
+ {
+  "path": "voice/steady/learning/chestup_0.mp3",
+  "text": "Chest up — proud chest, look ahead."
+ },
+ {
+  "path": "voice/steady/learning/bridgehigh_0.mp3",
+  "text": "Push your hips a little higher, and squeeze at the top."
+ },
+ {
+  "path": "voice/steady/learning/reachback_0.mp3",
+  "text": "Reach that leg all the way back, until it's in line with your back."
+ },
+ {
+  "path": "voice/steady/learning/reachforward_0.mp3",
+  "text": "Reach that arm all the way forward, level with your ear."
+ },
+ {
+  "path": "voice/steady/learning/sitlower_0.mp3",
+  "text": "Slide down a bit further — aim for a right angle at the knee."
+ },
+ {
+  "path": "voice/steady/learning/hipshigh_0.mp3",
+  "text": "Push your hips up and back a little more."
+ },
+ {
+  "path": "voice/steady/learning/longspine_0.mp3",
+  "text": "Push the floor away and make your back long."
+ },
+ {
+  "path": "voice/steady/learning/shouldersdown_0.mp3",
+  "text": "Slide your shoulders down, away from your ears."
+ },
+ {
+  "path": "voice/steady/learning/hollowlift_0.mp3",
+  "text": "Lift your legs a little — keep that back pressed down."
+ },
+ {
+  "path": "voice/steady/learning/hollowlow_0.mp3",
+  "text": "Bring your legs a bit lower, as long as your back stays flat."
+ },
+ {
+  "path": "voice/steady/learning/start_0.mp3",
+  "text": "Hi. We'll take this at your pace. Prop your phone side-on, a couple of metres back, so I can see all of you."
+ },
+ {
+  "path": "voice/steady/learning/teach.plank.a_0.mp3",
+  "text": "Plank. Forearms down, elbows under your shoulders, body in one straight line from your ears to your heels. It's completely normal to shake — that's the muscle working."
+ },
+ {
+  "path": "voice/steady/learning/teach.plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/learning/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank. Same shape, knees down. Straight line from your ears to your knees."
+ },
+ {
+  "path": "voice/steady/learning/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/learning/teach.side-plank-knee.a_0.mp3",
+  "text": "Side plank on your knee. Elbow under your shoulder, lift your hips so you're straight from head to knees."
+ },
+ {
+  "path": "voice/steady/learning/teach.side-plank-knee.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/learning/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug. On your back, arms up, knees up. Lower one arm and the opposite leg slowly, keeping your lower back pressed flat into the floor. That flat back is the whole point."
+ },
+ {
+  "path": "voice/steady/learning/teach.dead-bug.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.bird-dog_0.mp3",
+  "text": "Bird dog. On all fours. Reach one arm forward and the opposite leg back, until both are in line with your back. Imagine balancing a glass of water on your lower back."
+ },
+ {
+  "path": "voice/steady/learning/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridge. On your back, knees bent, feet flat. Push through your heels and lift your hips into a straight ramp. Squeeze at the top."
+ },
+ {
+  "path": "voice/steady/learning/teach.glute-bridge.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand. From a chair, no hands. Lean your chest forward, drive through your feet, stand all the way up. Sit back down slowly — that's the hard bit."
+ },
+ {
+  "path": "voice/steady/learning/teach.sit-to-stand.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit. Back flat against a wall, slide down until your knees are bent at about a right angle. Then just hold."
+ },
+ {
+  "path": "voice/steady/learning/teach.wall-sit.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/learning/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow hold. On your back, knees pulled in, shoulders just off the floor. One job: press your lower back into the floor."
+ },
+ {
+  "path": "voice/steady/learning/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/learning/teach.crunch.a_0.mp3",
+  "text": "Crunch. On your back, knees bent. Peel your shoulder blades off the floor with your tummy — hands beside your head, never pulling on your neck."
+ },
+ {
+  "path": "voice/steady/learning/teach.crunch.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee leg raise. On your back, knees bent, lift them towards your chest and lower slowly. If your lower back lifts off the floor, you've gone too far."
+ },
+ {
+  "path": "voice/steady/learning/teach.leg-raise-bent.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/steady/learning/teach.cat-cow_0.mp3",
+  "text": "Cat cow. On all fours. Round your back to the ceiling as you breathe out, then let it dip as you breathe in. Slow — this is a stretch, not an exercise. I'll breathe with you."
+ },
+ {
+  "path": "voice/steady/learning/teach.downward-dog_0.mp3",
+  "text": "Downward dog. Hands and feet down, hips pushed up and back into an upside-down V. A long spine matters more than straight legs — bend your knees as much as you need."
+ },
+ {
+  "path": "voice/steady/learning/teach.cobra_0.mp3",
+  "text": "Cobra. On your front, hands under your shoulders, gently lift your chest. Keep your shoulders down, away from your ears. This should feel good, never sharp."
+ },
+ {
+  "path": "voice/steady/building/go_0.mp3",
+  "text": "Go."
+ },
+ {
+  "path": "voice/steady/building/go_1.mp3",
+  "text": "Whenever you're ready."
+ },
+ {
+  "path": "voice/steady/building/rest.a_0.mp3",
+  "text": "Rest."
+ },
+ {
+  "path": "voice/steady/building/rest.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/building/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/steady/building/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/steady/building/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/steady/building/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/steady/building/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/steady/building/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/steady/building/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/steady/building/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/steady/building/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/steady/building/getin_0.mp3",
+  "text": "Get set — I'll start when you're in position."
+ },
+ {
+  "path": "voice/steady/building/turnside_0.mp3",
+  "text": "Side-on, please."
+ },
+ {
+  "path": "voice/steady/building/turnfront_0.mp3",
+  "text": "Turn to face the camera for this one."
+ },
+ {
+  "path": "voice/steady/building/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/steady/building/nextset_0.mp3",
+  "text": "Set {c} of {o}."
+ },
+ {
+  "path": "voice/steady/building/nextset_1.mp3",
+  "text": "Round {c}. Same standard."
+ },
+ {
+  "path": "voice/steady/building/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/steady/building/teach.push-up.b_0.mp3",
+  "text": ". One straight line, chest low, full lockout."
+ },
+ {
+  "path": "voice/steady/building/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/steady/building/teach.knee-push-up.b_0.mp3",
+  "text": ". Straight from head to knees."
+ },
+ {
+  "path": "voice/steady/building/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/steady/building/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/building/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/steady/building/switchsides_1.mp3",
+  "text": "Switch sides — same standard."
+ },
+ {
+  "path": "voice/steady/building/fixed_0.mp3",
+  "text": "There it is. Hold that."
+ },
+ {
+  "path": "voice/steady/building/fixed_1.mp3",
+  "text": "Better. Stay there."
+ },
+ {
+  "path": "voice/steady/building/fixed_2.mp3",
+  "text": "That's it — lock it in."
+ },
+ {
+  "path": "voice/steady/building/fixed_3.mp3",
+  "text": "Fixed. Keep it there."
+ },
+ {
+  "path": "voice/steady/building/fixed_4.mp3",
+  "text": "Yes. Hold."
+ },
+ {
+  "path": "voice/steady/building/goodhold_0.mp3",
+  "text": "Solid line. Keep breathing."
+ },
+ {
+  "path": "voice/steady/building/goodhold_1.mp3",
+  "text": "Strong."
+ },
+ {
+  "path": "voice/steady/building/goodhold_2.mp3",
+  "text": "That's the shape."
+ },
+ {
+  "path": "voice/steady/building/goodhold_3.mp3",
+  "text": "Good position. Own it."
+ },
+ {
+  "path": "voice/steady/building/goodhold_4.mp3",
+  "text": "Locked in."
+ },
+ {
+  "path": "voice/steady/building/goodhold_5.mp3",
+  "text": "Clean line."
+ },
+ {
+  "path": "voice/steady/building/goodrep_0.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/steady/building/goodrep_1.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/steady/building/goodrep_2.mp3",
+  "text": "Nice."
+ },
+ {
+  "path": "voice/steady/building/goodrep_3.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/steady/building/goodrep_4.mp3",
+  "text": "Controlled."
+ },
+ {
+  "path": "voice/steady/building/degrade_0.mp3",
+  "text": "Form's fading. Five more, then we stop."
+ },
+ {
+  "path": "voice/steady/building/regress_0.mp3",
+  "text": "Drop to the easier version and finish it clean."
+ },
+ {
+  "path": "voice/steady/building/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/steady/building/sag_0.mp3",
+  "text": "Hips are dropping — squeeze the glutes."
+ },
+ {
+  "path": "voice/steady/building/sag_1.mp3",
+  "text": "Lift the hips. Long line."
+ },
+ {
+  "path": "voice/steady/building/sag_2.mp3",
+  "text": "Hips. Squeeze and lift."
+ },
+ {
+  "path": "voice/steady/building/sag_3.mp3",
+  "text": "Middle's sagging — brace."
+ },
+ {
+  "path": "voice/steady/building/pike_0.mp3",
+  "text": "Hips are high — level them out."
+ },
+ {
+  "path": "voice/steady/building/sagside_0.mp3",
+  "text": "Hips to the ceiling."
+ },
+ {
+  "path": "voice/steady/building/neck_0.mp3",
+  "text": "Neck neutral. Eyes down."
+ },
+ {
+  "path": "voice/steady/building/neckpull_0.mp3",
+  "text": "Chin off your chest — lift with the abs."
+ },
+ {
+  "path": "voice/steady/building/backarch_0.mp3",
+  "text": "Back's arching — press it flat, shorten the range."
+ },
+ {
+  "path": "voice/steady/building/knees_0.mp3",
+  "text": "Straighter legs."
+ },
+ {
+  "path": "voice/steady/building/elbows_0.mp3",
+  "text": "Elbows under shoulders."
+ },
+ {
+  "path": "voice/steady/building/chestup_0.mp3",
+  "text": "Chest up."
+ },
+ {
+  "path": "voice/steady/building/bridgehigh_0.mp3",
+  "text": "Higher — full squeeze at the top."
+ },
+ {
+  "path": "voice/steady/building/reachback_0.mp3",
+  "text": "Reach that leg back."
+ },
+ {
+  "path": "voice/steady/building/reachforward_0.mp3",
+  "text": "Reach the arm forward, level."
+ },
+ {
+  "path": "voice/steady/building/sitlower_0.mp3",
+  "text": "Lower — ninety degrees."
+ },
+ {
+  "path": "voice/steady/building/hipshigh_0.mp3",
+  "text": "Hips up and back."
+ },
+ {
+  "path": "voice/steady/building/longspine_0.mp3",
+  "text": "Long spine — push the floor away."
+ },
+ {
+  "path": "voice/steady/building/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/steady/building/hollowlift_0.mp3",
+  "text": "Lift into the hollow."
+ },
+ {
+  "path": "voice/steady/building/hollowlow_0.mp3",
+  "text": "Legs lower."
+ },
+ {
+  "path": "voice/steady/building/teach.plank.a_0.mp3",
+  "text": "Plank —"
+ },
+ {
+  "path": "voice/steady/building/teach.plank.b_0.mp3",
+  "text": "seconds. One straight line, ears to heels."
+ },
+ {
+  "path": "voice/steady/building/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank —"
+ },
+ {
+  "path": "voice/steady/building/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/building/teach.side-plank.a_0.mp3",
+  "text": "Side plank —"
+ },
+ {
+  "path": "voice/steady/building/teach.side-plank.b_0.mp3",
+  "text": "seconds. Stack the feet, hips tall."
+ },
+ {
+  "path": "voice/steady/building/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog —"
+ },
+ {
+  "path": "voice/steady/building/teach.bird-dog.b_0.mp3",
+  "text": "seconds. Opposite arm and leg, hips level."
+ },
+ {
+  "path": "voice/steady/building/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug —"
+ },
+ {
+  "path": "voice/steady/building/teach.dead-bug.b_0.mp3",
+  "text": "reps. Back stays pinned to the floor."
+ },
+ {
+  "path": "voice/steady/building/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridges —"
+ },
+ {
+  "path": "voice/steady/building/teach.glute-bridge.b_0.mp3",
+  "text": ". Drive through the heels, squeeze at the top."
+ },
+ {
+  "path": "voice/steady/building/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow hold —"
+ },
+ {
+  "path": "voice/steady/building/teach.hollow-hold.b_0.mp3",
+  "text": "seconds. Legs long and low, back pressed down."
+ },
+ {
+  "path": "voice/steady/building/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow —"
+ },
+ {
+  "path": "voice/steady/building/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/steady/building/teach.squat.a_0.mp3",
+  "text": "Squats —"
+ },
+ {
+  "path": "voice/steady/building/teach.squat.b_0.mp3",
+  "text": ". Sit back, chest proud, full depth."
+ },
+ {
+  "path": "voice/steady/building/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand —"
+ },
+ {
+  "path": "voice/steady/building/teach.sit-to-stand.b_0.mp3",
+  "text": ". No hands."
+ },
+ {
+  "path": "voice/steady/building/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit —"
+ },
+ {
+  "path": "voice/steady/building/teach.wall-sit.b_0.mp3",
+  "text": "seconds. Ninety degrees."
+ },
+ {
+  "path": "voice/steady/building/teach.crunch.a_0.mp3",
+  "text": "Crunches —"
+ },
+ {
+  "path": "voice/steady/building/teach.crunch.b_0.mp3",
+  "text": ". Slow up, slower down."
+ },
+ {
+  "path": "voice/steady/building/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises —"
+ },
+ {
+  "path": "voice/steady/building/teach.leg-raise.b_0.mp3",
+  "text": ". Straight legs, back pinned."
+ },
+ {
+  "path": "voice/steady/building/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee raises —"
+ },
+ {
+  "path": "voice/steady/building/teach.leg-raise-bent.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/building/teach.downward-dog.a_0.mp3",
+  "text": "Down dog —"
+ },
+ {
+  "path": "voice/steady/building/teach.downward-dog.b_0.mp3",
+  "text": "seconds. Long spine, hips high."
+ },
+ {
+  "path": "voice/steady/building/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Move with the breath."
+ },
+ {
+  "path": "voice/steady/building/teach.cobra.a_0.mp3",
+  "text": "Cobra —"
+ },
+ {
+  "path": "voice/steady/building/teach.cobra.b_0.mp3",
+  "text": "seconds. Shoulders down."
+ },
+ {
+  "path": "voice/steady/strong/go_0.mp3",
+  "text": "Go."
+ },
+ {
+  "path": "voice/steady/strong/rest.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/steady/strong/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/steady/strong/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/steady/strong/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/steady/strong/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/steady/strong/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/steady/strong/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/steady/strong/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/steady/strong/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/steady/strong/getin_0.mp3",
+  "text": "Get set."
+ },
+ {
+  "path": "voice/steady/strong/turnside_0.mp3",
+  "text": "Side-on."
+ },
+ {
+  "path": "voice/steady/strong/turnfront_0.mp3",
+  "text": "Face me."
+ },
+ {
+  "path": "voice/steady/strong/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/steady/strong/nextset_0.mp3",
+  "text": "Set {c}."
+ },
+ {
+  "path": "voice/steady/strong/nextset_1.mp3",
+  "text": "Again."
+ },
+ {
+  "path": "voice/steady/strong/teach.push-up.a_0.mp3",
+  "text": "Push-ups."
+ },
+ {
+  "path": "voice/steady/strong/teach.push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/steady/strong/teach.knee-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/steady/strong/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/steady/strong/fixed_0.mp3",
+  "text": "Good. Hold."
+ },
+ {
+  "path": "voice/steady/strong/fixed_1.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/steady/strong/fixed_2.mp3",
+  "text": "Locked."
+ },
+ {
+  "path": "voice/steady/strong/goodhold_0.mp3",
+  "text": "Hold."
+ },
+ {
+  "path": "voice/steady/strong/goodhold_1.mp3",
+  "text": "Solid."
+ },
+ {
+  "path": "voice/steady/strong/goodhold_2.mp3",
+  "text": "Stay."
+ },
+ {
+  "path": "voice/steady/strong/goodrep_0.mp3",
+  "text": "Yep."
+ },
+ {
+  "path": "voice/steady/strong/goodrep_1.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/steady/strong/goodrep_2.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/steady/strong/degrade_0.mp3",
+  "text": "Form's gone. Five, then out."
+ },
+ {
+  "path": "voice/steady/strong/regress_0.mp3",
+  "text": "Let's try the easier version."
+ },
+ {
+  "path": "voice/steady/strong/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/steady/strong/sag_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/steady/strong/sag_1.mp3",
+  "text": "Hips up."
+ },
+ {
+  "path": "voice/steady/strong/pike_0.mp3",
+  "text": "Level."
+ },
+ {
+  "path": "voice/steady/strong/sagside_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/steady/strong/neck_0.mp3",
+  "text": "Neck."
+ },
+ {
+  "path": "voice/steady/strong/neckpull_0.mp3",
+  "text": "Don't pull on your neck."
+ },
+ {
+  "path": "voice/steady/strong/backarch_0.mp3",
+  "text": "Flatten it."
+ },
+ {
+  "path": "voice/steady/strong/knees_0.mp3",
+  "text": "Legs."
+ },
+ {
+  "path": "voice/steady/strong/elbows_0.mp3",
+  "text": "Elbows."
+ },
+ {
+  "path": "voice/steady/strong/chestup_0.mp3",
+  "text": "Chest."
+ },
+ {
+  "path": "voice/steady/strong/bridgehigh_0.mp3",
+  "text": "Lock it out."
+ },
+ {
+  "path": "voice/steady/strong/reachback_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/steady/strong/reachforward_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/steady/strong/sitlower_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/steady/strong/hipshigh_0.mp3",
+  "text": "Hips back."
+ },
+ {
+  "path": "voice/steady/strong/longspine_0.mp3",
+  "text": "Lengthen."
+ },
+ {
+  "path": "voice/steady/strong/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/steady/strong/hollowlift_0.mp3",
+  "text": "Lift."
+ },
+ {
+  "path": "voice/steady/strong/hollowlow_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/steady/strong/teach.plank.a_0.mp3",
+  "text": "Plank."
+ },
+ {
+  "path": "voice/steady/strong/teach.plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.side-plank.a_0.mp3",
+  "text": "Side plank."
+ },
+ {
+  "path": "voice/steady/strong/teach.side-plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow."
+ },
+ {
+  "path": "voice/steady/strong/teach.hollow-hold.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.squat.a_0.mp3",
+  "text": "Squats."
+ },
+ {
+  "path": "voice/steady/strong/teach.squat.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog."
+ },
+ {
+  "path": "voice/steady/strong/teach.bird-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises."
+ },
+ {
+  "path": "voice/steady/strong/teach.leg-raise.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.glute-bridge.a_0.mp3",
+  "text": "Bridges."
+ },
+ {
+  "path": "voice/steady/strong/teach.glute-bridge.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit."
+ },
+ {
+  "path": "voice/steady/strong/teach.wall-sit.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.downward-dog.a_0.mp3",
+  "text": "Down dog."
+ },
+ {
+  "path": "voice/steady/strong/teach.downward-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/steady/strong/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Breathe."
+ },
+ {
+  "path": "voice/warm/learning/go_0.mp3",
+  "text": "Whenever you're ready — no rush."
+ },
+ {
+  "path": "voice/warm/learning/go_1.mp3",
+  "text": "Off you go."
+ },
+ {
+  "path": "voice/warm/learning/rest.a_0.mp3",
+  "text": "Rest. Take"
+ },
+ {
+  "path": "voice/warm/learning/rest.b_0.mp3",
+  "text": "seconds — proper rest is part of the work."
+ },
+ {
+  "path": "voice/warm/learning/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/warm/learning/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/warm/learning/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/warm/learning/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/warm/learning/done_0.mp3",
+  "text": "Good. Rest."
+ },
+ {
+  "path": "voice/warm/learning/done_1.mp3",
+  "text": "That's the set. Well done."
+ },
+ {
+  "path": "voice/warm/learning/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/warm/learning/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/warm/learning/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/warm/learning/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/warm/learning/getin_0.mp3",
+  "text": "Take your time getting into position. I won't start the clock until you're set."
+ },
+ {
+  "path": "voice/warm/learning/getin_1.mp3",
+  "text": "No rush — get yourself set, and I'll start counting when you're in the shape."
+ },
+ {
+  "path": "voice/warm/learning/turnside_0.mp3",
+  "text": "Turn so I see you from the side — side-on is where I can really help you."
+ },
+ {
+  "path": "voice/warm/learning/turnfront_0.mp3",
+  "text": "Turn and face the camera for this one — that's the angle I read best."
+ },
+ {
+  "path": "voice/warm/learning/rotatetip_0.mp3",
+  "text": "Quick tip — for floor exercises, turning your phone sideways gives me a much better view of you."
+ },
+ {
+  "path": "voice/warm/learning/nextset_0.mp3",
+  "text": "Set {c} of {o}. Same as before — quality first, and rest whenever you need."
+ },
+ {
+  "path": "voice/warm/learning/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/warm/learning/teach.push-up.b_0.mp3",
+  "text": ". Chest to the floor, body in one line."
+ },
+ {
+  "path": "voice/warm/learning/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-up. Hands under your shoulders, knees on the floor, body straight from your head to your knees. Bend your elbows to lower your chest, then push the floor away."
+ },
+ {
+  "path": "voice/warm/learning/teach.knee-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-up. Stand an arm's length from a wall, hands flat on it at shoulder height. Bend your elbows to bring your chest to the wall, then push back. This is the right place to start — every push-up begins here."
+ },
+ {
+  "path": "voice/warm/learning/teach.wall-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/warm/learning/fixed_0.mp3",
+  "text": "There you go — feel that? That's the one."
+ },
+ {
+  "path": "voice/warm/learning/fixed_1.mp3",
+  "text": "Yes! Hold it right there."
+ },
+ {
+  "path": "voice/warm/learning/goodhold_0.mp3",
+  "text": "Oh, that's lovely. That's exactly it."
+ },
+ {
+  "path": "voice/warm/learning/goodhold_1.mp3",
+  "text": "Look at that. That's a proper one."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_0.mp3",
+  "text": "That's a good one."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_1.mp3",
+  "text": "Lovely. Same again."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_2.mp3",
+  "text": "Nice and controlled."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_3.mp3",
+  "text": "Good — same shape next time."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_4.mp3",
+  "text": "That's the one."
+ },
+ {
+  "path": "voice/warm/learning/goodrep_5.mp3",
+  "text": "Clean. Keep going."
+ },
+ {
+  "path": "voice/warm/learning/degrade_0.mp3",
+  "text": "That's plenty for today, and it was good work. Let's stop while it's clean."
+ },
+ {
+  "path": "voice/warm/learning/regress_0.mp3",
+  "text": "Let's make this easier. Same shape, less weight — that's not a step back, it's the right step."
+ },
+ {
+  "path": "voice/warm/learning/encourage_0.mp3",
+  "text": "You're doing really well. Keep breathing."
+ },
+ {
+  "path": "voice/warm/learning/encourage_1.mp3",
+  "text": "Nearly there — I've got you."
+ },
+ {
+  "path": "voice/warm/learning/sag_0.mp3",
+  "text": "Your hips are dipping towards the floor. Squeeze your bum and lift them, so your body's one straight line."
+ },
+ {
+  "path": "voice/warm/learning/sag_1.mp3",
+  "text": "Hips are sinking. Squeeze your backside and lift them back into line."
+ },
+ {
+  "path": "voice/warm/learning/sag_2.mp3",
+  "text": "Your middle's sagging. Tighten your tummy and your bum, and lift."
+ },
+ {
+  "path": "voice/warm/learning/pike_0.mp3",
+  "text": "Your hips are up too high. Bring them down a little — flat from your shoulders to your heels."
+ },
+ {
+  "path": "voice/warm/learning/sagside_0.mp3",
+  "text": "Let your bottom hip lift towards the ceiling — don't let it sink."
+ },
+ {
+  "path": "voice/warm/learning/neck_0.mp3",
+  "text": "Let your head hang naturally. Look at the floor just in front of your hands."
+ },
+ {
+  "path": "voice/warm/learning/neckpull_0.mp3",
+  "text": "Don't pull on your neck — chin soft, lift with your tummy."
+ },
+ {
+  "path": "voice/warm/learning/backarch_0.mp3",
+  "text": "Your lower back is arching off the floor. Press it flat and make the movement smaller."
+ },
+ {
+  "path": "voice/warm/learning/knees_0.mp3",
+  "text": "Try to keep your legs a bit straighter — a soft bend is fine."
+ },
+ {
+  "path": "voice/warm/learning/elbows_0.mp3",
+  "text": "Bring your elbows underneath your shoulders."
+ },
+ {
+  "path": "voice/warm/learning/chestup_0.mp3",
+  "text": "Chest up — proud chest, look ahead."
+ },
+ {
+  "path": "voice/warm/learning/bridgehigh_0.mp3",
+  "text": "Push your hips a little higher, and squeeze at the top."
+ },
+ {
+  "path": "voice/warm/learning/reachback_0.mp3",
+  "text": "Reach that leg all the way back, until it's in line with your back."
+ },
+ {
+  "path": "voice/warm/learning/reachforward_0.mp3",
+  "text": "Reach that arm all the way forward, level with your ear."
+ },
+ {
+  "path": "voice/warm/learning/sitlower_0.mp3",
+  "text": "Slide down a bit further — aim for a right angle at the knee."
+ },
+ {
+  "path": "voice/warm/learning/hipshigh_0.mp3",
+  "text": "Push your hips up and back a little more."
+ },
+ {
+  "path": "voice/warm/learning/longspine_0.mp3",
+  "text": "Push the floor away and make your back long."
+ },
+ {
+  "path": "voice/warm/learning/shouldersdown_0.mp3",
+  "text": "Slide your shoulders down, away from your ears."
+ },
+ {
+  "path": "voice/warm/learning/hollowlift_0.mp3",
+  "text": "Lift your legs a little — keep that back pressed down."
+ },
+ {
+  "path": "voice/warm/learning/hollowlow_0.mp3",
+  "text": "Bring your legs a bit lower, as long as your back stays flat."
+ },
+ {
+  "path": "voice/warm/learning/start_0.mp3",
+  "text": "Hi. We'll take this at your pace. Prop your phone side-on, a couple of metres back, so I can see all of you."
+ },
+ {
+  "path": "voice/warm/learning/teach.plank.a_0.mp3",
+  "text": "Plank. Forearms down, elbows under your shoulders, body in one straight line from your ears to your heels. It's completely normal to shake — that's the muscle working."
+ },
+ {
+  "path": "voice/warm/learning/teach.plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/learning/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank. Same shape, knees down. Straight line from your ears to your knees."
+ },
+ {
+  "path": "voice/warm/learning/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/learning/teach.side-plank-knee.a_0.mp3",
+  "text": "Side plank on your knee. Elbow under your shoulder, lift your hips so you're straight from head to knees."
+ },
+ {
+  "path": "voice/warm/learning/teach.side-plank-knee.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/learning/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug. On your back, arms up, knees up. Lower one arm and the opposite leg slowly, keeping your lower back pressed flat into the floor. That flat back is the whole point."
+ },
+ {
+  "path": "voice/warm/learning/teach.dead-bug.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.bird-dog_0.mp3",
+  "text": "Bird dog. On all fours. Reach one arm forward and the opposite leg back, until both are in line with your back. Imagine balancing a glass of water on your lower back."
+ },
+ {
+  "path": "voice/warm/learning/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridge. On your back, knees bent, feet flat. Push through your heels and lift your hips into a straight ramp. Squeeze at the top."
+ },
+ {
+  "path": "voice/warm/learning/teach.glute-bridge.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand. From a chair, no hands. Lean your chest forward, drive through your feet, stand all the way up. Sit back down slowly — that's the hard bit."
+ },
+ {
+  "path": "voice/warm/learning/teach.sit-to-stand.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit. Back flat against a wall, slide down until your knees are bent at about a right angle. Then just hold."
+ },
+ {
+  "path": "voice/warm/learning/teach.wall-sit.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/learning/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow hold. On your back, knees pulled in, shoulders just off the floor. One job: press your lower back into the floor."
+ },
+ {
+  "path": "voice/warm/learning/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/learning/teach.crunch.a_0.mp3",
+  "text": "Crunch. On your back, knees bent. Peel your shoulder blades off the floor with your tummy — hands beside your head, never pulling on your neck."
+ },
+ {
+  "path": "voice/warm/learning/teach.crunch.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee leg raise. On your back, knees bent, lift them towards your chest and lower slowly. If your lower back lifts off the floor, you've gone too far."
+ },
+ {
+  "path": "voice/warm/learning/teach.leg-raise-bent.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/warm/learning/teach.cat-cow_0.mp3",
+  "text": "Cat cow. On all fours. Round your back to the ceiling as you breathe out, then let it dip as you breathe in. Slow — this is a stretch, not an exercise. I'll breathe with you."
+ },
+ {
+  "path": "voice/warm/learning/teach.downward-dog_0.mp3",
+  "text": "Downward dog. Hands and feet down, hips pushed up and back into an upside-down V. A long spine matters more than straight legs — bend your knees as much as you need."
+ },
+ {
+  "path": "voice/warm/learning/teach.cobra_0.mp3",
+  "text": "Cobra. On your front, hands under your shoulders, gently lift your chest. Keep your shoulders down, away from your ears. This should feel good, never sharp."
+ },
+ {
+  "path": "voice/warm/building/go_0.mp3",
+  "text": "Go."
+ },
+ {
+  "path": "voice/warm/building/go_1.mp3",
+  "text": "Whenever you're ready."
+ },
+ {
+  "path": "voice/warm/building/rest.a_0.mp3",
+  "text": "Rest."
+ },
+ {
+  "path": "voice/warm/building/rest.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/building/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/warm/building/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/warm/building/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/warm/building/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/warm/building/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/warm/building/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/warm/building/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/warm/building/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/warm/building/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/warm/building/getin_0.mp3",
+  "text": "Get set — I'll start when you're in position."
+ },
+ {
+  "path": "voice/warm/building/turnside_0.mp3",
+  "text": "Side-on, please."
+ },
+ {
+  "path": "voice/warm/building/turnfront_0.mp3",
+  "text": "Turn to face the camera for this one."
+ },
+ {
+  "path": "voice/warm/building/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/warm/building/nextset_0.mp3",
+  "text": "Set {c} of {o}."
+ },
+ {
+  "path": "voice/warm/building/nextset_1.mp3",
+  "text": "Round {c}. Same standard."
+ },
+ {
+  "path": "voice/warm/building/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/warm/building/teach.push-up.b_0.mp3",
+  "text": ". One straight line, chest low, full lockout."
+ },
+ {
+  "path": "voice/warm/building/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/warm/building/teach.knee-push-up.b_0.mp3",
+  "text": ". Straight from head to knees."
+ },
+ {
+  "path": "voice/warm/building/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/warm/building/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/building/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/warm/building/switchsides_1.mp3",
+  "text": "Switch sides — same standard."
+ },
+ {
+  "path": "voice/warm/building/fixed_0.mp3",
+  "text": "There it is. Hold that."
+ },
+ {
+  "path": "voice/warm/building/fixed_1.mp3",
+  "text": "Better. Stay there."
+ },
+ {
+  "path": "voice/warm/building/fixed_2.mp3",
+  "text": "That's it — lock it in."
+ },
+ {
+  "path": "voice/warm/building/fixed_3.mp3",
+  "text": "Fixed. Keep it there."
+ },
+ {
+  "path": "voice/warm/building/fixed_4.mp3",
+  "text": "Yes. Hold."
+ },
+ {
+  "path": "voice/warm/building/goodhold_0.mp3",
+  "text": "Solid line. Keep breathing."
+ },
+ {
+  "path": "voice/warm/building/goodhold_1.mp3",
+  "text": "Strong."
+ },
+ {
+  "path": "voice/warm/building/goodhold_2.mp3",
+  "text": "That's the shape."
+ },
+ {
+  "path": "voice/warm/building/goodhold_3.mp3",
+  "text": "Good position. Own it."
+ },
+ {
+  "path": "voice/warm/building/goodhold_4.mp3",
+  "text": "Locked in."
+ },
+ {
+  "path": "voice/warm/building/goodhold_5.mp3",
+  "text": "Clean line."
+ },
+ {
+  "path": "voice/warm/building/goodrep_0.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/warm/building/goodrep_1.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/warm/building/goodrep_2.mp3",
+  "text": "Nice."
+ },
+ {
+  "path": "voice/warm/building/goodrep_3.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/warm/building/goodrep_4.mp3",
+  "text": "Controlled."
+ },
+ {
+  "path": "voice/warm/building/degrade_0.mp3",
+  "text": "Form's fading. Five more, then we stop."
+ },
+ {
+  "path": "voice/warm/building/regress_0.mp3",
+  "text": "Drop to the easier version and finish it clean."
+ },
+ {
+  "path": "voice/warm/building/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/warm/building/sag_0.mp3",
+  "text": "Hips are dropping — squeeze the glutes."
+ },
+ {
+  "path": "voice/warm/building/sag_1.mp3",
+  "text": "Lift the hips. Long line."
+ },
+ {
+  "path": "voice/warm/building/sag_2.mp3",
+  "text": "Hips. Squeeze and lift."
+ },
+ {
+  "path": "voice/warm/building/sag_3.mp3",
+  "text": "Middle's sagging — brace."
+ },
+ {
+  "path": "voice/warm/building/pike_0.mp3",
+  "text": "Hips are high — level them out."
+ },
+ {
+  "path": "voice/warm/building/sagside_0.mp3",
+  "text": "Hips to the ceiling."
+ },
+ {
+  "path": "voice/warm/building/neck_0.mp3",
+  "text": "Neck neutral. Eyes down."
+ },
+ {
+  "path": "voice/warm/building/neckpull_0.mp3",
+  "text": "Chin off your chest — lift with the abs."
+ },
+ {
+  "path": "voice/warm/building/backarch_0.mp3",
+  "text": "Back's arching — press it flat, shorten the range."
+ },
+ {
+  "path": "voice/warm/building/knees_0.mp3",
+  "text": "Straighter legs."
+ },
+ {
+  "path": "voice/warm/building/elbows_0.mp3",
+  "text": "Elbows under shoulders."
+ },
+ {
+  "path": "voice/warm/building/chestup_0.mp3",
+  "text": "Chest up."
+ },
+ {
+  "path": "voice/warm/building/bridgehigh_0.mp3",
+  "text": "Higher — full squeeze at the top."
+ },
+ {
+  "path": "voice/warm/building/reachback_0.mp3",
+  "text": "Reach that leg back."
+ },
+ {
+  "path": "voice/warm/building/reachforward_0.mp3",
+  "text": "Reach the arm forward, level."
+ },
+ {
+  "path": "voice/warm/building/sitlower_0.mp3",
+  "text": "Lower — ninety degrees."
+ },
+ {
+  "path": "voice/warm/building/hipshigh_0.mp3",
+  "text": "Hips up and back."
+ },
+ {
+  "path": "voice/warm/building/longspine_0.mp3",
+  "text": "Long spine — push the floor away."
+ },
+ {
+  "path": "voice/warm/building/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/warm/building/hollowlift_0.mp3",
+  "text": "Lift into the hollow."
+ },
+ {
+  "path": "voice/warm/building/hollowlow_0.mp3",
+  "text": "Legs lower."
+ },
+ {
+  "path": "voice/warm/building/teach.plank.a_0.mp3",
+  "text": "Plank —"
+ },
+ {
+  "path": "voice/warm/building/teach.plank.b_0.mp3",
+  "text": "seconds. One straight line, ears to heels."
+ },
+ {
+  "path": "voice/warm/building/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank —"
+ },
+ {
+  "path": "voice/warm/building/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/building/teach.side-plank.a_0.mp3",
+  "text": "Side plank —"
+ },
+ {
+  "path": "voice/warm/building/teach.side-plank.b_0.mp3",
+  "text": "seconds. Stack the feet, hips tall."
+ },
+ {
+  "path": "voice/warm/building/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog —"
+ },
+ {
+  "path": "voice/warm/building/teach.bird-dog.b_0.mp3",
+  "text": "seconds. Opposite arm and leg, hips level."
+ },
+ {
+  "path": "voice/warm/building/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug —"
+ },
+ {
+  "path": "voice/warm/building/teach.dead-bug.b_0.mp3",
+  "text": "reps. Back stays pinned to the floor."
+ },
+ {
+  "path": "voice/warm/building/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridges —"
+ },
+ {
+  "path": "voice/warm/building/teach.glute-bridge.b_0.mp3",
+  "text": ". Drive through the heels, squeeze at the top."
+ },
+ {
+  "path": "voice/warm/building/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow hold —"
+ },
+ {
+  "path": "voice/warm/building/teach.hollow-hold.b_0.mp3",
+  "text": "seconds. Legs long and low, back pressed down."
+ },
+ {
+  "path": "voice/warm/building/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow —"
+ },
+ {
+  "path": "voice/warm/building/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/warm/building/teach.squat.a_0.mp3",
+  "text": "Squats —"
+ },
+ {
+  "path": "voice/warm/building/teach.squat.b_0.mp3",
+  "text": ". Sit back, chest proud, full depth."
+ },
+ {
+  "path": "voice/warm/building/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand —"
+ },
+ {
+  "path": "voice/warm/building/teach.sit-to-stand.b_0.mp3",
+  "text": ". No hands."
+ },
+ {
+  "path": "voice/warm/building/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit —"
+ },
+ {
+  "path": "voice/warm/building/teach.wall-sit.b_0.mp3",
+  "text": "seconds. Ninety degrees."
+ },
+ {
+  "path": "voice/warm/building/teach.crunch.a_0.mp3",
+  "text": "Crunches —"
+ },
+ {
+  "path": "voice/warm/building/teach.crunch.b_0.mp3",
+  "text": ". Slow up, slower down."
+ },
+ {
+  "path": "voice/warm/building/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises —"
+ },
+ {
+  "path": "voice/warm/building/teach.leg-raise.b_0.mp3",
+  "text": ". Straight legs, back pinned."
+ },
+ {
+  "path": "voice/warm/building/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee raises —"
+ },
+ {
+  "path": "voice/warm/building/teach.leg-raise-bent.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/building/teach.downward-dog.a_0.mp3",
+  "text": "Down dog —"
+ },
+ {
+  "path": "voice/warm/building/teach.downward-dog.b_0.mp3",
+  "text": "seconds. Long spine, hips high."
+ },
+ {
+  "path": "voice/warm/building/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Move with the breath."
+ },
+ {
+  "path": "voice/warm/building/teach.cobra.a_0.mp3",
+  "text": "Cobra —"
+ },
+ {
+  "path": "voice/warm/building/teach.cobra.b_0.mp3",
+  "text": "seconds. Shoulders down."
+ },
+ {
+  "path": "voice/warm/strong/go_0.mp3",
+  "text": "Go."
+ },
+ {
+  "path": "voice/warm/strong/rest.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/warm/strong/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/warm/strong/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/warm/strong/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/warm/strong/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/warm/strong/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/warm/strong/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/warm/strong/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/warm/strong/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/warm/strong/getin_0.mp3",
+  "text": "Get set."
+ },
+ {
+  "path": "voice/warm/strong/turnside_0.mp3",
+  "text": "Side-on."
+ },
+ {
+  "path": "voice/warm/strong/turnfront_0.mp3",
+  "text": "Face me."
+ },
+ {
+  "path": "voice/warm/strong/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/warm/strong/nextset_0.mp3",
+  "text": "Set {c}."
+ },
+ {
+  "path": "voice/warm/strong/nextset_1.mp3",
+  "text": "Again."
+ },
+ {
+  "path": "voice/warm/strong/teach.push-up.a_0.mp3",
+  "text": "Push-ups."
+ },
+ {
+  "path": "voice/warm/strong/teach.push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/warm/strong/teach.knee-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/warm/strong/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/warm/strong/fixed_0.mp3",
+  "text": "Good. Hold."
+ },
+ {
+  "path": "voice/warm/strong/fixed_1.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/warm/strong/fixed_2.mp3",
+  "text": "Locked."
+ },
+ {
+  "path": "voice/warm/strong/goodhold_0.mp3",
+  "text": "Hold."
+ },
+ {
+  "path": "voice/warm/strong/goodhold_1.mp3",
+  "text": "Solid."
+ },
+ {
+  "path": "voice/warm/strong/goodhold_2.mp3",
+  "text": "Stay."
+ },
+ {
+  "path": "voice/warm/strong/goodrep_0.mp3",
+  "text": "Yep."
+ },
+ {
+  "path": "voice/warm/strong/goodrep_1.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/warm/strong/goodrep_2.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/warm/strong/degrade_0.mp3",
+  "text": "Form's gone. Five, then out."
+ },
+ {
+  "path": "voice/warm/strong/regress_0.mp3",
+  "text": "Let's try the easier version."
+ },
+ {
+  "path": "voice/warm/strong/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/warm/strong/sag_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/warm/strong/sag_1.mp3",
+  "text": "Hips up."
+ },
+ {
+  "path": "voice/warm/strong/pike_0.mp3",
+  "text": "Level."
+ },
+ {
+  "path": "voice/warm/strong/sagside_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/warm/strong/neck_0.mp3",
+  "text": "Neck."
+ },
+ {
+  "path": "voice/warm/strong/neckpull_0.mp3",
+  "text": "Don't pull on your neck."
+ },
+ {
+  "path": "voice/warm/strong/backarch_0.mp3",
+  "text": "Flatten it."
+ },
+ {
+  "path": "voice/warm/strong/knees_0.mp3",
+  "text": "Legs."
+ },
+ {
+  "path": "voice/warm/strong/elbows_0.mp3",
+  "text": "Elbows."
+ },
+ {
+  "path": "voice/warm/strong/chestup_0.mp3",
+  "text": "Chest."
+ },
+ {
+  "path": "voice/warm/strong/bridgehigh_0.mp3",
+  "text": "Lock it out."
+ },
+ {
+  "path": "voice/warm/strong/reachback_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/warm/strong/reachforward_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/warm/strong/sitlower_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/warm/strong/hipshigh_0.mp3",
+  "text": "Hips back."
+ },
+ {
+  "path": "voice/warm/strong/longspine_0.mp3",
+  "text": "Lengthen."
+ },
+ {
+  "path": "voice/warm/strong/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/warm/strong/hollowlift_0.mp3",
+  "text": "Lift."
+ },
+ {
+  "path": "voice/warm/strong/hollowlow_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/warm/strong/teach.plank.a_0.mp3",
+  "text": "Plank."
+ },
+ {
+  "path": "voice/warm/strong/teach.plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.side-plank.a_0.mp3",
+  "text": "Side plank."
+ },
+ {
+  "path": "voice/warm/strong/teach.side-plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow."
+ },
+ {
+  "path": "voice/warm/strong/teach.hollow-hold.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.squat.a_0.mp3",
+  "text": "Squats."
+ },
+ {
+  "path": "voice/warm/strong/teach.squat.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog."
+ },
+ {
+  "path": "voice/warm/strong/teach.bird-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises."
+ },
+ {
+  "path": "voice/warm/strong/teach.leg-raise.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.glute-bridge.a_0.mp3",
+  "text": "Bridges."
+ },
+ {
+  "path": "voice/warm/strong/teach.glute-bridge.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit."
+ },
+ {
+  "path": "voice/warm/strong/teach.wall-sit.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.downward-dog.a_0.mp3",
+  "text": "Down dog."
+ },
+ {
+  "path": "voice/warm/strong/teach.downward-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/warm/strong/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Breathe."
+ },
+ {
+  "path": "voice/energy/learning/go_0.mp3",
+  "text": "Whenever you're ready — no rush."
+ },
+ {
+  "path": "voice/energy/learning/go_1.mp3",
+  "text": "Off you go."
+ },
+ {
+  "path": "voice/energy/learning/rest.a_0.mp3",
+  "text": "Rest. Take"
+ },
+ {
+  "path": "voice/energy/learning/rest.b_0.mp3",
+  "text": "seconds — proper rest is part of the work."
+ },
+ {
+  "path": "voice/energy/learning/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/energy/learning/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/energy/learning/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/energy/learning/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/energy/learning/done_0.mp3",
+  "text": "Good. Rest."
+ },
+ {
+  "path": "voice/energy/learning/done_1.mp3",
+  "text": "That's the set. Well done."
+ },
+ {
+  "path": "voice/energy/learning/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/energy/learning/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/energy/learning/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/energy/learning/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/energy/learning/getin_0.mp3",
+  "text": "Take your time getting into position. I won't start the clock until you're set."
+ },
+ {
+  "path": "voice/energy/learning/getin_1.mp3",
+  "text": "No rush — get yourself set, and I'll start counting when you're in the shape."
+ },
+ {
+  "path": "voice/energy/learning/turnside_0.mp3",
+  "text": "Turn so I see you from the side — side-on is where I can really help you."
+ },
+ {
+  "path": "voice/energy/learning/turnfront_0.mp3",
+  "text": "Turn and face the camera for this one — that's the angle I read best."
+ },
+ {
+  "path": "voice/energy/learning/rotatetip_0.mp3",
+  "text": "Quick tip — for floor exercises, turning your phone sideways gives me a much better view of you."
+ },
+ {
+  "path": "voice/energy/learning/nextset_0.mp3",
+  "text": "Set {c} of {o}. Same as before — quality first, and rest whenever you need."
+ },
+ {
+  "path": "voice/energy/learning/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/energy/learning/teach.push-up.b_0.mp3",
+  "text": ". Chest to the floor, body in one line."
+ },
+ {
+  "path": "voice/energy/learning/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-up. Hands under your shoulders, knees on the floor, body straight from your head to your knees. Bend your elbows to lower your chest, then push the floor away."
+ },
+ {
+  "path": "voice/energy/learning/teach.knee-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-up. Stand an arm's length from a wall, hands flat on it at shoulder height. Bend your elbows to bring your chest to the wall, then push back. This is the right place to start — every push-up begins here."
+ },
+ {
+  "path": "voice/energy/learning/teach.wall-push-up.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/energy/learning/fixed_0.mp3",
+  "text": "There — that's it. That's exactly right. Remember what that feels like."
+ },
+ {
+  "path": "voice/energy/learning/fixed_1.mp3",
+  "text": "Yes. That's the shape. Hold it there."
+ },
+ {
+  "path": "voice/energy/learning/fixed_2.mp3",
+  "text": "Perfect. Whatever you just did, do that."
+ },
+ {
+  "path": "voice/energy/learning/fixed_3.mp3",
+  "text": "That's the one. Try to memorise that feeling."
+ },
+ {
+  "path": "voice/energy/learning/fixed_4.mp3",
+  "text": "Better. Feel the difference? That's what we're after."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_0.mp3",
+  "text": "That's a proper one. Learn what this feels like — that's the whole point."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_1.mp3",
+  "text": "Lovely. Just keep breathing."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_2.mp3",
+  "text": "That's textbook. Stay with it."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_3.mp3",
+  "text": "Really nice shape. Don't change a thing."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_4.mp3",
+  "text": "That's exactly right. Breathe."
+ },
+ {
+  "path": "voice/energy/learning/goodhold_5.mp3",
+  "text": "Holding it beautifully."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_0.mp3",
+  "text": "That's a good one."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_1.mp3",
+  "text": "Lovely. Same again."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_2.mp3",
+  "text": "Nice and controlled."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_3.mp3",
+  "text": "Good — same shape next time."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_4.mp3",
+  "text": "That's the one."
+ },
+ {
+  "path": "voice/energy/learning/goodrep_5.mp3",
+  "text": "Clean. Keep going."
+ },
+ {
+  "path": "voice/energy/learning/degrade_0.mp3",
+  "text": "That was strong — let's stop there while it's still clean. Quality beats grinding it out."
+ },
+ {
+  "path": "voice/energy/learning/regress_0.mp3",
+  "text": "Let's make this easier. Same shape, less weight — that's not a step back, it's the right step."
+ },
+ {
+  "path": "voice/energy/learning/encourage_0.mp3",
+  "text": "You're doing fine. Keep breathing."
+ },
+ {
+  "path": "voice/energy/learning/encourage_1.mp3",
+  "text": "Still with you. Nearly there."
+ },
+ {
+  "path": "voice/energy/learning/encourage_2.mp3",
+  "text": "Shaking is normal — that's the muscle, not a problem."
+ },
+ {
+  "path": "voice/energy/learning/encourage_3.mp3",
+  "text": "Stay with it. You've got more than you think."
+ },
+ {
+  "path": "voice/energy/learning/encourage_4.mp3",
+  "text": "Nearly done. Breathe."
+ },
+ {
+  "path": "voice/energy/learning/sag_0.mp3",
+  "text": "Your hips are dipping towards the floor. Squeeze your bum and lift them, so your body's one straight line."
+ },
+ {
+  "path": "voice/energy/learning/sag_1.mp3",
+  "text": "Hips are sinking. Squeeze your backside and lift them back into line."
+ },
+ {
+  "path": "voice/energy/learning/sag_2.mp3",
+  "text": "Your middle's sagging. Tighten your tummy and your bum, and lift."
+ },
+ {
+  "path": "voice/energy/learning/pike_0.mp3",
+  "text": "Your hips are up too high. Bring them down a little — flat from your shoulders to your heels."
+ },
+ {
+  "path": "voice/energy/learning/sagside_0.mp3",
+  "text": "Let your bottom hip lift towards the ceiling — don't let it sink."
+ },
+ {
+  "path": "voice/energy/learning/neck_0.mp3",
+  "text": "Let your head hang naturally. Look at the floor just in front of your hands."
+ },
+ {
+  "path": "voice/energy/learning/neckpull_0.mp3",
+  "text": "Don't pull on your neck — chin soft, lift with your tummy."
+ },
+ {
+  "path": "voice/energy/learning/backarch_0.mp3",
+  "text": "Your lower back is arching off the floor. Press it flat and make the movement smaller."
+ },
+ {
+  "path": "voice/energy/learning/knees_0.mp3",
+  "text": "Try to keep your legs a bit straighter — a soft bend is fine."
+ },
+ {
+  "path": "voice/energy/learning/elbows_0.mp3",
+  "text": "Bring your elbows underneath your shoulders."
+ },
+ {
+  "path": "voice/energy/learning/chestup_0.mp3",
+  "text": "Chest up — proud chest, look ahead."
+ },
+ {
+  "path": "voice/energy/learning/bridgehigh_0.mp3",
+  "text": "Push your hips a little higher, and squeeze at the top."
+ },
+ {
+  "path": "voice/energy/learning/reachback_0.mp3",
+  "text": "Reach that leg all the way back, until it's in line with your back."
+ },
+ {
+  "path": "voice/energy/learning/reachforward_0.mp3",
+  "text": "Reach that arm all the way forward, level with your ear."
+ },
+ {
+  "path": "voice/energy/learning/sitlower_0.mp3",
+  "text": "Slide down a bit further — aim for a right angle at the knee."
+ },
+ {
+  "path": "voice/energy/learning/hipshigh_0.mp3",
+  "text": "Push your hips up and back a little more."
+ },
+ {
+  "path": "voice/energy/learning/longspine_0.mp3",
+  "text": "Push the floor away and make your back long."
+ },
+ {
+  "path": "voice/energy/learning/shouldersdown_0.mp3",
+  "text": "Slide your shoulders down, away from your ears."
+ },
+ {
+  "path": "voice/energy/learning/hollowlift_0.mp3",
+  "text": "Lift your legs a little — keep that back pressed down."
+ },
+ {
+  "path": "voice/energy/learning/hollowlow_0.mp3",
+  "text": "Bring your legs a bit lower, as long as your back stays flat."
+ },
+ {
+  "path": "voice/energy/learning/start_0.mp3",
+  "text": "Hi. We'll take this at your pace. Prop your phone side-on, a couple of metres back, so I can see all of you."
+ },
+ {
+  "path": "voice/energy/learning/teach.plank.a_0.mp3",
+  "text": "Plank. Forearms down, elbows under your shoulders, body in one straight line from your ears to your heels. It's completely normal to shake — that's the muscle working."
+ },
+ {
+  "path": "voice/energy/learning/teach.plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/learning/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank. Same shape, knees down. Straight line from your ears to your knees."
+ },
+ {
+  "path": "voice/energy/learning/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/learning/teach.side-plank-knee.a_0.mp3",
+  "text": "Side plank on your knee. Elbow under your shoulder, lift your hips so you're straight from head to knees."
+ },
+ {
+  "path": "voice/energy/learning/teach.side-plank-knee.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/learning/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug. On your back, arms up, knees up. Lower one arm and the opposite leg slowly, keeping your lower back pressed flat into the floor. That flat back is the whole point."
+ },
+ {
+  "path": "voice/energy/learning/teach.dead-bug.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.bird-dog_0.mp3",
+  "text": "Bird dog. On all fours. Reach one arm forward and the opposite leg back, until both are in line with your back. Imagine balancing a glass of water on your lower back."
+ },
+ {
+  "path": "voice/energy/learning/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridge. On your back, knees bent, feet flat. Push through your heels and lift your hips into a straight ramp. Squeeze at the top."
+ },
+ {
+  "path": "voice/energy/learning/teach.glute-bridge.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand. From a chair, no hands. Lean your chest forward, drive through your feet, stand all the way up. Sit back down slowly — that's the hard bit."
+ },
+ {
+  "path": "voice/energy/learning/teach.sit-to-stand.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit. Back flat against a wall, slide down until your knees are bent at about a right angle. Then just hold."
+ },
+ {
+  "path": "voice/energy/learning/teach.wall-sit.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/learning/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow hold. On your back, knees pulled in, shoulders just off the floor. One job: press your lower back into the floor."
+ },
+ {
+  "path": "voice/energy/learning/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/learning/teach.crunch.a_0.mp3",
+  "text": "Crunch. On your back, knees bent. Peel your shoulder blades off the floor with your tummy — hands beside your head, never pulling on your neck."
+ },
+ {
+  "path": "voice/energy/learning/teach.crunch.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee leg raise. On your back, knees bent, lift them towards your chest and lower slowly. If your lower back lifts off the floor, you've gone too far."
+ },
+ {
+  "path": "voice/energy/learning/teach.leg-raise-bent.b_0.mp3",
+  "text": "reps."
+ },
+ {
+  "path": "voice/energy/learning/teach.cat-cow_0.mp3",
+  "text": "Cat cow. On all fours. Round your back to the ceiling as you breathe out, then let it dip as you breathe in. Slow — this is a stretch, not an exercise. I'll breathe with you."
+ },
+ {
+  "path": "voice/energy/learning/teach.downward-dog_0.mp3",
+  "text": "Downward dog. Hands and feet down, hips pushed up and back into an upside-down V. A long spine matters more than straight legs — bend your knees as much as you need."
+ },
+ {
+  "path": "voice/energy/learning/teach.cobra_0.mp3",
+  "text": "Cobra. On your front, hands under your shoulders, gently lift your chest. Keep your shoulders down, away from your ears. This should feel good, never sharp."
+ },
+ {
+  "path": "voice/energy/building/go_0.mp3",
+  "text": "Let's have it!"
+ },
+ {
+  "path": "voice/energy/building/go_1.mp3",
+  "text": "Go go go!"
+ },
+ {
+  "path": "voice/energy/building/rest.a_0.mp3",
+  "text": "Rest."
+ },
+ {
+  "path": "voice/energy/building/rest.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/building/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/energy/building/half_0.mp3",
+  "text": "Halfway — you're flying!"
+ },
+ {
+  "path": "voice/energy/building/twomore_0.mp3",
+  "text": "Two more."
+ },
+ {
+  "path": "voice/energy/building/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/energy/building/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/energy/building/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/energy/building/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/energy/building/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/energy/building/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/energy/building/getin_0.mp3",
+  "text": "Get set — I'll start when you're in position."
+ },
+ {
+  "path": "voice/energy/building/turnside_0.mp3",
+  "text": "Side-on, please."
+ },
+ {
+  "path": "voice/energy/building/turnfront_0.mp3",
+  "text": "Turn to face the camera for this one."
+ },
+ {
+  "path": "voice/energy/building/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/energy/building/nextset_0.mp3",
+  "text": "Set {c} of {o}."
+ },
+ {
+  "path": "voice/energy/building/nextset_1.mp3",
+  "text": "Round {c}. Same standard."
+ },
+ {
+  "path": "voice/energy/building/teach.push-up.a_0.mp3",
+  "text": "Push-ups —"
+ },
+ {
+  "path": "voice/energy/building/teach.push-up.b_0.mp3",
+  "text": ". One straight line, chest low, full lockout."
+ },
+ {
+  "path": "voice/energy/building/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/energy/building/teach.knee-push-up.b_0.mp3",
+  "text": ". Straight from head to knees."
+ },
+ {
+  "path": "voice/energy/building/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/energy/building/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/building/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/energy/building/switchsides_1.mp3",
+  "text": "Switch sides — same standard."
+ },
+ {
+  "path": "voice/energy/building/fixed_0.mp3",
+  "text": "Yes! Lock it in!"
+ },
+ {
+  "path": "voice/energy/building/goodhold_0.mp3",
+  "text": "Looking strong!"
+ },
+ {
+  "path": "voice/energy/building/goodrep_0.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/energy/building/goodrep_1.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/energy/building/goodrep_2.mp3",
+  "text": "Nice."
+ },
+ {
+  "path": "voice/energy/building/goodrep_3.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/energy/building/goodrep_4.mp3",
+  "text": "Controlled."
+ },
+ {
+  "path": "voice/energy/building/degrade_0.mp3",
+  "text": "Form's fading. Five more, then we stop."
+ },
+ {
+  "path": "voice/energy/building/regress_0.mp3",
+  "text": "Drop to the easier version and finish it clean."
+ },
+ {
+  "path": "voice/energy/building/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/energy/building/sag_0.mp3",
+  "text": "Hips up! Squeeze!"
+ },
+ {
+  "path": "voice/energy/building/pike_0.mp3",
+  "text": "Hips are high — level them out."
+ },
+ {
+  "path": "voice/energy/building/sagside_0.mp3",
+  "text": "Hips to the ceiling."
+ },
+ {
+  "path": "voice/energy/building/neck_0.mp3",
+  "text": "Neck neutral. Eyes down."
+ },
+ {
+  "path": "voice/energy/building/neckpull_0.mp3",
+  "text": "Chin off your chest — lift with the abs."
+ },
+ {
+  "path": "voice/energy/building/backarch_0.mp3",
+  "text": "Back's arching — press it flat, shorten the range."
+ },
+ {
+  "path": "voice/energy/building/knees_0.mp3",
+  "text": "Straighter legs."
+ },
+ {
+  "path": "voice/energy/building/elbows_0.mp3",
+  "text": "Elbows under shoulders."
+ },
+ {
+  "path": "voice/energy/building/chestup_0.mp3",
+  "text": "Chest up."
+ },
+ {
+  "path": "voice/energy/building/bridgehigh_0.mp3",
+  "text": "Higher — full squeeze at the top."
+ },
+ {
+  "path": "voice/energy/building/reachback_0.mp3",
+  "text": "Reach that leg back."
+ },
+ {
+  "path": "voice/energy/building/reachforward_0.mp3",
+  "text": "Reach the arm forward, level."
+ },
+ {
+  "path": "voice/energy/building/sitlower_0.mp3",
+  "text": "Lower — ninety degrees."
+ },
+ {
+  "path": "voice/energy/building/hipshigh_0.mp3",
+  "text": "Hips up and back."
+ },
+ {
+  "path": "voice/energy/building/longspine_0.mp3",
+  "text": "Long spine — push the floor away."
+ },
+ {
+  "path": "voice/energy/building/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/energy/building/hollowlift_0.mp3",
+  "text": "Lift into the hollow."
+ },
+ {
+  "path": "voice/energy/building/hollowlow_0.mp3",
+  "text": "Legs lower."
+ },
+ {
+  "path": "voice/energy/building/teach.plank.a_0.mp3",
+  "text": "Plank —"
+ },
+ {
+  "path": "voice/energy/building/teach.plank.b_0.mp3",
+  "text": "seconds. One straight line, ears to heels."
+ },
+ {
+  "path": "voice/energy/building/teach.knee-plank.a_0.mp3",
+  "text": "Knee plank —"
+ },
+ {
+  "path": "voice/energy/building/teach.knee-plank.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/building/teach.side-plank.a_0.mp3",
+  "text": "Side plank —"
+ },
+ {
+  "path": "voice/energy/building/teach.side-plank.b_0.mp3",
+  "text": "seconds. Stack the feet, hips tall."
+ },
+ {
+  "path": "voice/energy/building/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog —"
+ },
+ {
+  "path": "voice/energy/building/teach.bird-dog.b_0.mp3",
+  "text": "seconds. Opposite arm and leg, hips level."
+ },
+ {
+  "path": "voice/energy/building/teach.dead-bug.a_0.mp3",
+  "text": "Dead bug —"
+ },
+ {
+  "path": "voice/energy/building/teach.dead-bug.b_0.mp3",
+  "text": "reps. Back stays pinned to the floor."
+ },
+ {
+  "path": "voice/energy/building/teach.glute-bridge.a_0.mp3",
+  "text": "Glute bridges —"
+ },
+ {
+  "path": "voice/energy/building/teach.glute-bridge.b_0.mp3",
+  "text": ". Drive through the heels, squeeze at the top."
+ },
+ {
+  "path": "voice/energy/building/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow hold —"
+ },
+ {
+  "path": "voice/energy/building/teach.hollow-hold.b_0.mp3",
+  "text": "seconds. Legs long and low, back pressed down."
+ },
+ {
+  "path": "voice/energy/building/teach.hollow-tuck.a_0.mp3",
+  "text": "Tucked hollow —"
+ },
+ {
+  "path": "voice/energy/building/teach.hollow-tuck.b_0.mp3",
+  "text": "seconds."
+ },
+ {
+  "path": "voice/energy/building/teach.squat.a_0.mp3",
+  "text": "Squats —"
+ },
+ {
+  "path": "voice/energy/building/teach.squat.b_0.mp3",
+  "text": ". Sit back, chest proud, full depth."
+ },
+ {
+  "path": "voice/energy/building/teach.sit-to-stand.a_0.mp3",
+  "text": "Sit to stand —"
+ },
+ {
+  "path": "voice/energy/building/teach.sit-to-stand.b_0.mp3",
+  "text": ". No hands."
+ },
+ {
+  "path": "voice/energy/building/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit —"
+ },
+ {
+  "path": "voice/energy/building/teach.wall-sit.b_0.mp3",
+  "text": "seconds. Ninety degrees."
+ },
+ {
+  "path": "voice/energy/building/teach.crunch.a_0.mp3",
+  "text": "Crunches —"
+ },
+ {
+  "path": "voice/energy/building/teach.crunch.b_0.mp3",
+  "text": ". Slow up, slower down."
+ },
+ {
+  "path": "voice/energy/building/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises —"
+ },
+ {
+  "path": "voice/energy/building/teach.leg-raise.b_0.mp3",
+  "text": ". Straight legs, back pinned."
+ },
+ {
+  "path": "voice/energy/building/teach.leg-raise-bent.a_0.mp3",
+  "text": "Bent-knee raises —"
+ },
+ {
+  "path": "voice/energy/building/teach.leg-raise-bent.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/building/teach.downward-dog.a_0.mp3",
+  "text": "Down dog —"
+ },
+ {
+  "path": "voice/energy/building/teach.downward-dog.b_0.mp3",
+  "text": "seconds. Long spine, hips high."
+ },
+ {
+  "path": "voice/energy/building/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Move with the breath."
+ },
+ {
+  "path": "voice/energy/building/teach.cobra.a_0.mp3",
+  "text": "Cobra —"
+ },
+ {
+  "path": "voice/energy/building/teach.cobra.b_0.mp3",
+  "text": "seconds. Shoulders down."
+ },
+ {
+  "path": "voice/energy/strong/go_0.mp3",
+  "text": "Let's go!"
+ },
+ {
+  "path": "voice/energy/strong/rest.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/cd_0.mp3",
+  "text": "Three. Two. One."
+ },
+ {
+  "path": "voice/energy/strong/half_0.mp3",
+  "text": "Halfway."
+ },
+ {
+  "path": "voice/energy/strong/twomore_0.mp3",
+  "text": "Two more — empty the tank!"
+ },
+ {
+  "path": "voice/energy/strong/tenleft_0.mp3",
+  "text": "Ten seconds."
+ },
+ {
+  "path": "voice/energy/strong/done_0.mp3",
+  "text": "Done."
+ },
+ {
+  "path": "voice/energy/strong/vis_0.mp3",
+  "text": "I can't see you — step back so I can see all of you, side-on."
+ },
+ {
+  "path": "voice/energy/strong/inhale_0.mp3",
+  "text": "Inhale."
+ },
+ {
+  "path": "voice/energy/strong/exhale_0.mp3",
+  "text": "And exhale."
+ },
+ {
+  "path": "voice/energy/strong/breathe_0.mp3",
+  "text": "Keep breathing."
+ },
+ {
+  "path": "voice/energy/strong/getin_0.mp3",
+  "text": "Get set."
+ },
+ {
+  "path": "voice/energy/strong/turnside_0.mp3",
+  "text": "Side-on."
+ },
+ {
+  "path": "voice/energy/strong/turnfront_0.mp3",
+  "text": "Face me."
+ },
+ {
+  "path": "voice/energy/strong/rotatetip_0.mp3",
+  "text": "Tip — floor exercises work best with the phone sideways."
+ },
+ {
+  "path": "voice/energy/strong/nextset_0.mp3",
+  "text": "Set {c}."
+ },
+ {
+  "path": "voice/energy/strong/nextset_1.mp3",
+  "text": "Again."
+ },
+ {
+  "path": "voice/energy/strong/teach.push-up.a_0.mp3",
+  "text": "Push-ups."
+ },
+ {
+  "path": "voice/energy/strong/teach.push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.knee-push-up.a_0.mp3",
+  "text": "Knee push-ups —"
+ },
+ {
+  "path": "voice/energy/strong/teach.knee-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.wall-push-up.a_0.mp3",
+  "text": "Wall push-ups —"
+ },
+ {
+  "path": "voice/energy/strong/teach.wall-push-up.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/switchsides_0.mp3",
+  "text": "Other side."
+ },
+ {
+  "path": "voice/energy/strong/fixed_0.mp3",
+  "text": "Good. Hold."
+ },
+ {
+  "path": "voice/energy/strong/fixed_1.mp3",
+  "text": "That's it."
+ },
+ {
+  "path": "voice/energy/strong/fixed_2.mp3",
+  "text": "Locked."
+ },
+ {
+  "path": "voice/energy/strong/goodhold_0.mp3",
+  "text": "Hold."
+ },
+ {
+  "path": "voice/energy/strong/goodhold_1.mp3",
+  "text": "Solid."
+ },
+ {
+  "path": "voice/energy/strong/goodhold_2.mp3",
+  "text": "Stay."
+ },
+ {
+  "path": "voice/energy/strong/goodrep_0.mp3",
+  "text": "Yep."
+ },
+ {
+  "path": "voice/energy/strong/goodrep_1.mp3",
+  "text": "Good."
+ },
+ {
+  "path": "voice/energy/strong/goodrep_2.mp3",
+  "text": "Clean."
+ },
+ {
+  "path": "voice/energy/strong/degrade_0.mp3",
+  "text": "Form's gone. Five, then out."
+ },
+ {
+  "path": "voice/energy/strong/regress_0.mp3",
+  "text": "Let's try the easier version."
+ },
+ {
+  "path": "voice/energy/strong/encourage_0.mp3",
+  "text": "Keep going."
+ },
+ {
+  "path": "voice/energy/strong/sag_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/energy/strong/sag_1.mp3",
+  "text": "Hips up."
+ },
+ {
+  "path": "voice/energy/strong/pike_0.mp3",
+  "text": "Level."
+ },
+ {
+  "path": "voice/energy/strong/sagside_0.mp3",
+  "text": "Hips."
+ },
+ {
+  "path": "voice/energy/strong/neck_0.mp3",
+  "text": "Neck."
+ },
+ {
+  "path": "voice/energy/strong/neckpull_0.mp3",
+  "text": "Don't pull on your neck."
+ },
+ {
+  "path": "voice/energy/strong/backarch_0.mp3",
+  "text": "Flatten it."
+ },
+ {
+  "path": "voice/energy/strong/knees_0.mp3",
+  "text": "Legs."
+ },
+ {
+  "path": "voice/energy/strong/elbows_0.mp3",
+  "text": "Elbows."
+ },
+ {
+  "path": "voice/energy/strong/chestup_0.mp3",
+  "text": "Chest."
+ },
+ {
+  "path": "voice/energy/strong/bridgehigh_0.mp3",
+  "text": "Lock it out."
+ },
+ {
+  "path": "voice/energy/strong/reachback_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/energy/strong/reachforward_0.mp3",
+  "text": "Reach."
+ },
+ {
+  "path": "voice/energy/strong/sitlower_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/energy/strong/hipshigh_0.mp3",
+  "text": "Hips back."
+ },
+ {
+  "path": "voice/energy/strong/longspine_0.mp3",
+  "text": "Lengthen."
+ },
+ {
+  "path": "voice/energy/strong/shouldersdown_0.mp3",
+  "text": "Shoulders down."
+ },
+ {
+  "path": "voice/energy/strong/hollowlift_0.mp3",
+  "text": "Lift."
+ },
+ {
+  "path": "voice/energy/strong/hollowlow_0.mp3",
+  "text": "Lower."
+ },
+ {
+  "path": "voice/energy/strong/teach.plank.a_0.mp3",
+  "text": "Plank."
+ },
+ {
+  "path": "voice/energy/strong/teach.plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.side-plank.a_0.mp3",
+  "text": "Side plank."
+ },
+ {
+  "path": "voice/energy/strong/teach.side-plank.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.hollow-hold.a_0.mp3",
+  "text": "Hollow."
+ },
+ {
+  "path": "voice/energy/strong/teach.hollow-hold.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.squat.a_0.mp3",
+  "text": "Squats."
+ },
+ {
+  "path": "voice/energy/strong/teach.squat.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.bird-dog.a_0.mp3",
+  "text": "Bird dog."
+ },
+ {
+  "path": "voice/energy/strong/teach.bird-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.leg-raise.a_0.mp3",
+  "text": "Leg raises."
+ },
+ {
+  "path": "voice/energy/strong/teach.leg-raise.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.glute-bridge.a_0.mp3",
+  "text": "Bridges."
+ },
+ {
+  "path": "voice/energy/strong/teach.glute-bridge.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.wall-sit.a_0.mp3",
+  "text": "Wall sit."
+ },
+ {
+  "path": "voice/energy/strong/teach.wall-sit.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.downward-dog.a_0.mp3",
+  "text": "Down dog."
+ },
+ {
+  "path": "voice/energy/strong/teach.downward-dog.b_0.mp3",
+  "text": "."
+ },
+ {
+  "path": "voice/energy/strong/teach.cat-cow_0.mp3",
+  "text": "Cat cow. Breathe."
+ },
+ {
+  "path": "voice/num/1.mp3",
+  "text": "1"
+ },
+ {
+  "path": "voice/num/2.mp3",
+  "text": "2"
+ },
+ {
+  "path": "voice/num/3.mp3",
+  "text": "3"
+ },
+ {
+  "path": "voice/num/4.mp3",
+  "text": "4"
+ },
+ {
+  "path": "voice/num/5.mp3",
+  "text": "5"
+ },
+ {
+  "path": "voice/num/6.mp3",
+  "text": "6"
+ },
+ {
+  "path": "voice/num/7.mp3",
+  "text": "7"
+ },
+ {
+  "path": "voice/num/8.mp3",
+  "text": "8"
+ },
+ {
+  "path": "voice/num/9.mp3",
+  "text": "9"
+ },
+ {
+  "path": "voice/num/10.mp3",
+  "text": "10"
+ },
+ {
+  "path": "voice/num/11.mp3",
+  "text": "11"
+ },
+ {
+  "path": "voice/num/12.mp3",
+  "text": "12"
+ },
+ {
+  "path": "voice/num/13.mp3",
+  "text": "13"
+ },
+ {
+  "path": "voice/num/14.mp3",
+  "text": "14"
+ },
+ {
+  "path": "voice/num/15.mp3",
+  "text": "15"
+ },
+ {
+  "path": "voice/num/16.mp3",
+  "text": "16"
+ },
+ {
+  "path": "voice/num/17.mp3",
+  "text": "17"
+ },
+ {
+  "path": "voice/num/18.mp3",
+  "text": "18"
+ },
+ {
+  "path": "voice/num/19.mp3",
+  "text": "19"
+ },
+ {
+  "path": "voice/num/20.mp3",
+  "text": "20"
+ },
+ {
+  "path": "voice/num/21.mp3",
+  "text": "21"
+ },
+ {
+  "path": "voice/num/22.mp3",
+  "text": "22"
+ },
+ {
+  "path": "voice/num/23.mp3",
+  "text": "23"
+ },
+ {
+  "path": "voice/num/24.mp3",
+  "text": "24"
+ },
+ {
+  "path": "voice/num/25.mp3",
+  "text": "25"
+ },
+ {
+  "path": "voice/num/26.mp3",
+  "text": "26"
+ },
+ {
+  "path": "voice/num/27.mp3",
+  "text": "27"
+ },
+ {
+  "path": "voice/num/28.mp3",
+  "text": "28"
+ },
+ {
+  "path": "voice/num/29.mp3",
+  "text": "29"
+ },
+ {
+  "path": "voice/num/30.mp3",
+  "text": "30"
+ },
+ {
+  "path": "voice/num/31.mp3",
+  "text": "31"
+ },
+ {
+  "path": "voice/num/32.mp3",
+  "text": "32"
+ },
+ {
+  "path": "voice/num/33.mp3",
+  "text": "33"
+ },
+ {
+  "path": "voice/num/34.mp3",
+  "text": "34"
+ },
+ {
+  "path": "voice/num/35.mp3",
+  "text": "35"
+ },
+ {
+  "path": "voice/num/36.mp3",
+  "text": "36"
+ },
+ {
+  "path": "voice/num/37.mp3",
+  "text": "37"
+ },
+ {
+  "path": "voice/num/38.mp3",
+  "text": "38"
+ },
+ {
+  "path": "voice/num/39.mp3",
+  "text": "39"
+ },
+ {
+  "path": "voice/num/40.mp3",
+  "text": "40"
+ },
+ {
+  "path": "voice/num/41.mp3",
+  "text": "41"
+ },
+ {
+  "path": "voice/num/42.mp3",
+  "text": "42"
+ },
+ {
+  "path": "voice/num/43.mp3",
+  "text": "43"
+ },
+ {
+  "path": "voice/num/44.mp3",
+  "text": "44"
+ },
+ {
+  "path": "voice/num/45.mp3",
+  "text": "45"
+ },
+ {
+  "path": "voice/num/46.mp3",
+  "text": "46"
+ },
+ {
+  "path": "voice/num/47.mp3",
+  "text": "47"
+ },
+ {
+  "path": "voice/num/48.mp3",
+  "text": "48"
+ },
+ {
+  "path": "voice/num/49.mp3",
+  "text": "49"
+ },
+ {
+  "path": "voice/num/50.mp3",
+  "text": "50"
+ },
+ {
+  "path": "voice/num/51.mp3",
+  "text": "51"
+ },
+ {
+  "path": "voice/num/52.mp3",
+  "text": "52"
+ },
+ {
+  "path": "voice/num/53.mp3",
+  "text": "53"
+ },
+ {
+  "path": "voice/num/54.mp3",
+  "text": "54"
+ },
+ {
+  "path": "voice/num/55.mp3",
+  "text": "55"
+ },
+ {
+  "path": "voice/num/56.mp3",
+  "text": "56"
+ },
+ {
+  "path": "voice/num/57.mp3",
+  "text": "57"
+ },
+ {
+  "path": "voice/num/58.mp3",
+  "text": "58"
+ },
+ {
+  "path": "voice/num/59.mp3",
+  "text": "59"
+ },
+ {
+  "path": "voice/num/60.mp3",
+  "text": "60"
+ },
+ {
+  "path": "voice/num/61.mp3",
+  "text": "61"
+ },
+ {
+  "path": "voice/num/62.mp3",
+  "text": "62"
+ },
+ {
+  "path": "voice/num/63.mp3",
+  "text": "63"
+ },
+ {
+  "path": "voice/num/64.mp3",
+  "text": "64"
+ },
+ {
+  "path": "voice/num/65.mp3",
+  "text": "65"
+ },
+ {
+  "path": "voice/num/66.mp3",
+  "text": "66"
+ },
+ {
+  "path": "voice/num/67.mp3",
+  "text": "67"
+ },
+ {
+  "path": "voice/num/68.mp3",
+  "text": "68"
+ },
+ {
+  "path": "voice/num/69.mp3",
+  "text": "69"
+ },
+ {
+  "path": "voice/num/70.mp3",
+  "text": "70"
+ },
+ {
+  "path": "voice/num/71.mp3",
+  "text": "71"
+ },
+ {
+  "path": "voice/num/72.mp3",
+  "text": "72"
+ },
+ {
+  "path": "voice/num/73.mp3",
+  "text": "73"
+ },
+ {
+  "path": "voice/num/74.mp3",
+  "text": "74"
+ },
+ {
+  "path": "voice/num/75.mp3",
+  "text": "75"
+ },
+ {
+  "path": "voice/num/76.mp3",
+  "text": "76"
+ },
+ {
+  "path": "voice/num/77.mp3",
+  "text": "77"
+ },
+ {
+  "path": "voice/num/78.mp3",
+  "text": "78"
+ },
+ {
+  "path": "voice/num/79.mp3",
+  "text": "79"
+ },
+ {
+  "path": "voice/num/80.mp3",
+  "text": "80"
+ },
+ {
+  "path": "voice/num/81.mp3",
+  "text": "81"
+ },
+ {
+  "path": "voice/num/82.mp3",
+  "text": "82"
+ },
+ {
+  "path": "voice/num/83.mp3",
+  "text": "83"
+ },
+ {
+  "path": "voice/num/84.mp3",
+  "text": "84"
+ },
+ {
+  "path": "voice/num/85.mp3",
+  "text": "85"
+ },
+ {
+  "path": "voice/num/86.mp3",
+  "text": "86"
+ },
+ {
+  "path": "voice/num/87.mp3",
+  "text": "87"
+ },
+ {
+  "path": "voice/num/88.mp3",
+  "text": "88"
+ },
+ {
+  "path": "voice/num/89.mp3",
+  "text": "89"
+ },
+ {
+  "path": "voice/num/90.mp3",
+  "text": "90"
+ },
+ {
+  "path": "voice/num/91.mp3",
+  "text": "91"
+ },
+ {
+  "path": "voice/num/92.mp3",
+  "text": "92"
+ },
+ {
+  "path": "voice/num/93.mp3",
+  "text": "93"
+ },
+ {
+  "path": "voice/num/94.mp3",
+  "text": "94"
+ },
+ {
+  "path": "voice/num/95.mp3",
+  "text": "95"
+ },
+ {
+  "path": "voice/num/96.mp3",
+  "text": "96"
+ },
+ {
+  "path": "voice/num/97.mp3",
+  "text": "97"
+ },
+ {
+  "path": "voice/num/98.mp3",
+  "text": "98"
+ },
+ {
+  "path": "voice/num/99.mp3",
+  "text": "99"
+ },
+ {
+  "path": "voice/num/100.mp3",
+  "text": "100"
+ },
+ {
+  "path": "voice/num/101.mp3",
+  "text": "101"
+ },
+ {
+  "path": "voice/num/102.mp3",
+  "text": "102"
+ },
+ {
+  "path": "voice/num/103.mp3",
+  "text": "103"
+ },
+ {
+  "path": "voice/num/104.mp3",
+  "text": "104"
+ },
+ {
+  "path": "voice/num/105.mp3",
+  "text": "105"
+ },
+ {
+  "path": "voice/num/106.mp3",
+  "text": "106"
+ },
+ {
+  "path": "voice/num/107.mp3",
+  "text": "107"
+ },
+ {
+  "path": "voice/num/108.mp3",
+  "text": "108"
+ },
+ {
+  "path": "voice/num/109.mp3",
+  "text": "109"
+ },
+ {
+  "path": "voice/num/110.mp3",
+  "text": "110"
+ },
+ {
+  "path": "voice/num/111.mp3",
+  "text": "111"
+ },
+ {
+  "path": "voice/num/112.mp3",
+  "text": "112"
+ },
+ {
+  "path": "voice/num/113.mp3",
+  "text": "113"
+ },
+ {
+  "path": "voice/num/114.mp3",
+  "text": "114"
+ },
+ {
+  "path": "voice/num/115.mp3",
+  "text": "115"
+ },
+ {
+  "path": "voice/num/116.mp3",
+  "text": "116"
+ },
+ {
+  "path": "voice/num/117.mp3",
+  "text": "117"
+ },
+ {
+  "path": "voice/num/118.mp3",
+  "text": "118"
+ },
+ {
+  "path": "voice/num/119.mp3",
+  "text": "119"
+ },
+ {
+  "path": "voice/num/120.mp3",
+  "text": "120"
+ }
+]
