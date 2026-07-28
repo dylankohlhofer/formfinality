@@ -91,13 +91,22 @@ formfinality/
 
 ### What to hand it first
 
-1. **"Run `node verify.mjs` and reconcile the 23 divergences."** A real, bounded task with a
-   clear success condition, and it restores your safety net. `README-verify.md` in the kit
-   explains which are harness artifacts and which one is worth investigating.
-2. **"Add the lost behavioural suites."** The vectors cover engine *values*; what was lost
+*The old first task — "reconcile the 23 divergences" — is **done**. `verify.mjs` exits 0 on
+3,847 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
+licensed. The safety net is restored; what follows extends it.*
+
+1. **"Add the lost behavioural suites."** The vectors cover engine *values*; what was lost
    were scenario tests (cooldown neutrality, plan completion, regression swaps). Rebuilding
    them in the repo means they persist this time.
+2. **"Make the demo gate check a suite."** The cheapest real coverage left. `gen-refs.mjs`
+   used to assert that every demo passes the exercise it demonstrates; it was lost, the
+   assertion was never carried into `verify.mjs`, and three demos quietly drifted into
+   teaching poses the app refuses to start from (bugs #40, #41). The check is currently an
+   authoring script — nothing fails if a REF edit breaks a gate.
 3. **Then the Swift port**, Week 0 onward.
+
+None of these gate beginner test 02. Engineering is not on the critical path — see
+`project-status.md`.
 
 ---
 
@@ -170,10 +179,11 @@ commits without running `verify.mjs` erodes precisely what makes the codebase tr
 `node verify.mjs` once to see where you stand.
 
 **This week, in this order:**
-1. Reconcile the 23 divergences (Claude Code, one session)
-2. Render the 210 pending voice clips (~£1–2.50)
-3. Desktop smoke pass — 15 minutes, the shell's only test
-4. **Two beginner sessions** — the thing everything else is waiting on
+1. Render the 210 pending voice clips (~£1–2.50)
+2. Desktop smoke pass — 15 minutes, the shell's only test. Watch crunch, side plank **and
+   glute bridge**: all three demos were re-authored and none has automated coverage
+3. **Beginner test 02** — the thing everything else is waiting on
+4. *Then* the engineering items above, none of which gate the test
 
 **Then:** Swift port with Claude Code, which is where the tooling pays for itself several
 times over.

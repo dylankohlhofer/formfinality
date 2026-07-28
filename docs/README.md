@@ -55,7 +55,7 @@ thing standing between here and the Swift port.
 |---|---|
 | `form-coach-v4.9.html` | **The build.** Single file, no dependencies but the pose model CDN |
 | `swift-port-kit.zip` | Swift package: 12 sources, conformance vectors |
-| `conformance-vectors.json` | The executable specification — 1,891 recorded cases |
+| `conformance-vectors.json` | The executable specification — 1,893 recorded cases |
 | `render-plan-v4.8.json` | Voice render plan — 1,351 clips, 210 pending |
 | `voice-render-kit.zip` | The ElevenLabs render tooling |
 | `test-recovery-kit.zip` | `verify.mjs` + vectors + `CLAUDE.md` — rebuilds the test safety net |

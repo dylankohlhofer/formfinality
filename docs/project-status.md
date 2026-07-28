@@ -3,7 +3,8 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** after beginner test 01 (Max, 26 July) and the v4.9 fixes.
+**Last updated:** 27 July 2026 — after beginner test 01 (Max, 26 July), the v4.9 fixes, and
+the supine-demo keyframe correction that followed from re-diagnosing them.
 
 ---
 
@@ -27,7 +28,7 @@ before the Swift port is justified.
 | | |
 |---|---|
 | **Build** | `form-coach-v4.9.html` — single file, 197 KB, no dependencies but the pose model CDN |
-| **Verification** | `verify.mjs` — **3,789 checks passing** against 1,891 recorded vectors |
+| **Verification** | `verify.mjs` — **3,847 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | 1,351 clips planned · **210 pending render** (~£1–2.50) |
 | **Swift kit** | 12 sources, conformance vectors current |
@@ -40,15 +41,20 @@ lived only in an ephemeral sandbox and were lost when it reset. They were never 
 files.
 
 The **vectors survived**, and they held the valuable half: the expected outputs. `verify.mjs`
-reconstructs 3,789 checks from them, in a better shape than what it replaced — one file, one
+reconstructs 3,847 checks from them, in a better shape than what it replaced — one file, one
 source of truth, shared with the Swift tests so the two cannot drift.
 
-**23 known divergences remain**, classified in `test-recovery-kit.zip`: 13 are harness
-artifacts, 10 are a real ~1.3% gap on one target worth investigating. The `frameRate`
-section isn't replayable without the lost generator.
+**The 23 divergences are closed, and all 23 were *harness* faults** — the build never diverged
+and the vectors were never wrong (the reasoning is kept in `README-verify.md`, including a note
+that two of the diagnoses were wrong in their specifics while right about the cause).
+`verify.mjs` now exits 0 and `swift test` passes 15/15 against the same JSON. The `frameRate`
+section (4 vectors) is still skipped: it isn't replayable without the lost generator.
 
 **What was genuinely lost:** the behavioural scenario suites — cooldown neutrality, plan
-completion, regression swaps. Rebuilding those in a real repo is a first task for Claude Code.
+completion, regression swaps — and **`gen-refs.mjs`, the FK rig that generated every demo
+skeleton**. The rig's loss is why the corrected keyframes are hand-authored; they are checked
+instead by running each frame through the Evaluator's own read path against the movement's
+real gates. Rebuilding either is worth less than beginner test 02 and is sequenced after it.
 
 ---
 
@@ -77,12 +83,20 @@ and several movements had unregistered reps. Whether v4.9 resolves that is the o
 
 ## Critical path
 
+**Nothing engineering-side is gating.** `verify.mjs` exits 0, `swift test` passes 15/15, and
+every demo passes its own gates. Three steps stand between here and the port decision, and
+none of them is code.
+
 ```
 NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
         └─ mixed recorded/TTS was likely half the "overlapping voices" complaint
 
     ──▶ smoke-test v4.9 yourself (15 min)
-        └─ watch one crunch and one side plank: those demos should now teach
+        └─ crunch and side plank — re-authored after test 01
+        └─ GLUTE BRIDGE — step 2 of First Steps, the demo a beginner meets
+           earliest of all, and the one that was never on anyone's list
+        └─ the shell and REF both have zero automated coverage: your eyes
+           are the only test either of them gets
 
     ──▶ ★ BEGINNER TEST 02 on v4.9 ★
         └─ measures the fixes · ask the wrong-corrections question explicitly
@@ -92,6 +106,10 @@ NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
         FAIL → fix in the browser, re-test
 ```
 
+*Engineering work that exists but does not gate any of the above: rebuild the lost behavioural
+suites; turn the demo gate check into a suite; `drawRef`'s ground line; `hollow-tuck`'s folded
+leg. All in `engineering-log.md` under known open items.*
+
 ---
 
 ## Open items
@@ -99,10 +117,13 @@ NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
 **From test 01** — see `test-01-max.md` for the full list. Highest value: demo audio synced
 to the animation, and a per-exercise debrief (the data is already logged).
 
-**Engineering** — two orphaned movements (`hollow-tuck`, `hollow-hold`); `dead-bug` and
-`leg-raise-bent` demos fail their own gates; tint solo coupled to `cueBudget`; explicit
-`video.videoWidth` aspect (port Week 1); framing is 2D-only so it can't detect bad camera
-*tilt*.
+**Engineering** — two orphaned movements (`hollow-tuck`, `hollow-hold`, the first still
+carrying the rig's folded leg but having no knee gate to author against); `leg-raise-bent` is
+**unreachable** — no plan lists it and its only route, regression from `leg-raise`, needs a
+`learning`-tier user in a `building`/`strong`-only plan; `dead-bug` frame 1 fails
+`kneeTucked` permanently and correctly; `drawRef`'s ground line floats above a correct
+dead-bug tabletop; tint solo coupled to `cueBudget`; explicit `video.videoWidth` aspect (port
+Week 1); framing is 2D-only so it can't detect bad camera *tilt*.
 
 **Deliberately unpatched** — a frame with no `cam` throws. Unreachable from `buildFrame` and
 boundary-caught; changing engine code immediately before user testing is the worse trade.
@@ -116,7 +137,13 @@ place and most port for free. Content-as-data meant correcting a broken demo was
 nine numbers, and the vector diff caught it. The honesty principle is enforced by audit.
 Zero running costs make £4.99 one-time viable.
 
-**Risks.** The demos are the weakest part of the product and two more are known broken. The
+**Risks.** The demos are the weakest part of the product; five more frames across three
+movements have now been corrected, and the way they were found is the warning. They were sat
+on for a week behind a diagnosis ("asymmetric movements a single-sided skeleton can't show")
+that was plausible, wrong, and — because it pointed at *asymmetry* — steered attention away
+from `glute-bridge`, the most-used demo of the three. **Every demo now passes its own gates;
+none of that was caught by a test, because the demos have no automated coverage.** The gate
+check that found it is an authoring script, not a suite. The
 privacy promise constrains features (history, voice control) in ways that need respecting
 rather than working around. Single-camera geometry means some faults — squat valgus above all
 — are permanently invisible and must be taught rather than corrected.

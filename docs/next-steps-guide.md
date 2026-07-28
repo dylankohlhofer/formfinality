@@ -57,7 +57,11 @@ the browser and re-test, which is exactly why the prototype exists.
 ## In parallel, whenever the Mac is idle
 
 **Set up Claude Code** (`tooling-guide.md`) — half an hour, and the Swift port is precisely
-what it's best at. First task: reconcile the 23 divergences in `verify.mjs`.
+what it's best at. The old first task (reconcile the 23 divergences) is **done** — `verify.mjs`
+exits 0 on 3,847 checks and `swift test` passes 15/15. First task now: rebuild the lost
+behavioural suites, then make the demo gate check a suite rather than an authoring script.
+
+Neither gates the beginner test. Run it in parallel, or after.
 
 ---
 

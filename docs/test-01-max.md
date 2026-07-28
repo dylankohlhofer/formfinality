@@ -106,9 +106,42 @@ it recognise a real crunch?"* — was literally true.
 *Fixed:* both re-authored, every frame passing every gate. Correcting them legitimately
 moved 21 `readMetric` vectors, regenerated deliberately for those two movements only.
 
-**Found in passing, not yet fixed:** `dead-bug` and `leg-raise-bent` have the same defect.
-Both are asymmetric movements where a single-sided demo skeleton genuinely can't show one
-limb moving while the other stays still — a different problem needing a different fix.
+**Found in passing — and originally misdiagnosed.** This section first recorded that
+`dead-bug` and `leg-raise-bent` had "the same defect", explained as asymmetry: a single-sided
+skeleton can't show one limb moving while the other stays still, so "a different problem
+needing a different fix". **That was wrong, and it hid a worse case for a week.**
+
+The failing gate was `kneesBent` / `kneeTucked` — a *knee* gate, reading 4–10°. Asymmetry
+cannot fold a knee to 4°. The rig had laid every supine shin flat back along its thigh, which
+is the same defect as the crunch above, and `drawRef` duly painted the two capsules as one
+bar. Corrected:
+
+| | gate | before | after |
+|---|---|---|---|
+| **`glute-bridge`** f0 | `kneesBent` (ideal 100°) | **9.9° · score 0 · BLOCKED** | 95.1° · 100 |
+| `glute-bridge` f1 | `kneesBent` | 90.1° · 100 | 104.7° · 100 |
+| `dead-bug` f0 | `kneeTucked` (ideal 95°) | **3.9° · score 0 · BLOCKED** | 95.0° · 100 |
+| `leg-raise-bent` f0 | `kneesBent` (ideal 100°) | **10.0° · score 0 · BLOCKED** | 99.8° · 100 |
+| `leg-raise-bent` f1 | `kneesBent` | **9.9° · score 0 · BLOCKED** | 100.0° · 100 |
+
+**`glute-bridge` was the one that mattered and the one nobody wrote down.** It is in three
+plans and is **step 2 of First Steps** — the second thing a beginner is ever asked to do —
+and its demo was showing a leg folded shut. It went unmentioned because the asymmetry story
+sent everyone looking at asymmetric movements, and a glute bridge is symmetric.
+
+`leg-raise-bent` is not asymmetric either — a bent-knee leg raise lifts **both** legs. It was
+fixed with the same edit, but it is the *lowest* priority of the three, not a peer of them:
+it is currently **unreachable**. No plan lists it; its only route is regression from
+`leg-raise`, which lives solely in `core-strength` (tiers `building`/`strong`), while
+regression requires `TIERS[tier].regress` — true only at `learning`. No user can reach this
+demo today. (`verify.mjs`'s orphan audit doesn't catch it: it adds every `regression` to the
+reachable set without checking whether the tiers line up.)
+
+Only **`dead-bug` frame 1** was ever genuinely unrepresentable, and it still is — see below.
+
+*Fixed:* keyframes hand-authored (the FK rig is unrecoverable) and verified through the
+Evaluator's own read path with `agg` applied, at learning tier. 15 `readMetric` vectors
+regenerated deliberately, for those three movements only.
 
 ---
 
@@ -118,7 +151,7 @@ limb moving while the other stays still — a different problem needing a differ
 |---|---|
 | Demo audio synced to the animation | Max's suggestion; design work, high value |
 | Per-exercise debrief | *"Way too broad, no real feedback the user can use."* Data is already logged — presentation only |
-| `dead-bug` / `leg-raise-bent` demos | Asymmetric-movement problem |
+| `dead-bug` frame 1 | **Closed as won't-fix.** Genuinely unrepresentable single-sided — the one place the asymmetry story was true. Recorded in the REF header so it isn't re-opened |
 | Longer rests between sets | One constant; needs a deliberate number |
 | Warm's "two" sounds like "coo" | Re-render one clip |
 | Surprised the first exercise was a plank, straight after a plank calibration | Acknowledge it in the copy |

@@ -16,7 +16,7 @@ never leaves the device. One-time £4.99, no subscription.
 ```
 form-coach-v4.8.html      the entire browser app — engine + shell in one file
 verify.mjs                replays conformance vectors against the build
-conformance-vectors.json  1,891 recorded cases: the executable specification
+conformance-vectors.json  1,893 recorded cases: the executable specification
 content-v4.8.json         all movements/plans/tiers/dialogue as data
 swift/                    the Swift port (FormCoachEngine SPM package)
 voice/                    rendered coach audio, indexed by manifest.json
@@ -88,13 +88,22 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 - An **empty collection** must mean "no requirement", not "no filter".
 - Author `display` silently defeats the `hidden` attribute.
 - Demo (`REF`) data is a **single-sided** skeleton; mirroring it can't represent asymmetric
-  movements. Demos are drawings, never evaluated.
+  movements.
+- Demos are drawings the engine never evaluates, **but they must still pass the movement's own
+  gates** — a demo teaching a pose the app would refuse is the crunch/glute-bridge bug
+  (#40, #41). Verify any `REF` edit through `Evaluator.read` at learning tier. `gen-refs.mjs`
+  is gone; frames are hand-authored.
+- A diagnosis that explains the symptom is not therefore the cause (#42). "Asymmetric movements
+  can't be drawn single-sided" explained the failing demos perfectly and was wrong — the gate
+  reading 4° was a *knee* gate, and asymmetry cannot fold a knee. It also steered a week of
+  attention away from the symmetric movement that mattered most.
 
 ## Current state
 
-17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs ~3,800
-checks from the surviving vectors. The UI shell has **no** automated coverage — a manual
-smoke pass is its only test.
+17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 3,847
+checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
+JSON. Two things have **no** automated coverage: the UI shell, and `REF` — a keyframe edit
+that breaks a gate fails nothing. A manual smoke pass is the only test either gets.
 
 **The next milestone is not code.** It's two beginner test sessions
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.

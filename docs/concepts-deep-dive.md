@@ -784,7 +784,7 @@ was producing different results depending on hardware speed.
 
 ## 6.5 Testing strategy
 
-Your 3,789 checks across the vector harness are roughly:
+Your 3,847 checks across the vector harness are roughly:
 
 **Unit** — one function (`scoreTarget` across every target × tier).
 **Property** — invariants rather than examples ("the same physical movement scores the same
@@ -792,10 +792,18 @@ at 24, 30, 60 and 90 fps"). This is how the frame-rate bug is prevented from ret
 **Integration** — whole scenarios through the Evaluator.
 **Regression** — a test whose only job is proving a specific fixed bug stays fixed
 (bug #16 has one).
-**Self-consistency** — the generated demo animations must pass the very exercise they
-demonstrate. Elegant, because it makes the content check *itself*.
+~~**Self-consistency** — the generated demo animations must pass the very exercise they
+demonstrate. Elegant, because it makes the content check *itself*.~~
 
-**And the one honest gap:** the UI shell has **zero** automated coverage. 3,789 checks prove
+> **Correction.** Elegant, and real once — but it lived in `gen-refs.mjs`, which was lost with
+> the sandbox, and it was never carried into `verify.mjs`. So this category was being counted
+> in the strategy while nothing ran it, and three demos drifted into teaching poses the app
+> would refuse to start from (bugs #40, #41). The idea is still right; it is now an authoring
+> script (`Evaluator.read` at learning tier, per frame, per gate) rather than a test. **Making
+> it a suite again is the cheapest real coverage left on the board.**
+
+**And the two honest gaps:** the UI shell has **zero** automated coverage, and neither does
+REF — a keyframe edit that breaks a gate fails nothing. 3,847 checks prove
 the core emits the right effects, not that the screen replays them. That's precisely why the
 desktop smoke test is Phase 1 of your task list.
 

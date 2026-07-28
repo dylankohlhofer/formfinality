@@ -4,7 +4,7 @@ Consolidates eight code reviews into one record: every bug found, why it happene
 it taught. The individual reviews are in `archive/code-reviews/` if you want the raw
 working; nothing here is lost, only compressed.
 
-**Current state: `verify.mjs` — 3,789 checks against 1,891 recorded vectors.**
+**Current state: `verify.mjs` — 3,847 checks against 1,893 recorded vectors, 0 divergences.**
 
 *The 17 JS suites this log used to cite were lost with an ephemeral sandbox; the vectors
 survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
@@ -42,6 +42,8 @@ survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
 | 38 | Rep acknowledged on the way down | Cycle completion and user acknowledgement were the same event | Wrong moment |
 | 39 | Side-plank demo never animated the hip | `hip.y` identical across all three keyframes | Dead content |
 | 40 | Crunch demo taught a pose the engine rejects | `kneesBent` scored **0** on the demo's own frames | Content vs engine |
+| 41 | **Every supine demo folded the shin flat onto the thigh** | FK rig emitted 4–10° knee angles; the position gate the demo exists to show scored **0**, and `drawRef` painted thigh and shin as one bar | Content vs engine |
+| 42 | #41 was diagnosed as unrepresentable asymmetry, and the diagnosis stuck for a week | A story that explained the symptom was accepted without being tested against the geometry | Wrong diagnosis |
 
 **Bugs 35–40 all came from one 20-minute session with one real beginner.** Six defects, none
 of which eight code reviews had found, because every one of them lives in the gap between
@@ -109,6 +111,22 @@ test caught it because both values are booleans that are usually equal.
 across every keyframe, so the movement's defining action was never shown. Audits checked that
 code was reachable; nothing checked that *animation actually animated*.
 
+**A diagnosis that explains the symptom is not therefore the cause.** Bug #42. `dead-bug` and
+`leg-raise-bent` failed their own gates, both are core movements, and "a single-sided skeleton
+can't show one limb moving while the other stays still" explained it perfectly — so it was
+written into three documents and the movements were parked as needing "a different fix". It
+was wrong three ways. A bent-knee leg raise lifts **both** legs: nothing about it is
+asymmetric. Dead bug is asymmetric only in its *second* keyframe; its tabletop start is as
+symmetric as a crunch. And because the story was about asymmetry, nobody checked the
+**symmetric** movements — so `glute-bridge`, which appears in three plans and is step 2 of
+First Steps, sat with a 9.9° knee and a failing `kneesBent` gate, unmentioned in any document,
+while two rarer movements were discussed at length. The real cause was the same rig artefact
+as #40 and the same fix worked on all of them.
+
+*The tell was available the whole time and cost one command to read: the failing gate was
+`kneesBent` / `kneeTucked` — a **knee** gate. Asymmetry cannot fold a knee to 4°. The
+explanation never actually matched the number it was explaining.*
+
 **When a broad new probe reports many failures at once, suspect the probe.** Twice in review
 #5 and once in #8, an alarming result was my harness, not the product — mirrored single-sided
 demo skeletons, static frames that can't drive reps, and measuring collections after they'd
@@ -143,5 +161,8 @@ These run every review. Each exists because a bug got past the previous set.
 | Frame without `cam` throws | Unreachable from `buildFrame`, boundary-caught. Deliberately unpatched before user testing |
 | `ev.hold` accumulates pre-arm | No observable effect; the verdict is armed-guarded |
 | Learning teach lines run 12–16s | A content judgement. Test 01 suggests the issue is that they play against a *static screen* — pairing them with the demo animation is the fix |
-| `dead-bug` / `leg-raise-bent` demos fail their own gates | Same class as #40, but these are asymmetric movements a single-sided demo skeleton can't represent |
-| 23 divergences in `verify.mjs` | 13 harness, 10 a real ~1.3% gap on one target. First Claude Code task |
+| `dead-bug` frame 1 fails `kneeTucked` | **Correct and permanent.** A dead bug extends the *opposite* arm and leg; one skeleton can only draw the same side's, which is the anti-pattern. The frame is a drawing of a limb reaching away, not a claim about a pose. Noted in the REF header so it isn't "fixed" |
+| `dead-bug` frame 0 scores 0 on `backFlat` | Geometric, not authoring. `backFlat` reads the hip's deviation from the shoulder→knee line; with the thigh vertical over the hip that line is near-vertical and the measure degenerates. Not a gate, and no cue fires — nothing unsupported is said. Arguably a mis-specified target for this movement |
+| `drawRef`'s ground line floats above a correct dead-bug tabletop | The line sits under the lowest of ankle/heel/toe/wrist/knee, and arms-up/knees-up puts all five in the air. Widening it to all joints fixes this one frame and changes no other demo (checked). Shell change, so it wants the static audits + a smoke pass |
+| `hollow-tuck` still carries the rig's folded leg (10°/7°) | It has no knee gate, so a hand-authored replacement could only be judged on taste. Needs a gate or a rig first |
+| `gen-refs.mjs` (the FK rig) is unrecoverable | Went with the sandbox that took the 17 suites. Rebuilding it lost to beginner test 02 on priority; hand-authoring + the gate check covers the frames that actually needed it |

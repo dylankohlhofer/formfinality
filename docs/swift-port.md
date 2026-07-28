@@ -37,9 +37,9 @@ Already true; confirm on the day.
 
 | | Status |
 |---|---|
-| `swift test` runs and names divergences | ✅ kit synced |
+| `swift test` runs and names divergences | ✅ Xcode licensed, **15/15 passing** |
 | Content exported as data, zero hand-transcription | ✅ `content-v4.8.json` |
-| Vectors cover every engine behaviour | ✅ 1,891 rows |
+| Vectors cover every engine behaviour | ✅ 1,893 rows · `verify.mjs` 3,847 checks, 0 divergences |
 | No open engine bugs | ✅ eight reviews |
 
 ### The sequence

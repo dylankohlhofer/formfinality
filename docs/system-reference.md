@@ -217,11 +217,18 @@ calendar are designed but unbuilt — see `backlog.md`.
 
 ## Testing
 
-**3,789 vector checks**, all headless. Unit (one function across every target × tier),
-property (the same movement scores identically at 24/30/60/90 fps), integration (whole
-scenarios), regression (one per fixed bug), and self-consistency (generated demos must pass
-the exercise they demonstrate).
+**3,847 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
+same JSON. Unit (one function across every target × tier), property (the same movement scores
+identically at 24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug).
 
-**The honest gap:** the UI shell has zero automated coverage. 3,789 checks prove the core
+**The honest gap:** the UI shell has zero automated coverage. 3,847 checks prove the core
 emits the right effects, not that the screen replays them. That's why the desktop smoke test
 is Phase 1 of `next-steps-guide.md`.
+
+**The second gap — the demos.** This section used to claim a fifth category, self-consistency:
+"generated demos must pass the exercise they demonstrate". That check lived in `gen-refs.mjs`,
+which is lost, and it is **not** part of `verify.mjs` — so for a while the docs credited
+coverage that nothing was running. Three demos were meanwhile teaching poses the app would
+refuse to start from (bugs #40, #41). Demo frames are now hand-authored and checked by running
+each one through `Evaluator.read` at learning tier, but that is an authoring script, not a
+suite: **nothing fails if a future REF edit breaks a gate.**

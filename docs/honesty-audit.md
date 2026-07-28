@@ -224,8 +224,16 @@ it's true. Regression-tested in `t52`.
 | — | Bug #16 fixed |
 
 11 new dialogue keys, all resolving at all three tiers and all three personas.
-**`t52` (21 checks)**; 3,789 vector checks, all green. The FK demos still pass their own
-exercises against the newly added targets.
+**`t52` (21 checks)**; 3,789 vector checks, all green. ~~The FK demos still pass their own
+exercises against the newly added targets.~~
+
+> **Correction (27 July 2026).** That last sentence was false when written. The FK demos were
+> never re-checked against the position gates — `glute-bridge.kneesBent`, `dead-bug.kneeTucked`
+> and `leg-raise-bent.kneesBent` all scored **0** on the demos' own frames, because the rig had
+> folded every supine shin flat back along its thigh. An audit whose subject is honesty should
+> not have asserted a pass it did not run. The frames are now hand-authored and each one is
+> verified through the Evaluator's own read path; see `test-01-max.md` §B5 and the REF header
+> in the build. `dead-bug` frame 1 still fails `kneeTucked`, deliberately and permanently.
 
 **Voice:** 117 new clips, ~£0.52–1.25, next time you render.
 
