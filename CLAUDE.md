@@ -16,6 +16,7 @@ never leaves the device. One-time £4.99, no subscription.
 ```
 form-coach-v4.8.html      the entire browser app — engine + shell in one file
 verify.mjs                replays conformance vectors against the build
+verify-mutations.mjs      breaks demo keyframes on purpose; asserts refGates catches it
 conformance-vectors.json  1,893 recorded cases: the executable specification
 content-v4.8.json         all movements/plans/tiers/dialogue as data
 swift/                    the Swift port (FormCoachEngine SPM package)
@@ -55,6 +56,13 @@ makes a reading unreliable, suppress the cue and log the suppression. `cat-cow` 
 
 ```bash
 node verify.mjs form-coach-v4.9.html   # must exit 0 — naming the build is required
+```
+
+If you touched `REF` or the `refGates` section, also run its mutation test — it is the only
+thing that proves that suite still bites:
+
+```bash
+node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
 ```
 
 Then the permanent static audits — each exists because a bug got past the previous set:

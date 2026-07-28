@@ -4,7 +4,8 @@ Replays the conformance vectors against the browser build. The browser-side twin
 `swift test`: same recorded cases, same specification, so the two can't drift.
 
 ```bash
-node verify.mjs path/to/build.html   # the build is REQUIRED
+node verify.mjs path/to/build.html             # the build is REQUIRED
+node verify-mutations.mjs path/to/build.html   # proves the refGates section still bites
 ```
 
 Exit 0 = every vector matches. Exit 2 = you didn't name a build.
@@ -93,12 +94,26 @@ excuses must still be failing. An exception that starts passing is reported as a
 to delete. Without that, the table becomes a list of things nobody re-checks — which is the
 mechanism that produced the bugs it exists to prevent.
 
-Verified by mutation rather than by reading. Seven mutations against a copy of the build,
-all caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
+Verified by mutation rather than by reading — and the mutations are **in the repo**, not in
+this file:
+
+```bash
+node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
+```
+
+It breaks a demo keyframe on purpose, runs this harness against the broken build, and asserts
+`refGates` fails on the check that should have caught it. Six mutations plus a control, all
+caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
 floor); the same fold moved onto the taught frame; a rep driver that no longer reaches its
-top; `dead-bug` frame 1 "fixed" so its exception stops applying (reported as deletable);
-a setup exemption left covering the only remaining frame; a renamed movement leaving a fold
+top; `dead-bug` frame 1 "fixed" so its exception stops applying (reported as deletable); a
+setup exemption left covering the only remaining frame; a renamed movement leaving a fold
 exemption excusing nothing; and an unmodified control that stays green.
+
+That it is tracked at all is the point. `refGates` exists because the identical assertion
+lived in `gen-refs.mjs`, outside the repo, and vanished — leaving three documents crediting
+coverage nothing ran. A mutation test for it kept in a scratch directory would have been the
+same mistake one level up. **An assertion nobody has watched fail is an assumption**, and
+prose describing a mutation is not a mutation.
 
 `repDispatch` is the v4.9 **atPeak** coverage: acknowledgement (the up-crossing, where the
 effort peaks) is a separate event from accounting (the completed cycle). Each row records
