@@ -4,7 +4,7 @@ Consolidates eight code reviews into one record: every bug found, why it happene
 it taught. The individual reviews are in `archive/code-reviews/` if you want the raw
 working; nothing here is lost, only compressed.
 
-**Current state: `verify.mjs` — 4,023 checks against 1,893 recorded vectors, 0 divergences.**
+**Current state: `verify.mjs` — 4,044 checks against 1,893 recorded vectors, 0 divergences.**
 
 *The 17 JS suites this log used to cite were lost with an ephemeral sandbox; the vectors
 survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
@@ -110,6 +110,15 @@ test caught it because both values are booleans that are usually equal.
 **Content can be dead too.** Bug #39: the side-plank demo's hip coordinate was identical
 across every keyframe, so the movement's defining action was never shown. Audits checked that
 code was reachable; nothing checked that *animation actually animated*.
+
+*`refGates` now catches a demo that is entirely static — which nothing did before; a frozen
+demo passed the whole harness once its vectors were regenerated. It does **not** catch #39's
+exact shape, where only the hip was frozen. Two general rules were built and measured for
+that: "the joint the movement is most about must move" fails 15 of 21 shipped demos, because
+the rig anchors the hip on purpose; "a hold demo must arrive at its pose" needs five
+exceptions to catch one bug. Distinguishing an anchor joint from the joint whose motion IS
+the exercise is authored knowledge the content model doesn't hold. **Some things are only
+caught by looking, and saying which ones is worth more than a check that pretends.***
 
 **A test category you can name but not run is worse than one you never claimed.** The
 self-consistency check — "every demo must pass the exercise it demonstrates" — was real, and

@@ -28,7 +28,7 @@ before the Swift port is justified.
 | | |
 |---|---|
 | **Build** | `form-coach-v4.9.html` — single file, 197 KB, no dependencies but the pose model CDN |
-| **Verification** | `verify.mjs` — **4,023 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
+| **Verification** | `verify.mjs` — **4,044 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | 1,351 clips planned · **210 pending render** (~£1–2.50) |
 | **Swift kit** | 12 sources, conformance vectors current |
@@ -41,7 +41,7 @@ lived only in an ephemeral sandbox and were lost when it reset. They were never 
 files.
 
 The **vectors survived**, and they held the valuable half: the expected outputs. `verify.mjs`
-reconstructs 4,023 checks from them, in a better shape than what it replaced — one file, one
+reconstructs 4,044 checks from them, in a better shape than what it replaced — one file, one
 source of truth, shared with the Swift tests so the two cannot drift.
 
 **The 23 divergences are closed, and all 23 were *harness* faults** — the build never diverged
@@ -142,7 +142,7 @@ movements have now been corrected, and the way they were found is the warning. T
 on for a week behind a diagnosis ("asymmetric movements a single-sided skeleton can't show")
 that was plausible, wrong, and — because it pointed at *asymmetry* — steered attention away
 from `glute-bridge`, the most-used demo of the three. **None of it was caught by a test,
-because the demos had no automated coverage.** They do now — `refGates` (176 checks) asserts
+because the demos had no automated coverage.** They do now — `refGates` (197 checks) asserts
 every demo against its own gates and is itself mutation-tested, so this exact class fails by
 name rather than waiting for someone to look. What it still cannot judge is whether a demo
 *reads* as the movement: `glute-bridge` frame 1 passed every gate for months while drawn

@@ -76,7 +76,13 @@ const tol = k => {
 
 /* ── reporting ──────────────────────────────────────────────────────────── */
 let pass = 0, fail = 0;
-const failures = [];
+/* Failures are budgeted PER SECTION, not globally. A single global cap of 25 meant a
+   noisy early section could starve every later one: reviewing v4.8, `refGates` reported
+   "14 FAILED" and printed nothing at all, because `scoreTarget` had already spent the
+   budget. The one time the detail was wanted, it wasn't there. A section's job is to
+   name what broke, so each gets its own allowance. */
+const FAILS_PER_SECTION = 8;
+const failures = new Map();          // section → [detail]
 const near = (a, b, tol = 1e-6) =>
   (a == null && b == null) || (typeof a === "number" && typeof b === "number"
     ? Math.abs(a - b) <= tol : a === b);
@@ -84,7 +90,10 @@ const near = (a, b, tol = 1e-6) =>
 function check(section, label, got, want, tol){
   if(near(got, want, tol)){ pass++; return true; }
   fail++;
-  if(failures.length < 25) failures.push(`${section} · ${label}\n      expected ${want}\n      got      ${got}`);
+  if(!failures.has(section)) failures.set(section, []);
+  const seen = failures.get(section);
+  if(seen.length < FAILS_PER_SECTION)
+    seen.push(`${section} · ${label}\n      expected ${want}\n      got      ${got}`);
   return false;
 }
 const section = (name, n) => process.stdout.write(`  ${name.padEnd(20)} ${String(n).padStart(5)} vectors … `);
@@ -281,6 +290,37 @@ const REF_FOLD_EXEMPT = {
       const kneeGate = mv.targets.find(t => (t.pos || t.gate) && t.m.k === "angle" && t.m.v === "knee");
       add(`${id} — fold exemption still justified (no knee gate to author against)`,
           kneeGate ? `now gated by ${kneeGate.id}` : "no knee gate", "no knee gate");
+    }
+
+    /* A multi-frame demo must ANIMATE. Bug #39 — the side-plank demo whose `hip.y` was
+       identical in all three keyframes, so the one thing a side plank IS was never shown.
+
+       WHAT THIS CATCHES, AND WHAT IT DOES NOT. This catches a demo that is entirely
+       static; nothing else in the harness does, and a frozen demo otherwise passes
+       clean (measured — with its readMetric rows regenerated, the whole harness reports
+       0 failed). It does NOT catch #39 as it actually shipped, where only the hip was
+       frozen and every other joint moved.
+
+       That is not laziness, it is the honest boundary, and two candidate rules were
+       built and measured before settling here:
+         · "the joint the movement is most about must move", focus derived from tintSegs
+           — fails 15 of 21 SHIPPED demos, because the rig anchors the hip and expresses
+           motion around it. A frozen hip is the normal convention, not a defect.
+         · "a hold demo must arrive: its taught pose is at least as close to each ideal
+           as frame 0" — catches v4.8's side-plank, but false-positives on plank,
+           side-plank-knee, wall-sit, hollow-tuck and hollow-hold. Five exceptions to
+           catch one bug is the exception table nobody re-reads, which is the mechanism
+           (#42) this section exists to avoid.
+       Distinguishing "anchor joint" from "the joint whose motion IS the exercise" needs
+       authored knowledge the content model does not carry. Adding it to satisfy a test
+       would be authoring content backwards from the assertion. So: assert what is true,
+       and say plainly what is still only caught by looking. */
+    if(ref.frames.length > 1){
+      const f0 = ref.frames[0];
+      const animates = Object.keys(f0).some(j =>
+        ref.frames.some(f => f[j] && (f[j][0] !== f0[j][0] || f[j][1] !== f0[j][1])));
+      add(`${id} demo animates (${ref.frames.length} frames)`,
+          animates ? "animates" : "every frame identical — the demo is a still", "animates");
     }
 
     /* A rep demo that never crosses its own thresholds is not showing a rep. Mirrors
@@ -603,9 +643,10 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
 
 /* ── verdict ────────────────────────────────────────────────────────────── */
 console.log(`\n  ${pass} passed · ${fail} failed`);
-if(failures.length){
-  console.log(`\n  first ${failures.length} divergence(s):\n`);
-  for(const f of failures) console.log("   " + f + "\n");
+if(failures.size){
+  const shown = [...failures.values()].reduce((a, l) => a + l.length, 0);
+  console.log(`\n  ${shown} of ${fail} divergence(s), up to ${FAILS_PER_SECTION} per section:\n`);
+  for(const [, list] of failures) for(const f of list) console.log("   " + f + "\n");
 }
 console.log(fail === 0
   ? "\n✅ the build matches every recorded vector\n"

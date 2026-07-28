@@ -109,7 +109,7 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 
 ## Current state
 
-17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,023
+17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,044
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name. The UI shell still has **no** automated coverage; a manual smoke pass is its

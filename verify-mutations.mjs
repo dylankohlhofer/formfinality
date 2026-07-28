@@ -110,6 +110,13 @@ const MUTATIONS = [
     apply: h => h.replace('  "hollow-tuck": {', '  "hollow-tuck-renamed": {'),
     expect: ["fold exemption 'hollow-tuck' refers to a real movement"] },
 
+  { name: "side-plank frozen to one repeated pose — a demo that is a still",
+    why:  "bug #39's class. NOTE this is the total freeze, not #39 as it shipped " +
+          "(where only the hip was frozen) — see the boundary note in refGates",
+    apply: h => { const held = refOf("side-plank").frames[1];
+                  return withFrames(h, "side-plank", [held, held, held]); },
+    expect: ["side-plank demo animates"] },
+
   { name: "control — unmodified build",
     why:  "a suite that fails on everything catches nothing",
     apply: h => h,
@@ -123,15 +130,29 @@ console.log(`build   ${BUILD}\n`);
 let missed = 0;
 for(const m of MUTATIONS){
   const tmp = join(ROOT, `.mutant-${process.pid}.html`);
-  let out = "";
+  let out = "", broke = null;
   try {
     writeFileSync(tmp, m.apply(load()));
     /* Non-zero exit is the expected outcome for a mutation, so the throw carries
        the output we actually want to read. */
     try { out = execFileSync("node", ["verify.mjs", tmp], { cwd: ROOT, encoding: "utf8" }); }
     catch(e){ out = (e.stdout || "") + (e.stderr || ""); }
+  } catch(e) {
+    /* The mutation itself could not be applied — a renamed movement, a changed REF
+       shape. That is a broken TEST, not a passing build, and it must say so by name
+       rather than by stack trace. */
+    broke = e.message;
   } finally {
     try { unlinkSync(tmp); } catch {}
+  }
+
+  if(broke){
+    missed++;
+    console.log(`  ✗ ${m.name}`);
+    console.log(`      ${m.why}`);
+    console.log(`      could not apply this mutation: ${broke}`);
+    console.log(`      the mutation is stale, not the build — fix it here\n`);
+    continue;
   }
 
   const line   = (out.split("\n").find(l => l.includes("refGates")) || "").trim();

@@ -100,6 +100,13 @@ against the engine found a third defect nobody had seen:
 EXISTING crunch frame0 → kneesBent = 12.8 (score 0)  BLOCKED
 ```
 
+*Figure not reproducible (27 July): replayed against `form-coach-v4.8.html` — the only
+pre-fix build that still exists — `crunch` frame 0 reads **9.8°**, and all three frames read
+9.8°, not just frame 0. Either 12.8 came from an intermediate build lost with the sandbox,
+or it was mistyped. The conclusion is unaffected and if anything understated. Recording the
+discrepancy rather than quietly overwriting it, since neither number can now be checked
+against the build that produced it.*
+
 **The demo taught a position the app would refuse to start from.** Max's inference — *"will
 it recognise a real crunch?"* — was literally true.
 

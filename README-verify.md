@@ -32,7 +32,7 @@ the Swift tests.
 
 ## Known state
 
-**4,023 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
+**4,044 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
 
 Up from 3,812: `repDispatch` is new, and `repScenarios` went from asserting *nothing* to
 asserting 30-odd things. It read `sc.reps`/`sc.rushed`, fields no row has, behind
@@ -61,7 +61,7 @@ This is exactly the kind of task to hand to Claude Code with the repo in front o
 
 ## What it covers
 
-`scoreTarget` (1,428) · `readMetric` (169) · `refGates` (176) · `filters` (24) ·
+`scoreTarget` (1,428) · `readMetric` (169) · `refGates` (197) · `filters` (24) ·
 `tempo` (120) · `neededJoints` (21) · `framing` (7) · `tintDerivation` (68) ·
 `tintScenarios` (3) · `planExpansion` (15) · `aspect` (3) · `slug` (4) ·
 `repScenarios` (3) · `repDispatch` (2) · `evaluatorScenarios` (14) ·
@@ -79,8 +79,32 @@ learning tier. That is deliberate: it survives a vector regeneration, and it fai
 edit no recorded row would notice. Per movement it asserts every `pos`/`gate` target scores
 above zero on every frame, that no shin is folded back over its thigh (knee ≥ 25°, a drawing
 failure before it is a gate failure — and caught on *angle*, since a straight leg has no
-perpendicular separation either and is correct), and that rep drivers still cross their own
-up and down thresholds across the keyframes.
+perpendicular separation either and is correct), that rep drivers still cross their own up
+and down thresholds across the keyframes, and that a multi-frame demo is not a still.
+
+### The animation check, and what it deliberately does not claim
+
+A frozen demo used to pass everything. Measured: freeze side-plank to one repeated pose,
+regenerate its three `readMetric` rows through the documented deliberate-regeneration
+workflow, and the harness reports **0 failed** on a demo that does not move. That is now
+caught.
+
+**It does not catch bug #39 as it actually shipped.** There, only `hip.y` was frozen and
+every other joint moved. Two candidate rules were built and measured before settling for
+the narrow one:
+
+- *"the joint the movement is most about must move"*, focus derived from `tintSegs` —
+  **fails 15 of 21 shipped demos.** The rig anchors the hip and expresses motion around it,
+  so a frozen hip is the normal authoring convention, not a defect.
+- *"a hold demo must arrive: its taught pose is at least as close to each ideal as frame 0"* —
+  catches v4.8's side-plank, but false-positives on `plank`, `side-plank-knee`, `wall-sit`,
+  `hollow-tuck` and `hollow-hold`. Five exceptions to catch one bug is the table nobody
+  re-reads, which is the mechanism this section exists to avoid.
+
+Telling an *anchor* joint from *the joint whose motion is the exercise* needs authored
+knowledge the content model doesn't carry, and adding it to satisfy a test would be
+authoring content backwards from the assertion. So the check asserts what is true and the
+boundary is written down. #39's exact shape is still only caught by looking.
 
 **It checks every frame, not just the taught pose** — and that is not fussiness. A
 final-frame-only check would have missed #41 on two of its three movements: `glute-bridge`
@@ -102,12 +126,21 @@ node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
 ```
 
 It breaks a demo keyframe on purpose, runs this harness against the broken build, and asserts
-`refGates` fails on the check that should have caught it. Six mutations plus a control, all
-caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
+`refGates` fails on the check that should have caught it. Seven mutations plus a control,
+all caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
 floor); the same fold moved onto the taught frame; a rep driver that no longer reaches its
 top; `dead-bug` frame 1 "fixed" so its exception stops applying (reported as deletable); a
 setup exemption left covering the only remaining frame; a renamed movement leaving a fold
-exemption excusing nothing; and an unmodified control that stays green.
+exemption excusing nothing; a demo frozen to a single repeated pose; and an unmodified
+control that stays green.
+
+A mutation that can no longer be *applied* — a renamed movement, a changed REF shape — is
+reported by name as a stale test rather than as a passing build.
+
+Independent check worth keeping: run `verify.mjs` against **v4.8**, the pre-fix build it was
+never tuned on, and `refGates` rediscovers #40 and #41 unaided — `crunch[0,1,2]`,
+`glute-bridge[0]`, `dead-bug[0]`, `leg-raise-bent[0,1]`, each on both the gate and the fold
+floor.
 
 That it is tracked at all is the point. `refGates` exists because the identical assertion
 lived in `gen-refs.mjs`, outside the repo, and vanished — leaving three documents crediting
