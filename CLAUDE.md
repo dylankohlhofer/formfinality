@@ -91,8 +91,9 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
   movements.
 - Demos are drawings the engine never evaluates, **but they must still pass the movement's own
   gates** — a demo teaching a pose the app would refuse is the crunch/glute-bridge bug
-  (#40, #41). Verify any `REF` edit through `Evaluator.read` at learning tier. `gen-refs.mjs`
-  is gone; frames are hand-authored.
+  (#40, #41). `verify.mjs`'s `refGates` section enforces this through `Evaluator.read` at
+  learning tier; its exception table is asserted both ways, so an exception that stops being
+  needed fails as an exception to delete. `gen-refs.mjs` is gone; frames are hand-authored.
 - A diagnosis that explains the symptom is not therefore the cause (#42). "Asymmetric movements
   can't be drawn single-sided" explained the failing demos perfectly and was wrong — the gate
   reading 4° was a *knee* gate, and asymmetry cannot fold a knee. It also steered a week of
@@ -100,10 +101,12 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 
 ## Current state
 
-17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 3,847
+17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,023
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
-JSON. Two things have **no** automated coverage: the UI shell, and `REF` — a keyframe edit
-that breaks a gate fails nothing. A manual smoke pass is the only test either gets.
+JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
+fails by name. The UI shell still has **no** automated coverage; a manual smoke pass is its
+only test, and `refGates` can prove a demo passes its gates but not that it *reads* as the
+movement.
 
 **The next milestone is not code.** It's two beginner test sessions
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.

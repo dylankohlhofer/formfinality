@@ -31,7 +31,7 @@ the Swift tests.
 
 ## Known state
 
-**3,847 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
+**4,023 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
 
 Up from 3,812: `repDispatch` is new, and `repScenarios` went from asserting *nothing* to
 asserting 30-odd things. It read `sc.reps`/`sc.rushed`, fields no row has, behind
@@ -60,10 +60,45 @@ This is exactly the kind of task to hand to Claude Code with the repo in front o
 
 ## What it covers
 
-`scoreTarget` (1,428) · `readMetric` (169) · `filters` (24) · `tempo` (120) ·
-`neededJoints` (21) · `framing` (7) · `tintDerivation` (68) · `tintScenarios` (3) ·
-`planExpansion` (15) · `aspect` (3) · `slug` (4) · `repScenarios` (3) ·
-`repDispatch` (2) · `evaluatorScenarios` (14) · content integrity (5)
+`scoreTarget` (1,428) · `readMetric` (169) · `refGates` (176) · `filters` (24) ·
+`tempo` (120) · `neededJoints` (21) · `framing` (7) · `tintDerivation` (68) ·
+`tintScenarios` (3) · `planExpansion` (15) · `aspect` (3) · `slug` (4) ·
+`repScenarios` (3) · `repDispatch` (2) · `evaluatorScenarios` (14) ·
+content integrity (5)
+
+`refGates` asserts that **a demo passes the exercise it demonstrates**. `gen-refs.mjs` used
+to do this and was lost with the sandbox; the assertion was never carried into a harness,
+while three documents went on listing it as a live test category. In that gap `crunch` (#40)
+and then `glute-bridge`, `dead-bug` and `leg-raise-bent` (#41) drifted into teaching poses
+the app refuses to start from. Every one was found by a person looking.
+
+It is **derived, not vector-driven** — no recorded expectation, only the movement's own
+targets read through `Evaluator.read` (so `agg` resolves as a session resolves it) at
+learning tier. That is deliberate: it survives a vector regeneration, and it fails on a REF
+edit no recorded row would notice. Per movement it asserts every `pos`/`gate` target scores
+above zero on every frame, that no shin is folded back over its thigh (knee ≥ 25°, a drawing
+failure before it is a gate failure — and caught on *angle*, since a straight leg has no
+perpendicular separation either and is correct), and that rep drivers still cross their own
+up and down thresholds across the keyframes.
+
+**It checks every frame, not just the taught pose** — and that is not fussiness. A
+final-frame-only check would have missed #41 on two of its three movements: `glute-bridge`
+was broken in frame 0 and clean in frame 1, and `dead-bug` the same with frame 1 already a
+documented exception. Only `leg-raise-bent`, the unreachable one, was broken in its last
+frame.
+
+Four exceptions are declared (`REF_SETUP_FRAMES`, `REF_ZERO_TARGETS`, `REF_FOLD_EXEMPT`) and
+each is asserted **both ways**: it must still refer to something real, *and* the thing it
+excuses must still be failing. An exception that starts passing is reported as an exception
+to delete. Without that, the table becomes a list of things nobody re-checks — which is the
+mechanism that produced the bugs it exists to prevent.
+
+Verified by mutation rather than by reading. Seven mutations against a copy of the build,
+all caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
+floor); the same fold moved onto the taught frame; a rep driver that no longer reaches its
+top; `dead-bug` frame 1 "fixed" so its exception stops applying (reported as deletable);
+a setup exemption left covering the only remaining frame; a renamed movement leaving a fold
+exemption excusing nothing; and an unmodified control that stays green.
 
 `repDispatch` is the v4.9 **atPeak** coverage: acknowledgement (the up-crossing, where the
 effort peaks) is a separate event from accounting (the completed cycle). Each row records
@@ -75,3 +110,8 @@ bottom, while the count never moves — fails by name rather than by inspection.
 
 The UI shell — every bug in reviews #17, #19, #21, #22, #23 and #31 lived there, and none
 would be caught here. A manual smoke pass remains its only test.
+
+Demo *drawing* quality beyond the folded-limb floor. `refGates` proves a demo passes its own
+gates and doesn't paint a limb as one bar; it cannot tell you the figure reads as the
+movement. `glute-bridge` frame 1 passed every gate for months while drawn rigidly rotated
+~51°, ramp pointing downhill. Only looking at it caught that.

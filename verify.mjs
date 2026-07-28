@@ -139,6 +139,186 @@ console.log(`vectors ${VECTORS} (${Object.values(V).filter(Array.isArray).reduce
   done(b);
 }
 
+/* ── 2b · refGates — a demo must pass the exercise it demonstrates ───────────
+   THE HOLE THIS CLOSES. `gen-refs.mjs` used to assert exactly this and was lost with
+   the sandbox; the assertion was never carried into any harness, while three documents
+   went on crediting it as a live test category. In that gap `crunch` (#40) and then
+   `glute-bridge`, `dead-bug` and `leg-raise-bent` (#41) drifted into teaching poses the
+   app refuses to start from — a demo showing a knee folded to 4° while the movement's
+   own position gate demands ~95°. Every one was found by a person looking, not by a test.
+
+   Unlike every other section here this one is DERIVED, not vector-driven: there is no
+   recorded expectation, only the movement's own targets. That is the point — it stays
+   true across deliberate vector regenerations, and it fails on a REF edit that no
+   recorded row would notice.
+
+   WHY EVERY FRAME, not just the taught pose. The obvious form of this check — assert the
+   final frame, the one the demo is teaching — would NOT have caught #41. `glute-bridge`
+   was broken in frame 0 and clean in frame 1; `dead-bug` likewise, and its frame 1 is a
+   documented exception. A final-frame-only check would have passed the broken build on
+   two of the three movements. So: every frame, with the frames that deliberately start
+   outside the pose named individually below.
+
+   Read through `Evaluator.read`, so `agg` (best/worst/mean) resolves exactly as a live
+   session resolves it, at LEARNING tier — the widest tolerance band, and the tier these
+   demos exist for. A gate that cannot clear the widest band is broken at every tier. */
+const REF_TIER = "learning";
+
+/* A folded-flat limb is a DRAWING failure before it is a gate failure: `drawRef` paints
+   thigh and shin as capsules, so a shin doubled back over its thigh renders as one bar
+   whatever the gates say. Caught on knee angle, which is what "folded" actually means —
+   perpendicular separation can't be used, because a STRAIGHT leg (plank, 180°) has none
+   either and is perfectly correct. Floor at 25°: the bug frames read 3.9–10.0°, and the
+   lowest legitimate demo is crunch at 47.4°, so this sits ~2x clear of both. */
+const REF_FOLD_FLOOR = 25;
+const KNEE_FOLD = { k:"angle", v:"knee", a:"hip", c:"ankle" };
+
+/* ── the exceptions ───────────────────────────────────────────────────────────
+   Each is asserted BOTH WAYS: it must still refer to something real, and the thing it
+   excuses must still be failing. An exception that starts passing is reported as an
+   exception to delete. That is what stops this table rotting into a list of things
+   nobody re-checks — the failure mode that produced the bugs above. */
+
+/* Frames that deliberately begin outside the pose: "from all fours…", "back on the
+   wall…". They are the demo's approach, not its claim, so their gates are not asserted.
+   Only frame 0 of a multi-frame demo can ever qualify, and never the taught pose. */
+const REF_SETUP_FRAMES = {
+  "plank:0":        "'From all fours…' — on hands and knees, legs not yet straight",
+  "knee-plank:0":   "'From all fours…' — the body line is not made until frame 1",
+  "wall-sit:0":     "'Back on the wall…' — standing, knees straight at 180°",
+  "downward-dog:0": "'From all fours…' — the hips have not gone up yet",
+};
+
+/* Individual targets known to score 0 on a specific frame, for reasons that are not
+   authoring mistakes and cannot be authored away. */
+const REF_ZERO_TARGETS = {
+  "dead-bug:1:kneeTucked":
+    "UNREPRESENTABLE, permanently. A dead bug extends the OPPOSITE arm and leg; a " +
+    "single-sided skeleton can only draw the same side's, which is the anti-pattern. " +
+    "The frame is a drawing of a limb reaching away, not a claim about a pose.",
+  "dead-bug:0:backFlat":
+    "DEGENERATE GEOMETRY. backFlat reads the hip's deviation from the shoulder→knee " +
+    "line; in a correct tabletop the thigh is vertical over the hip, so that line is " +
+    "near-vertical and the measure stops meaning anything. Not a gate, and no cue fires " +
+    "(below:'backarch' needs a NEGATIVE deviation), so nothing unsupported is said.",
+};
+
+/* Movements exempt from the folded-limb floor. Also asserted to still be JUSTIFIED:
+   the exemption holds only while there is no knee gate to author a replacement against. */
+const REF_FOLD_EXEMPT = {
+  "hollow-tuck":
+    "Still carries the FK rig's folded leg (10°/7°). It has no knee gate, so a " +
+    "hand-authored replacement could only be judged on taste — redraw it when it has " +
+    "a gate, or when there is a rig again.",
+};
+
+{
+  const rows = [];
+  const add = (label, got, want) => rows.push([label, got, want]);
+  const yn  = c => c ? "yes" : "no";
+  const seenSetup = new Set(), seenZero = new Set(), seenFold = new Set();
+
+  for(const id of Object.keys(E.REF)){
+    const mv = E.M[id], ref = E.REF[id];
+    if(!mv){ add(`${id} — REF entry has a movement`, "missing", "present"); continue; }
+    const ev   = new E.Evaluator(mv, REF_TIER);
+    const last = ref.frames.length - 1;
+    const frameOf = f => {
+      const pose = {}; for(const k in f){ if(k === "spine") continue; pose[k] = f[k]; }
+      return frameFromPose(pose);
+    };
+
+    ref.frames.forEach((f, i) => {
+      const frame = frameOf(f);
+      const at = `${id}[${i}]${i === last ? " (taught pose)" : ""}`;
+      const setupKey = `${id}:${i}`;
+      const isSetup  = setupKey in REF_SETUP_FRAMES;
+      let setupStillOutside = false;
+
+      for(const t of mv.targets){
+        const v = ev.read(t, frame);
+        const s = v == null ? null : E.scoreTarget(t, v, REF_TIER);
+        const shown = v == null ? "null" : v.toFixed(1);
+        const zeroKey = `${id}:${i}:${t.id}`;
+
+        if(zeroKey in REF_ZERO_TARGETS){
+          seenZero.add(zeroKey);
+          /* Two-way: if this ever starts scoring, the exception is the thing to delete. */
+          add(`${zeroKey} — documented exception, still scores 0 (delete it if this fails)`,
+              s === 0 || s == null ? "scores 0" : `scores ${s.toFixed(0)} (${shown})`, "scores 0");
+          continue;
+        }
+        if(!(t.pos || t.gate)) continue;   // graded targets are judged over a set, not a pose
+        if(isSetup){ if(!(s > 0)) setupStillOutside = true; continue; }
+        add(`${at} gate ${t.id}`, s > 0 ? "in band" : `score 0 (${shown})`, "in band");
+      }
+
+      if(isSetup){
+        seenSetup.add(setupKey);
+        add(`${setupKey} — setup exemption still needed (a gate still fails here)`,
+            yn(setupStillOutside), "yes");
+        add(`${setupKey} — setup exemption is not covering the taught pose`,
+            yn(i !== last), "yes");
+      }
+
+      /* Folded-limb geometry, checked on every frame including setup ones: "from all
+         fours" is a legitimate starting shape, a shin doubled back over its thigh is not. */
+      const knee = E.readMetric(KNEE_FOLD, frame, "left");
+      if(knee != null && !(id in REF_FOLD_EXEMPT))
+        add(`${at} shin not folded back over the thigh`,
+            knee >= REF_FOLD_FLOOR ? "clear" : `${knee.toFixed(1)}° < ${REF_FOLD_FLOOR}°`, "clear");
+    });
+
+    if(id in REF_FOLD_EXEMPT){
+      seenFold.add(id);
+      const folded = ref.frames.some(f => {
+        const k = E.readMetric(KNEE_FOLD, frameOf(f), "left");
+        return k != null && k < REF_FOLD_FLOOR;
+      });
+      add(`${id} — fold exemption still needed (a frame is still folded)`, yn(folded), "yes");
+      /* …and still justified. The moment this movement gains a knee gate there IS
+         something to author against, and the leg should be redrawn instead of excused. */
+      const kneeGate = mv.targets.find(t => (t.pos || t.gate) && t.m.k === "angle" && t.m.v === "knee");
+      add(`${id} — fold exemption still justified (no knee gate to author against)`,
+          kneeGate ? `now gated by ${kneeGate.id}` : "no knee gate", "no knee gate");
+    }
+
+    /* A rep demo that never crosses its own thresholds is not showing a rep. Mirrors
+       Rep.update's arithmetic exactly: `rising` compares the raw value, otherwise the
+       thresholds are OFFSETS — from frame 0 for baseline movements, from zero for the
+       rest. (leg-raise-bent's downAbove was once 155, which no planted-feet pose could
+       reach; the demo failing its own counter is how that was found.) */
+    if(mv.reps){
+      const s = mv.reps, t = mv.targets.find(x => x.id === s.driver);
+      if(!t) add(`${id} — rep driver '${s.driver}' is a real target`, "missing", "present");
+      else {
+        const vals = ref.frames.map(f => ev.read(t, frameOf(f)));
+        const base = s.baseline ? vals[0] : 0;
+        const up   = s.rising ? s.upAbove   : base + s.upBelow;
+        const down = s.rising ? s.downBelow : base + s.downAbove;
+        const trace = vals.map(v => v == null ? "null" : v.toFixed(1)).join(" → ");
+        add(`${id} rep driver ${s.driver} reaches the top (${trace})`,
+            yn(vals.some(v => v != null && (s.rising ? v > up : v < up))), "yes");
+        add(`${id} rep driver ${s.driver} returns to rest (${trace})`,
+            yn(vals.some(v => v != null && (s.rising ? v < down : v > down))), "yes");
+      }
+    }
+  }
+
+  /* No stale entries: a renamed movement or a deleted frame must not leave an exception
+     quietly excusing nothing. */
+  for(const k of Object.keys(REF_SETUP_FRAMES))
+    add(`setup exemption '${k}' refers to a real frame`, yn(seenSetup.has(k)), "yes");
+  for(const k of Object.keys(REF_ZERO_TARGETS))
+    add(`zero-target exception '${k}' refers to a real target`, yn(seenZero.has(k)), "yes");
+  for(const k of Object.keys(REF_FOLD_EXEMPT))
+    add(`fold exemption '${k}' refers to a real movement`, yn(seenFold.has(k)), "yes");
+
+  const b = fail; section("refGates", rows.length);
+  for(const [label, got, want] of rows) check("refGates", label, got, want);
+  done(b);
+}
+
 /* ── 3 · filters (dt-normalised EMA) ────────────────────────────────────── */
 {
   const b = fail; section("filters", V.filters.length);

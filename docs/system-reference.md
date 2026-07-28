@@ -217,18 +217,23 @@ calendar are designed but unbuilt — see `backlog.md`.
 
 ## Testing
 
-**3,847 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
+**4,023 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
 same JSON. Unit (one function across every target × tier), property (the same movement scores
 identically at 24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug).
 
-**The honest gap:** the UI shell has zero automated coverage. 3,847 checks prove the core
+**The honest gap:** the UI shell has zero automated coverage. 4,023 checks prove the core
 emits the right effects, not that the screen replays them. That's why the desktop smoke test
 is Phase 1 of `next-steps-guide.md`.
 
-**The second gap — the demos.** This section used to claim a fifth category, self-consistency:
-"generated demos must pass the exercise they demonstrate". That check lived in `gen-refs.mjs`,
-which is lost, and it is **not** part of `verify.mjs` — so for a while the docs credited
-coverage that nothing was running. Three demos were meanwhile teaching poses the app would
-refuse to start from (bugs #40, #41). Demo frames are now hand-authored and checked by running
-each one through `Evaluator.read` at learning tier, but that is an authoring script, not a
-suite: **nothing fails if a future REF edit breaks a gate.**
+**Self-consistency is back, as `refGates` (176 checks).** This section once claimed the
+category on the strength of a check inside `gen-refs.mjs` — which was lost, was never carried
+into `verify.mjs`, and so credited coverage nothing ran while three demos drifted into
+teaching poses the app refuses to start from (bugs #40, #41). It is now a real section:
+every REF frame read through `Evaluator.read` at learning tier against the movement's own
+gates, plus a folded-limb geometry floor and a rep-driver straddle check, with a small
+exception table asserted in both directions so an exception that stops being needed fails as
+one to delete. Verified by mutation, not by reading.
+
+**What it still can't judge** is whether a demo *reads* as the movement. `glute-bridge`
+frame 1 passed every gate for months while drawn rigidly rotated ~51°, its ramp pointing
+downhill. That needs eyes.

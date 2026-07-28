@@ -784,7 +784,7 @@ was producing different results depending on hardware speed.
 
 ## 6.5 Testing strategy
 
-Your 3,847 checks across the vector harness are roughly:
+Your 4,023 checks across the vector harness are roughly:
 
 **Unit** — one function (`scoreTarget` across every target × tier).
 **Property** — invariants rather than examples ("the same physical movement scores the same
@@ -795,15 +795,15 @@ at 24, 30, 60 and 90 fps"). This is how the frame-rate bug is prevented from ret
 ~~**Self-consistency** — the generated demo animations must pass the very exercise they
 demonstrate. Elegant, because it makes the content check *itself*.~~
 
-> **Correction.** Elegant, and real once — but it lived in `gen-refs.mjs`, which was lost with
-> the sandbox, and it was never carried into `verify.mjs`. So this category was being counted
-> in the strategy while nothing ran it, and three demos drifted into teaching poses the app
-> would refuse to start from (bugs #40, #41). The idea is still right; it is now an authoring
-> script (`Evaluator.read` at learning tier, per frame, per gate) rather than a test. **Making
-> it a suite again is the cheapest real coverage left on the board.**
+> **Correction, and then repair.** Elegant, and real once — but it lived in `gen-refs.mjs`,
+> which was lost with the sandbox and never carried into `verify.mjs`. So the category was
+> counted in the strategy while nothing ran it, and three demos drifted into teaching poses
+> the app would refuse to start from (bugs #40, #41). It is now `refGates`, a real section of
+> 176 checks: every REF frame through `Evaluator.read` at learning tier against the movement's
+> own gates. The idea was always right — **a category you can name but not run is worse than
+> one you never claimed**, because it buys the feeling of coverage at the price of the thing.
 
-**And the two honest gaps:** the UI shell has **zero** automated coverage, and neither does
-REF — a keyframe edit that breaks a gate fails nothing. 3,847 checks prove
+**And the one honest gap:** the UI shell has **zero** automated coverage. 4,023 checks prove
 the core emits the right effects, not that the screen replays them. That's precisely why the
 desktop smoke test is Phase 1 of your task list.
 

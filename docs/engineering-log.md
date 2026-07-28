@@ -4,7 +4,7 @@ Consolidates eight code reviews into one record: every bug found, why it happene
 it taught. The individual reviews are in `archive/code-reviews/` if you want the raw
 working; nothing here is lost, only compressed.
 
-**Current state: `verify.mjs` — 3,847 checks against 1,893 recorded vectors, 0 divergences.**
+**Current state: `verify.mjs` — 4,023 checks against 1,893 recorded vectors, 0 divergences.**
 
 *The 17 JS suites this log used to cite were lost with an ephemeral sandbox; the vectors
 survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
@@ -111,6 +111,15 @@ test caught it because both values are booleans that are usually equal.
 across every keyframe, so the movement's defining action was never shown. Audits checked that
 code was reachable; nothing checked that *animation actually animated*.
 
+**A test category you can name but not run is worse than one you never claimed.** The
+self-consistency check — "every demo must pass the exercise it demonstrates" — was real, and
+lived in `gen-refs.mjs`. When the rig was lost the check went with it, but the *claim* stayed
+in three documents. For a week the project believed it had coverage that nothing executed,
+which is strictly worse than knowing the gap was there: bugs #40 and #41 both walked straight
+through it. Now `refGates` in `verify.mjs`, and verified by **mutation** — the pre-fix
+`glute-bridge` frame 0 is replayed into a copy of the build to confirm the suite actually
+fails on it. An assertion nobody has watched fail is an assumption.
+
 **A diagnosis that explains the symptom is not therefore the cause.** Bug #42. `dead-bug` and
 `leg-raise-bent` failed their own gates, both are core movements, and "a single-sided skeleton
 can't show one limb moving while the other stays still" explained it perfectly — so it was
@@ -147,6 +156,9 @@ These run every review. Each exists because a bug got past the previous set.
 - `[hidden]` **beats author display** *(the fix that silently didn't work)*
 - Effect stream clean **in both directions** *(bug #31)*
 - Shipped file **byte-identical** to the working copy
+- Every demo **passes the exercise it demonstrates** — `refGates` in `verify.mjs` *(bugs #40,
+  #41; and #42, which is why its exceptions are asserted in both directions rather than
+  merely listed)*
 
 ---
 
