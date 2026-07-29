@@ -52,7 +52,7 @@ let TINT_OUT: [Double] = [86, 62]
 public struct LogEntry { public let key: String; public let at: Double }
 public struct TracePoint { public let t: Double; public let s: Int }
 
-/// 1:1 transcription of the v4.7 Evaluator — pos/quality gate split, view awareness,
+/// 1:1 transcription of the browser Evaluator — pos/quality gate split, view awareness,
 /// w:0-safe score pool, worst-offender cue with budget+cooldown, priming'd reps,
 /// timestamped corrections. The conformance vectors are the proof of parity.
 

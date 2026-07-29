@@ -1,9 +1,10 @@
 # Form Coach — Swift port kit
 
 **Method: the browser engine is the specification, and this kit makes the
-specification executable.** Everything in `Vectors/` was recorded from the running
-**v4.8** engine — the one validated by 247 checks across 15 suites. The Swift
-package's definition of done is one command:
+specification executable.** The vectors were recorded from the running browser engine —
+the build is named in `meta.source` inside `conformance-vectors.json`, and `verify.mjs`
+holds the browser side to the same rows. The Swift package's definition of done is one
+command:
 
     cd FormCoachEngine
     swift test
@@ -23,18 +24,20 @@ Green = the Swift engine is behaviourally identical to the browser on:
 | `planExpansion` | 15 | sets × tier scaling |
 | `clipResolver` + `slug` | 12 | voice clip resolution and tokenisation |
 | `repScenarios` | 3 | priming, baseline drift, the crunch guard |
+| `repDispatch` | 2 | which slot each rep event lands in — the atPeak double-count trap |
+| `framing` | 7 | in-frame / too-far / clipped verdicts and which way to nudge |
+| `neededJoints` | 21 | the framing scope derived from each movement's targets |
 | `evaluatorScenarios` | 14 (21 checkpoints) | standing rejection, bridge priming, view gating, cue budgets |
 
-A failure names the scenario, frame and field that diverged.
+That is all 15 tests. A failure names the scenario, frame and field that diverged.
 
 ## Honest status
 
 The vectors and content JSON are machine-generated and machine-verified. The Swift
-sources are a careful 1:1 transcription of the JS, written without a compiler in the
-loop — expect a handful of compile errors on first `swift test` (typos, Codable
-edge cases), which Xcode will pinpoint in seconds. That is the deal: the hard part
-(semantic parity) is mechanically checkable; the easy part (syntax) is yours to
-sweep up in the first ten minutes.
+sources are a careful 1:1 transcription of the JS, and they **compile and pass**:
+`swift test` is green at 15/15 against the repo-root fixtures. (This section used to warn
+of compile errors on first run, written before anyone had a compiler in the loop — that
+has been true for a while now and the warning was left standing longer than it was true.)
 
 Two transcription notes encoded in the source: Swift's sort is not guaranteed
 stable where JS's is, so cue-offender ordering sorts by (score, index) explicitly;
@@ -71,7 +74,7 @@ and JS `??`/truthiness quirks around `w:0` are mirrored with explicit optionals.
     FormCoachEngine/
       Package.swift
       Sources/FormCoachEngine/
-        ContentModels.swift   Codable schemas (decode content-v4.7.json)
+        ContentModels.swift   Codable schemas (decode content-v4.8.json)
         PoseFrame.swift       the engine's only input type
         Geometry.swift        angleAt · readMetric (aspect-corrected) · verticality
         Scoring.swift         scoreTarget · cueFor
@@ -82,8 +85,18 @@ and JS `??`/truthiness quirks around `w:0` are mirrored with explicit optionals.
         Content.swift         loader
       Tests/FormCoachEngineTests/
         ConformanceTests.swift
-        Vectors/conformance-vectors.json   ← ground truth, machine-generated
-        Vectors/content-v4.7.json          ← all 21 movements, 5 plans, tiers, REF
+
+The fixtures are NOT in this package. `ConformanceTests` walks up to the repo root and
+reads the same two files `verify.mjs` reads:
+
+    conformance-vectors.json   ← ground truth, machine-generated
+    content-v4.8.json          ← all 21 movements, 5 plans, tiers, REF
+
+They used to be copied into `Tests/…/Vectors/`. The copy went stale — root's content was
+corrected after beginner test 01 and the copy was not — and `swift test` reported 19
+readMetric failures describing a divergence that did not exist. One canonical copy makes
+that class of failure impossible rather than merely unlikely. A missing fixture is a
+`fatalError` naming the expected path, because a missing fixture must never look like a pass.
 
 ## Not in this kit (deliberately)
 

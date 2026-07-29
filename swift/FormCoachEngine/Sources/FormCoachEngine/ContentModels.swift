@@ -1,7 +1,9 @@
 import Foundation
 
-// Codable mirrors of the v4.7 content schemas. Decoded from content-v4.7.json —
-// exported mechanically from the browser build so nothing is hand-transcribed.
+// Codable mirrors of the browser's content schemas. Decoded from content-v4.8.json at
+// the REPO ROOT — exported mechanically from the browser build so nothing is
+// hand-transcribed, and read from the one canonical copy rather than a bundled duplicate
+// (see the repoRoot note in ConformanceTests).
 
 public struct MetricSpec: Codable {
     public let k: String                 // "angle" | "line" | "vert"

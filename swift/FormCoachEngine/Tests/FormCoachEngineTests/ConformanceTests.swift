@@ -1,7 +1,9 @@
 import XCTest
 @testable import FormCoachEngine
 
-/// Replays golden vectors recorded from the RUNNING browser engine (v4.7).
+/// Replays golden vectors recorded from the RUNNING browser engine. The build they came
+/// from is named in `meta.source` of the vectors themselves — not repeated here, because a
+/// version number in a comment is exactly what went stale last time.
 /// The browser build is the specification; these tests are the port's definition
 /// of done. A failure names the scenario, frame and field that diverged.
 final class ConformanceTests: XCTestCase {

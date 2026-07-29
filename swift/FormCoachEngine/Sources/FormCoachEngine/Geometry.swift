@@ -1,6 +1,6 @@
 import Foundation
 
-// 1:1 transcription of the v4.7 geometry. Every branch mirrors the JS, including
+// 1:1 transcription of the browser geometry. Every branch mirrors the JS, including
 // the aspect correction (x is scaled by W/H so angles are PHYSICAL in any
 // orientation) and the |dx| < 0.05 guard in line deviation.
 

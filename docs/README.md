@@ -1,8 +1,11 @@
 # Form Coach — documentation
 
-**Start here.** Seventeen documents, each with one job. Where any two disagree,
+**Start here.** Eighteen documents, each with one job. Where any two disagree,
 `project-status.md` wins — it's the only one whose numbers are recomputed rather than
 remembered.
+
+**New to the codebase?** `architecture-guide.md` is the orientation — the whole system, from
+nothing, with a map of where everything lives.
 
 ---
 
@@ -23,6 +26,7 @@ thing standing between here and the Swift port.
 
 | Document | Covers |
 |---|---|
+| `architecture-guide.md` | **Start here if you're new.** The whole system explained from scratch — the four boxes, a tour of every file, what each group of functions is for, the principles underneath, and what the Swift port changes |
 | `system-reference.md` | How it works — pipeline, content model, mechanisms, limits |
 | `interface-principles.md` | The nine UI rules, and why each exists |
 | `concepts-deep-dive.md` | The computing and ML fundamentals, from zero |

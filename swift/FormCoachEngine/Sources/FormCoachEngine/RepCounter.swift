@@ -26,7 +26,7 @@ public struct RepEvent {
     }
 }
 
-/// Exact mirror of the v4.7 Rep class — including PRIMING (nothing counts until a
+/// Exact mirror of the browser's Rep class — including PRIMING (nothing counts until a
 /// genuine resting position has been seen; a plank is geometrically identical to a
 /// bridge lockout) and the rest-only baseline drift guard (drifting during the rep
 /// made slow, shallow reps uncountable — the beginner pattern).
