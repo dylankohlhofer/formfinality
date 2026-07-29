@@ -199,17 +199,23 @@ const REF_SETUP_FRAMES = {
 };
 
 /* Individual targets known to score 0 on a specific frame, for reasons that are not
-   authoring mistakes and cannot be authored away. */
+   authoring mistakes and cannot be authored away.
+
+   `gated` records whether the target was a gate WHEN THE EXCEPTION WAS WRITTEN, and is
+   asserted. Without it the table rots in a direction the other two arms can't see: a
+   target that is merely graded today costs nothing to excuse, but promote it to a gate
+   later and this entry silently becomes a gate exemption on a demo pose — bug #40's
+   exact class, arriving through the table built to prevent it. */
 const REF_ZERO_TARGETS = {
-  "dead-bug:1:kneeTucked":
+  "dead-bug:1:kneeTucked": { gated:true, why:
     "UNREPRESENTABLE, permanently. A dead bug extends the OPPOSITE arm and leg; a " +
     "single-sided skeleton can only draw the same side's, which is the anti-pattern. " +
-    "The frame is a drawing of a limb reaching away, not a claim about a pose.",
-  "dead-bug:0:backFlat":
+    "The frame is a drawing of a limb reaching away, not a claim about a pose." },
+  "dead-bug:0:backFlat": { gated:false, why:
     "DEGENERATE GEOMETRY. backFlat reads the hip's deviation from the shoulder→knee " +
     "line; in a correct tabletop the thigh is vertical over the hip, so that line is " +
     "near-vertical and the measure stops meaning anything. Not a gate, and no cue fires " +
-    "(below:'backarch' needs a NEGATIVE deviation), so nothing unsupported is said.",
+    "(below:'backarch' needs a NEGATIVE deviation), so nothing unsupported is said." },
 };
 
 /* Movements exempt from the folded-limb floor. Also asserted to still be JUSTIFIED:
@@ -250,11 +256,18 @@ const REF_FOLD_EXEMPT = {
         const shown = v == null ? "null" : v.toFixed(1);
         const zeroKey = `${id}:${i}:${t.id}`;
 
-        if(zeroKey in REF_ZERO_TARGETS){
+        const zero = REF_ZERO_TARGETS[zeroKey];
+        if(zero){
           seenZero.add(zeroKey);
-          /* Two-way: if this ever starts scoring, the exception is the thing to delete. */
+          /* Two-way: if this ever starts scoring, the exception is the thing to delete.
+             An UNREADABLE target is not the documented condition and is not accepted as
+             one — a vanished joint would otherwise read as "still scores 0" forever. */
           add(`${zeroKey} — documented exception, still scores 0 (delete it if this fails)`,
-              s === 0 || s == null ? "scores 0" : `scores ${s.toFixed(0)} (${shown})`, "scores 0");
+              s === 0 ? "scores 0" : s == null ? `unreadable (${shown})` : `scores ${s.toFixed(0)} (${shown})`,
+              "scores 0");
+          /* …and still excusing the same kind of thing. */
+          add(`${zeroKey} — exception still justified (gate status unchanged)`,
+              (t.pos || t.gate) ? "gated" : "not gated", zero.gated ? "gated" : "not gated");
           continue;
         }
         if(!(t.pos || t.gate)) continue;   // graded targets are judged over a set, not a pose
@@ -268,6 +281,10 @@ const REF_FOLD_EXEMPT = {
             yn(setupStillOutside), "yes");
         add(`${setupKey} — setup exemption is not covering the taught pose`,
             yn(i !== last), "yes");
+        /* The rule the comment above states, asserted rather than trusted. A demo's
+           approach is its FIRST frame; an exemption anywhere else is excusing a pose
+           the demo has already started teaching. */
+        add(`${setupKey} — setup exemption is on frame 0`, yn(i === 0), "yes");
       }
 
       /* Folded-limb geometry, checked on every frame including setup ones: "from all
@@ -344,6 +361,13 @@ const REF_FOLD_EXEMPT = {
       }
     }
   }
+
+  /* The other direction of the REF↔M pairing. Iterating REF catches a demo whose movement
+     is gone; nothing caught a MOVEMENT WITH NO DEMO. That is not a crash — `hasDemo` hides
+     the button — it is a silent capability loss: a movement ships and "Show me how" simply
+     isn't offered for it, which no failing test would ever mention. */
+  for(const id of Object.keys(E.M))
+    add(`${id} — has a demo`, id in E.REF ? "yes" : "no demo", "yes");
 
   /* No stale entries: a renamed movement or a deleted frame must not leave an exception
      quietly excusing nothing. */
@@ -634,10 +658,15 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
         Object.values(E.TIERS).every(t => t.repMin != null), true);
   check("content", "every rep movement has shortCue",
         Object.values(E.M).filter(m => m.kind === "reps").every(m => m.reps.shortCue != null), true);
+  /* WHICH movements no plan reaches, not how many. A count is not an assertion about
+     identity: wire `hollow-hold` into a plan, let some new movement fall out of one, and
+     a length check stays green through a swap it should have named. Asserted both ways —
+     an orphan that gets adopted fails just as loudly as one that appears. */
   const reach = new Set(E.PLANS.flatMap(p => p.steps.filter(s => s.ex).map(s => s.ex)));
   for(const id of [...reach]) if(E.M[id]?.regression) reach.add(E.M[id].regression);
-  const orphans = Object.keys(E.M).filter(id => !reach.has(id));
-  check("content", `orphaned movements (${orphans.join(",") || "none"})`, orphans.length, 2);
+  const orphans = Object.keys(E.M).filter(id => !reach.has(id)).sort();
+  const EXPECTED_ORPHANS = ["hollow-hold", "hollow-tuck"];
+  check("content", "orphaned movements", orphans.join(",") || "none", EXPECTED_ORPHANS.join(","));
   done(b);
 }
 

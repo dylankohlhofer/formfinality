@@ -2337,15 +2337,46 @@ const REF = {
 const RECORDED = {};
 
 function refFor(id){ return RECORDED[id] || REF[id] || null; }
+
+/* ═══ ONE COORDINATE SPACE FOR REFERENCES ═════════════════════════════════
+   REF is authored ISOTROPICALLY: x and y in the same units, so a femur is the
+   same number whichever way it points (leg-raise: 0.2263 horizontal, 0.2261
+   vertical). Camera landmarks are NOT — MediaPipe normalises x by width and y
+   by height separately, exactly the distortion `readMetric`'s `A` undoes.
+
+   Recordings arrive from the camera and therefore arrive anisotropic. They are
+   converted HERE, at the boundary, so that everything downstream — refPose,
+   drawRef, the ghost — sees one space and never asks where a frame came from.
+   Undoing the aspect alone would leave x spanning [0,aspect]; re-centring puts
+   the camera's full width back on the unit square REF is authored in. */
+const camToIso = ([x, y], aspect) =>
+  [+(x*aspect - (aspect - 1)/2).toFixed(3), +y.toFixed(3)];
+
+/* Recordings made before the space was unified are raw camera coordinates. They
+   carry no aspect of their own, so they are converted on the assumption
+   `openCamera` states — 1280x720 is what it asks for. Tagged on the way through
+   so the conversion happens exactly once, whatever path the ref arrived by. */
+const REC_ASPECT_ASSUMED = 16/9;
+function toIsoRef(ref){
+  if(!ref || !ref.frames || ref.space === "iso") return ref;
+  const a = ref.aspect ?? REC_ASPECT_ASSUMED;
+  return { ...ref, space:"iso", frames: ref.frames.map(f => {
+    const o = {};
+    for(const j in f) o[j] = camToIso(f[j], a);
+    return o;
+  }) };
+}
+
 /* Recordings persist in localStorage (this file runs from your own server, not
    inside claude.ai, so storage works). Export/import keeps them portable. */
 function loadSavedRefs(){
   try{
     const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
-    Object.assign(RECORDED, saved);
+    for(const [id, ref] of Object.entries(saved)) RECORDED[id] = toIsoRef(ref);
   }catch(e){}
 }
 function saveRef(id, ref){
+  ref = toIsoRef(ref);                 // idempotent — imports arrive here too
   RECORDED[id] = ref;
   try{
     const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
@@ -2379,12 +2410,34 @@ function refPose(ref, t){
   return out;
 }
 
+/* ISOTROPIC UNIT SQUARE → CANVAS PIXELS. One scale factor, centred.
+   This used to be `x*W, y*H`, which stretched every reference by the canvas
+   aspect: 1.41x in the 480x340 demo box, 1.78x in the 1280x720 ghost overlay.
+   The tell was the head — `scale` below is a PIXEL hypotenuse, so an identical
+   rig drew a head 1.78x larger in a lying demo (plank, crunch, cobra) than an
+   upright one (squat, wall-sit), and no gate could see it because `refGates`
+   verifies the authored numbers, not the picture.
+
+   It also broke the GHOST, whose whole job is to be superimposed: the live
+   skeleton beside it is drawn from raw MediaPipe coordinates into a canvas
+   sized to the video, which is undistorted, so the two could not be related by
+   any uniform scale — a correct pose could never line up with the shape it was
+   being asked to copy.
+
+   Note this mapping is exactly camera space again once the aspect is undone: a
+   recording converted by `camToIso` lands back on the very pixels it was
+   captured at, provided the capture is landscape (S == H). In a portrait
+   capture the reference is fitted to the frame rather than pixel-registered,
+   which is the honest trade for never clipping a demo. */
+function refFit(W, H){ const S = Math.min(W, H); return { S, ox:(W - S)/2, oy:(H - S)/2 }; }
+
 /** Draw a reference figure. `ghost` = faint, behind the live one.
     Not a wire skeleton: capsule limbs, a filled torso and a head, so it reads
     as a person at a glance. */
 function drawRef(ctx, pose, W, H, ghost){
   if(!pose) return;
-  const P = j => pose[j] ? [pose[j][0]*W, pose[j][1]*H] : null;
+  const { S, ox, oy } = refFit(W, H);
+  const P = j => pose[j] ? [pose[j][0]*S + ox, pose[j][1]*S + oy] : null;
   const scale = (() => {                       // body size on screen → limb thickness
     const sh = P("shoulder"), hp = P("hip");
     return sh && hp ? Math.max(Math.hypot(hp[0]-sh[0], hp[1]-sh[1]), 40) : 120;
@@ -2407,7 +2460,7 @@ function drawRef(ctx, pose, W, H, ghost){
     ctx.beginPath(); ctx.moveTo(sh[0], sh[1]);
     if(pose.spine){
       // pass THROUGH the spine point: control = 2·spine − midpoint
-      const sx = pose.spine[0]*W, sy = pose.spine[1]*H;
+      const sx = pose.spine[0]*S + ox, sy = pose.spine[1]*S + oy;
       ctx.quadraticCurveTo(2*sx - (sh[0]+hp[0])/2, 2*sy - (sh[1]+hp[1])/2, hp[0], hp[1]);
     } else ctx.lineTo(hp[0], hp[1]);
     ctx.stroke();
@@ -3451,19 +3504,24 @@ function drawDemo(dt){
   dctx.fillStyle = "#0C1116"; dctx.fillRect(0,0,W,H);
   const pose = refPose(ref, demoT);
   if(ref.props){
+    /* Props are placed FROM the reference's own coordinates, so they map through
+       the same isotropic fit as the figure — otherwise the wall drifts off the
+       back and the chair slides out from under the hips. */
+    const { S, ox, oy } = refFit(W, H);
+    const px = x => x*S + ox, py = y => y*S + oy;
     dctx.strokeStyle = "rgba(237,234,226,.28)"; dctx.lineWidth = 3; dctx.lineCap = "round";
     const xs = ref.frames.flatMap(fr => Object.entries(fr)
       .filter(([k]) => k !== "spine").map(([,v]) => v[0]));
     if(ref.props.wallBehind || ref.props.wallFront){
-      const wx = (ref.props.wallFront ? Math.max(...xs) + .045 : Math.min(...xs) - .045) * W;
-      dctx.beginPath(); dctx.moveTo(wx, H*.08); dctx.lineTo(wx, H*.84); dctx.stroke();
+      const wx = px(ref.props.wallFront ? Math.max(...xs) + .045 : Math.min(...xs) - .045);
+      dctx.beginPath(); dctx.moveTo(wx, py(.08)); dctx.lineTo(wx, py(.84)); dctx.stroke();
     }
     if(ref.props.chair){
-      const f0 = ref.frames[0], hx = f0.hip[0]*W, hy = f0.hip[1]*H;
+      const f0 = ref.frames[0], hx = px(f0.hip[0]), hy = py(f0.hip[1]);
       dctx.beginPath();
-      dctx.moveTo(hx - .15*W, hy + .012*H); dctx.lineTo(hx + .04*W, hy + .012*H);
-      dctx.moveTo(hx - .13*W, hy + .012*H); dctx.lineTo(hx - .13*W, H*.82);
-      dctx.moveTo(hx + .02*W, hy + .012*H); dctx.lineTo(hx + .02*W, H*.82);
+      dctx.moveTo(hx - .15*S, hy + .012*S); dctx.lineTo(hx + .04*S, hy + .012*S);
+      dctx.moveTo(hx - .13*S, hy + .012*S); dctx.lineTo(hx - .13*S, py(.82));
+      dctx.moveTo(hx + .02*S, hy + .012*S); dctx.lineTo(hx + .02*S, py(.82));
       dctx.stroke();
     }
   }
@@ -3492,12 +3550,15 @@ function recTick(frame, dt){
   // recording: ~15fps
   if(frame && (!recMode.frames.length || recMode.t - recMode.lastAt >= 1/15)){
     recMode.lastAt = recMode.t;
+    /* THE BOUNDARY. Camera landmarks are anisotropic; references are isotropic.
+       Convert once, here, so a recorded ref is indistinguishable from an
+       authored one everywhere downstream. */
     const P = frame[frame.cam], f = {};
-    for(const j of JOINTS){ if(P[j]) f[j] = [+P[j].x.toFixed(3), +P[j].y.toFixed(3)]; }
+    for(const j of JOINTS){ if(P[j]) f[j] = camToIso([P[j].x, P[j].y], frame.aspect || 1); }
     recMode.frames.push(f);
   }
   if(recMode.t >= 6){
-    const ref = { loop:true, fps:15, frames:recMode.frames, recorded:true };
+    const ref = { loop:true, fps:15, frames:recMode.frames, recorded:true, space:"iso" };
     saveRef(recMode.id, ref);
     const id = recMode.id;
     recMode = null;

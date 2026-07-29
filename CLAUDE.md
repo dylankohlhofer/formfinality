@@ -65,6 +65,13 @@ thing that proves that suite still bites:
 node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
 ```
 
+If you touched `drawRef`, `refFit` or the demo/ghost canvases, run the drawing check —
+`refGates` reads the keyframe numbers and cannot see the picture:
+
+```bash
+node verify-draw.mjs form-coach-v4.9.html        # must exit 0
+```
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled
@@ -106,15 +113,25 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
   can't be drawn single-sided" explained the failing demos perfectly and was wrong — the gate
   reading 4° was a *knee* gate, and asymmetry cannot fold a knee. It also steered a week of
   attention away from the symmetric movement that mattered most.
+- **References are isotropic; camera landmarks are not** (#43). `REF` is authored with x and y
+  in the same units — a femur is the same number whichever way it points. MediaPipe normalises
+  x by width and y by height *separately*, which is the distortion `readMetric`'s `A` undoes.
+  Drawing a reference with `x*W, y*H` therefore stretched every demo by the canvas aspect
+  (1.41x in the demo box, 1.78x in the ghost) and no gate could see it, because `refGates`
+  reads the keyframe numbers and never the picture. Anything crossing that boundary converts
+  at the boundary — `camToIso` on the way in, `refFit` on the way out — and `verify-draw.mjs`
+  is what holds the line.
 
 ## Current state
 
-17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,044
+17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,071
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
-fails by name. The UI shell still has **no** automated coverage; a manual smoke pass is its
-only test, and `refGates` can prove a demo passes its gates but not that it *reads* as the
-movement.
+fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
+drawing has ever had. The rest of the UI shell still has **no** automated coverage; a manual
+smoke pass is its only test, and between them `refGates` and `verify-draw` prove a demo
+passes its gates and is drawn in the proportions it was authored in, but not that it *reads*
+as the movement.
 
 **The next milestone is not code.** It's two beginner test sessions
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.

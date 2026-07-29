@@ -217,15 +217,16 @@ calendar are designed but unbuilt — see `backlog.md`.
 
 ## Testing
 
-**4,044 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
+**4,071 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
 same JSON. Unit (one function across every target × tier), property (the same movement scores
 identically at 24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug).
 
-**The honest gap:** the UI shell has zero automated coverage. 4,044 checks prove the core
-emits the right effects, not that the screen replays them. That's why the desktop smoke test
-is Phase 1 of `next-steps-guide.md`.
+**The honest gap:** the UI shell has almost no automated coverage — `verify-draw.mjs` (250
+checks) now holds `drawRef`, and that is all of it. 4,071 vector checks prove the core emits
+the right effects, not that the screen replays them. That's why the desktop smoke test is
+Phase 1 of `next-steps-guide.md`.
 
-**Self-consistency is back, as `refGates` (197 checks).** This section once claimed the
+**Self-consistency is back, as `refGates` (224 checks).** This section once claimed the
 category on the strength of a check inside `gen-refs.mjs` — which was lost, was never carried
 into `verify.mjs`, and so credited coverage nothing ran while three demos drifted into
 teaching poses the app refuses to start from (bugs #40, #41). It is now a real section:

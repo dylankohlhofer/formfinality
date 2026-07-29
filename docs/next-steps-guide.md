@@ -58,7 +58,7 @@ the browser and re-test, which is exactly why the prototype exists.
 
 **Set up Claude Code** (`tooling-guide.md`) — half an hour, and the Swift port is precisely
 what it's best at. The old first task (reconcile the 23 divergences) is **done** — `verify.mjs`
-exits 0 on 4,044 checks and `swift test` passes 15/15, and the demo gate check is now a real
+exits 0 on 4,071 checks and `swift test` passes 15/15, and the demo gate check is now a real
 section (`refGates`). First task now: rebuild the lost behavioural suites — cooldown
 neutrality, plan completion, regression swaps.
 

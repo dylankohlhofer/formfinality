@@ -4,7 +4,7 @@ Consolidates eight code reviews into one record: every bug found, why it happene
 it taught. The individual reviews are in `archive/code-reviews/` if you want the raw
 working; nothing here is lost, only compressed.
 
-**Current state: `verify.mjs` — 4,044 checks against 1,893 recorded vectors, 0 divergences.**
+**Current state: `verify.mjs` — 4,071 checks against 1,893 recorded vectors, 0 divergences.**
 
 *The 17 JS suites this log used to cite were lost with an ephemeral sandbox; the vectors
 survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
@@ -44,6 +44,7 @@ survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
 | 40 | Crunch demo taught a pose the engine rejects | `kneesBent` scored **0** on the demo's own frames | Content vs engine |
 | 41 | **Every supine demo folded the shin flat onto the thigh** | FK rig emitted 4–10° knee angles; the position gate the demo exists to show scored **0**, and `drawRef` painted thigh and shin as one bar | Content vs engine |
 | 42 | #41 was diagnosed as unrepresentable asymmetry, and the diagnosis stuck for a week | A story that explained the symptom was accepted without being tested against the geometry | Wrong diagnosis |
+| 43 | **Every demo was drawn stretched, and the ghost could never be lined up** | `drawRef` mapped isotropically-authored `REF` with `x*W, y*H`, so each reference was stretched by the canvas aspect — 1.41x in the demo box, 1.78x in the ghost | Coordinate space |
 
 **Bugs 35–40 all came from one 20-minute session with one real beginner.** Six defects, none
 of which eight code reviews had found, because every one of them lives in the gap between
@@ -144,6 +145,24 @@ as #40 and the same fix worked on all of them.
 *The tell was available the whole time and cost one command to read: the failing gate was
 `kneesBent` / `kneeTucked` — a **knee** gate. Asymmetry cannot fold a knee to 4°. The
 explanation never actually matched the number it was explaining.*
+
+**A check that reads the numbers cannot see the picture.** Bug #43. `REF` is authored
+isotropically — x and y in the same units, so a femur measures 0.2263 lying down and 0.2261
+standing up. `drawRef` mapped it with `x*W, y*H`, which is the *anisotropic* convention
+MediaPipe uses and `readMetric`'s `A` exists to undo. Every demo was therefore stretched by
+the canvas aspect: 1.41x in the 480x340 demo box, 1.78x in the 1280x720 ghost. The tell was
+the head — its radius is derived from the drawn torso, so the identical rig drew a head 1.78x
+larger in a lying demo than an upright one, and nobody read it as a bug because a stick figure
+has no obvious right size.
+
+*Worse than cosmetic: the ghost exists to be superimposed, and the live skeleton beside it is
+drawn from raw MediaPipe landmarks, which are undistorted once the canvas matches the video.
+Ghost and body were related by no uniform scale at all — best fit ranged 1.26 to 2.20 across
+demos, residuals to 76px — so a **correct** pose could not line up with the shape it was being
+asked to copy, however the person stood. Now one space, converted at the boundary (`camToIso`
+in, `refFit` out), and held by `verify-draw.mjs`: 250 checks that fail 185 times on the
+pre-fix build. `refGates` passed clean throughout, and was right to — it verifies the authored
+numbers, and the authored numbers were never wrong.*
 
 **When a broad new probe reports many failures at once, suspect the probe.** Twice in review
 #5 and once in #8, an alarming result was my harness, not the product — mirrored single-sided

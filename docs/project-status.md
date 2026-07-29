@@ -27,8 +27,8 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.9.html` — single file, 197 KB, no dependencies but the pose model CDN |
-| **Verification** | `verify.mjs` — **4,044 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
+| **Build** | `form-coach-v4.9.html` — single file, 203 KB, no dependencies but the pose model CDN |
+| **Verification** | `verify.mjs` — **4,071 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | 1,351 clips planned · **210 pending render** (~£1–2.50) |
 | **Swift kit** | 12 sources, conformance vectors current |
@@ -41,7 +41,7 @@ lived only in an ephemeral sandbox and were lost when it reset. They were never 
 files.
 
 The **vectors survived**, and they held the valuable half: the expected outputs. `verify.mjs`
-reconstructs 4,044 checks from them, in a better shape than what it replaced — one file, one
+reconstructs 4,071 checks from them, in a better shape than what it replaced — one file, one
 source of truth, shared with the Swift tests so the two cannot drift.
 
 **The 23 divergences are closed, and all 23 were *harness* faults** — the build never diverged
@@ -95,8 +95,13 @@ NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
         └─ crunch and side plank — re-authored after test 01
         └─ GLUTE BRIDGE — step 2 of First Steps, the demo a beginner meets
            earliest of all, and the one that was never on anyone's list
-        └─ REF now has coverage (refGates); the SHELL still has none, and
-           no test can tell you a demo reads as the movement — only you can
+        └─ REF has coverage (refGates) and so does its DRAWING (verify-draw,
+           after bug #43 — every demo was being stretched by the canvas
+           aspect); the rest of the SHELL still has none, and no test can
+           tell you a demo reads as the movement — only you can
+        └─ the demos are now drawn ~29% smaller in the 480x340 box, which
+           fits a square: correct proportions, less of the box used. Judge
+           it on screen — the canvas is one line if it wants changing
 
     ──▶ ★ BEGINNER TEST 02 on v4.9 ★
         └─ measures the fixes · ask the wrong-corrections question explicitly
@@ -142,11 +147,14 @@ movements have now been corrected, and the way they were found is the warning. T
 on for a week behind a diagnosis ("asymmetric movements a single-sided skeleton can't show")
 that was plausible, wrong, and — because it pointed at *asymmetry* — steered attention away
 from `glute-bridge`, the most-used demo of the three. **None of it was caught by a test,
-because the demos had no automated coverage.** They do now — `refGates` (197 checks) asserts
+because the demos had no automated coverage.** They do now — `refGates` (224 checks) asserts
 every demo against its own gates and is itself mutation-tested, so this exact class fails by
-name rather than waiting for someone to look. What it still cannot judge is whether a demo
-*reads* as the movement: `glute-bridge` frame 1 passed every gate for months while drawn
-rigidly rotated ~51°. The
+name rather than waiting for someone to look. A second gap in the same area closed with bug
+#43: `refGates` reads keyframe *numbers*, and every demo was being **drawn** stretched by the
+canvas aspect — 1.41x in the demo box, 1.78x in the ghost, which meant a correct pose could
+never line up with the ghost it was being asked to copy. `verify-draw.mjs` (250 checks) now
+holds the drawing. What neither can judge is whether a demo *reads* as the movement:
+`glute-bridge` frame 1 passed every gate for months while drawn rigidly rotated ~51°. The
 privacy promise constrains features (history, voice control) in ways that need respecting
 rather than working around. Single-camera geometry means some faults — squat valgus above all
 — are permanently invisible and must be taught rather than corrected.

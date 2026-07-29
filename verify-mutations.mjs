@@ -16,6 +16,13 @@
    The mutations were derived once, from the real bugs. They are kept here so they
    can be RE-RUN rather than re-derived from prose.
 
+   NOT EVERY refGates ASSERTION CAN BE MUTATED HERE, and the gap is named rather than
+   papered over: mutations edit the BUILD, so a rule about the shape of the exception
+   tables in verify.mjs — "a setup exemption must sit on frame 0" — has no build edit
+   that trips it. Prepending a frame to a setup demo just renumbers what `plank:0`
+   points at, and the rule still holds. It is a guard on the harness, watched by
+   reading it, and that is the whole of its coverage.
+
    USAGE
      node verify-mutations.mjs path/to/build.html    # the build is REQUIRED
 
@@ -41,16 +48,29 @@ const load = () => readFileSync(BUILD, "utf8");
 
 /* Replace one movement's `frames` array in the build text. Deliberately the same
    surgical edit a person makes by hand — labels, fps and the — escapes are
-   left alone, so the mutation is only ever the coordinates. */
+   left alone, so the mutation is only ever the coordinates.
+
+   Only the frames ARRAY is replaced, located by scanning to its matching bracket, so
+   every other key survives byte for byte whatever order they appear in. This used to
+   rebuild the line from its prefix and drop anything that followed `frames`; `frames`
+   happens to be last in all 21 entries today, so it silently worked — but a `props`
+   authored after it would have been deleted by the mutation and the suite would have
+   reported a catch it hadn't really made. */
 function withFrames(html, id, frames){
   const i = html.indexOf(`  "${id}": {`);
   if(i < 0) throw new Error(`REF entry ${id} not found in ${BUILD}`);
-  const eol  = html.indexOf("\n", i);
-  const line = html.slice(i, eol);
-  const f    = line.indexOf('"frames":');
-  if(f < 0) throw new Error(`no frames key in ${id}`);
-  return html.slice(0, i) + line.slice(0, f) + `"frames":${JSON.stringify(frames)}` +
-         (line.endsWith("},") ? "}," : "}") + html.slice(eol);
+  const eol = html.indexOf("\n", i);
+  const f   = html.indexOf('"frames":', i);
+  if(f < 0 || f > eol) throw new Error(`no frames key in ${id}`);
+  const open = html.indexOf("[", f);
+  if(open < 0 || open > eol) throw new Error(`frames is not an array in ${id}`);
+  let depth = 0, end = -1;
+  for(let k = open; k < eol; k++){
+    if(html[k] === "[") depth++;
+    else if(html[k] === "]" && --depth === 0){ end = k + 1; break; }
+  }
+  if(end < 0) throw new Error(`unterminated frames array in ${id}`);
+  return html.slice(0, open) + JSON.stringify(frames) + html.slice(end);
 }
 /* Read a movement's current REF entry out of the build, so mutations are expressed
    as edits to what is actually shipped rather than to a stale copy pasted in here. */
@@ -106,9 +126,17 @@ const MUTATIONS = [
 
   { name: "hollow-tuck renamed — its fold exemption now excuses nothing",
     why:  "a stale exception key must not sit there quietly excusing a movement " +
-          "that no longer exists",
+          "that no longer exists, AND the movement it left behind now has no demo",
     apply: h => h.replace('  "hollow-tuck": {', '  "hollow-tuck-renamed": {'),
-    expect: ["fold exemption 'hollow-tuck' refers to a real movement"] },
+    expect: ["fold exemption 'hollow-tuck' refers to a real movement",
+             "hollow-tuck — has a demo"] },
+
+  { name: "dead-bug backFlat promoted to a gate — its zero-exception was written for a graded target",
+    why:  "EXCEPTION ROT in the direction the other arms cannot see. Excusing a score of 0 " +
+          "on a target nothing gates costs nothing; the same entry on a GATE is a demo pose " +
+          "the app would refuse, which is bug #40 arriving through the table built to stop it",
+    apply: h => h.replace('below:"backarch"}', 'below:"backarch", gate:true}'),
+    expect: ["dead-bug:0:backFlat — exception still justified"] },
 
   { name: "side-plank frozen to one repeated pose — a demo that is a still",
     why:  "bug #39's class. NOTE this is the total freeze, not #39 as it shipped " +

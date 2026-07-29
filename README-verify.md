@@ -32,7 +32,7 @@ the Swift tests.
 
 ## Known state
 
-**4,044 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
+**4,071 passing, 0 divergences** against `form-coach-v4.9.html`. It exits 0.
 
 Up from 3,812: `repDispatch` is new, and `repScenarios` went from asserting *nothing* to
 asserting 30-odd things. It read `sc.reps`/`sc.rushed`, fields no row has, behind
@@ -61,7 +61,7 @@ This is exactly the kind of task to hand to Claude Code with the repo in front o
 
 ## What it covers
 
-`scoreTarget` (1,428) · `readMetric` (169) · `refGates` (197) · `filters` (24) ·
+`scoreTarget` (1,428) · `readMetric` (169) · `refGates` (224) · `filters` (24) ·
 `tempo` (120) · `neededJoints` (21) · `framing` (7) · `tintDerivation` (68) ·
 `tintScenarios` (3) · `planExpansion` (15) · `aspect` (3) · `slug` (4) ·
 `repScenarios` (3) · `repDispatch` (2) · `evaluatorScenarios` (14) ·
@@ -126,7 +126,7 @@ node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
 ```
 
 It breaks a demo keyframe on purpose, runs this harness against the broken build, and asserts
-`refGates` fails on the check that should have caught it. Seven mutations plus a control,
+`refGates` fails on the check that should have caught it. Eight mutations plus a control,
 all caught: the verbatim pre-fix `glute-bridge` frame 0 (fails on both the gate and the fold
 floor); the same fold moved onto the taught frame; a rep driver that no longer reaches its
 top; `dead-bug` frame 1 "fixed" so its exception stops applying (reported as deletable); a
@@ -157,9 +157,32 @@ bottom, while the count never moves — fails by name rather than by inspection.
 ## What it does *not* cover
 
 The UI shell — every bug in reviews #17, #19, #21, #22, #23 and #31 lived there, and none
-would be caught here. A manual smoke pass remains its only test.
+would be caught here. A manual smoke pass remains its only test, with one exception:
+`drawRef` is covered by `verify-draw.mjs` (see below).
 
-Demo *drawing* quality beyond the folded-limb floor. `refGates` proves a demo passes its own
-gates and doesn't paint a limb as one bar; it cannot tell you the figure reads as the
-movement. `glute-bridge` frame 1 passed every gate for months while drawn rigidly rotated
-~51°, ramp pointing downhill. Only looking at it caught that.
+Demo *drawing* quality beyond the folded-limb floor and the proportions check. `refGates`
+proves a demo passes its own gates and doesn't paint a limb as one bar; `verify-draw.mjs`
+proves it is drawn in the proportions it was authored in. Neither can tell you the figure
+reads as the movement. `glute-bridge` frame 1 passed every gate for months while drawn
+rigidly rotated ~51°, ramp pointing downhill. Only looking at it caught that.
+
+### `verify-draw.mjs` — the drawing, not the numbers
+
+```bash
+node verify-draw.mjs form-coach-v4.9.html   # must exit 0
+```
+
+`refGates` reads keyframe coordinates; it never sees the picture, and for as long as it has
+existed `drawRef` stretched every demo by the canvas aspect (bug #43). There is no canvas in
+node, so this records the 2D operations `drawRef` issues and asserts on their geometry — two
+derived properties, no recorded expectations to drift from:
+
+- **isotropy** — the head radius is `scale * .21` of the *drawn* torso, so dividing it by the
+  *authored* torso and the canvas scale gives `.21` exactly, for every demo and frame, if and
+  only if the mapping is isotropic. Checked at four canvas shapes including a square control.
+- **the ghost superimposes** — the ghost and the live skeleton must differ by a similarity
+  (one uniform scale plus a translation), or a correct pose can never line up with the shape
+  it is being asked to copy. The recovered scale is asserted to be the placement's inverse,
+  not merely *some* uniform scale.
+
+It has been watched failing: 185 of its 250 checks fail on the pre-fix build.

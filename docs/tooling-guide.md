@@ -92,7 +92,7 @@ formfinality/
 ### What to hand it first
 
 *The old first task — "reconcile the 23 divergences" — is **done**. `verify.mjs` exits 0 on
-4,044 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
+4,071 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
 licensed. The safety net is restored; what follows extends it.*
 
 1. **"Add the lost behavioural suites."** The vectors cover engine *values*; what was lost
@@ -100,7 +100,7 @@ licensed. The safety net is restored; what follows extends it.*
    them in the repo means they persist this time.
 2. **Then the Swift port**, Week 0 onward.
 
-*Also done: "make the demo gate check a suite". It is `refGates` in `verify.mjs` — 197 checks
+*Also done: "make the demo gate check a suite". It is `refGates` in `verify.mjs` — 224 checks
 asserting every demo against its own gates, mutation-tested, with its exceptions asserted
 both ways so they can't rot.*
 

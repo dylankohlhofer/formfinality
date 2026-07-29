@@ -1,2 +1,8 @@
 .DS_Store
 .build/
+
+# Harness scratch. Both are removed in a `finally`, but a SIGINT during the import
+# or the child run leaves one behind — and `.mutant-*.html` is a deliberately broken
+# build sitting next to the real ones, which is not a thing to commit by accident.
+.engine-*.mjs
+.mutant-*.html
