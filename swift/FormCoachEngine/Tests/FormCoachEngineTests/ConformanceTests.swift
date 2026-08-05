@@ -39,8 +39,12 @@ final class ConformanceTests: XCTestCase {
         let finalReps: Int; let finalState: String; let primed: Bool
         let events: [RepEventRow]; let base: Double? }
     struct Over: Codable { let sideness: Double? }
+    /// `over` sets FRAME-level fields; `conf` sets PER-JOINT confidence, which is the
+    /// only way to state "the camera cropped their head" as data. It is what makes
+    /// Evaluator.confFor assertable: the same map over the same joints has to pass a
+    /// squat and fail a crunch, because a crunch is the movement that reads the ear.
     struct TimelineStep: Codable { let pose: String?; let n: Int?; let over: Over?
-        let action: String? }
+        let action: String?; let conf: [String: Double]? }
     struct Checkpoint: Codable { let frame: Int; let ok: Bool; let inPosition: Bool
         let inPose: Bool; let blocking: [String]; let viewLimited: Bool
         let viewCue: String?; let score: Int?; let reps: Int; let state: String?
@@ -111,10 +115,10 @@ final class ConformanceTests: XCTestCase {
     }
 
     // ── helpers ──
-    func frame(pose name: String, over: Over?) -> PoseFrame {
+    func frame(pose name: String, over: Over?, conf per: [String: Double]? = nil) -> PoseFrame {
         let src = Self.vec.poses[name]!
         var side: SideJoints = [:]
-        for (k, xy) in src { side[k] = Joint(x: xy[0], y: xy[1], c: 0.95) }
+        for (k, xy) in src { side[k] = Joint(x: xy[0], y: xy[1], c: per?[k] ?? 0.95) }
         return PoseFrame(left: side, right: side, cam: "left", conf: 0.95,
                          aspect: nil, sideness: over?.sideness)
     }
@@ -434,7 +438,7 @@ final class ConformanceTests: XCTestCase {
                 guard let pose = step.pose, let n = step.n else { continue }
                 for _ in 0..<n {
                     now += dt
-                    let r = ev.evaluate(frame(pose: pose, over: step.over), dt: dt, now: now)
+                    let r = ev.evaluate(frame(pose: pose, over: step.over, conf: step.conf), dt: dt, now: now)
                     let slot: String? = r.atPeak != nil ? "atPeak"
                                       : r.tooFast != nil ? "tooFast"
                                       : r.short != nil ? "short"
@@ -492,7 +496,7 @@ final class ConformanceTests: XCTestCase {
                 guard let pose = step.pose, let n = step.n else { continue }
                 for _ in 0..<n {
                     now += dt
-                    r = ev.evaluate(frame(pose: pose, over: step.over), dt: dt, now: now)
+                    r = ev.evaluate(frame(pose: pose, over: step.over, conf: step.conf), dt: dt, now: now)
                     frameIdx += 1
                 }
             }

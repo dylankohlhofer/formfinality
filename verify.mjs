@@ -100,9 +100,15 @@ const section = (name, n) => process.stdout.write(`  ${name.padEnd(20)} ${String
 const done = (before) => console.log(fail === before ? "ok" : `${fail - before} FAILED`);
 
 /* ── frame helpers ──────────────────────────────────────────────────────── */
-const frameFromPose = (j, conf = 0.95) => {
+/* `over` on a timeline step sets FRAME-level fields; `conf` sets PER-JOINT
+   confidence, which is the only way to state "the camera cropped their head"
+   as data. It is what makes Evaluator.confFor assertable: the same map over
+   the same joints has to pass a squat and fail a crunch, because a crunch is
+   the movement that reads the ear. Both harnesses read this field — see
+   ConformanceTests.swift's TimelineStep. */
+const frameFromPose = (j, conf = 0.95, per = null) => {
   const side = {};
-  for(const k in j) side[k] = { x: j[k][0], y: j[k][1], c: conf };
+  for(const k in j) side[k] = { x: j[k][0], y: j[k][1], c: per?.[k] ?? conf };
   return { left: side, right: JSON.parse(JSON.stringify(side)), cam: "left", conf };
 };
 
@@ -554,7 +560,7 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
       if(step.action === "arm"){ ev.arm(now); continue; }
       for(let i = 0; i < step.n; i++){
         now += DT;
-        const f = frameFromPose(V.poses[step.pose]);
+        const f = frameFromPose(V.poses[step.pose], 0.95, step.conf);
         if(step.over) Object.assign(f, step.over);
         const r = ev.evaluate(f, DT, now);
         const slot = r.atPeak ? "atPeak" : r.tooFast ? "tooFast"
@@ -609,7 +615,7 @@ console.log(`  ${"frameRate".padEnd(20)} ${String(V.frameRate.length).padStart(5
            derived from landmark z, which these 2-D synthetic poses have none of.
            Dropping it silently left the four view scenarios grading a frame whose
            viewing angle was never set, so every view assertion failed. */
-        const f = frameFromPose(V.poses[step.pose]);
+        const f = frameFromPose(V.poses[step.pose], 0.95, step.conf);
         if(step.over) Object.assign(f, step.over);
         const res = ev.evaluate(f, DT, now);
         seen[frame] = res;
