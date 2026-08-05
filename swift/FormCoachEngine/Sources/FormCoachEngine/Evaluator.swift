@@ -160,12 +160,28 @@ public final class Evaluator {
         return lv
     }
 
+    /// The joints THIS movement is judged on, averaged. A joint the movement never
+    /// reads cannot make the app claim it can't see you.
+    ///
+    /// `PoseFrame.conf` averages a fixed core, which is wrong in both directions: a
+    /// wall sit is judged on shoulder and hip alone, so a poorly-seen ankle discarded
+    /// the whole frame while the user stood in perfectly good view; and a movement
+    /// that genuinely needs the ear (crunch, plank neck) got no signal from it at all.
+    func confFor(_ frame: PoseFrame) -> Double {
+        let side = frame.side(frame.cam)
+        if need.isEmpty { return frame.conf }
+        var sum = 0.0
+        for j in need { sum += side[j]?.c ?? 0 }
+        return sum / Double(need.count)
+    }
+
     public func evaluate(_ frame: PoseFrame, dt: Double, now: Double) -> FormResult {
         var out = FormResult()
         out.reps = rep?.display() ?? 0
 
         out.framing = framing(frame, need: need)
-        if frame.conf < 0.5 { out.ok = false; return out }
+        // Judged on the joints this movement needs, not a fixed list.
+        if confFor(frame) < 0.5 { out.ok = false; return out }
 
         // GUIDED — position checked, no claims about quality.
         if mv.kind == "guided" {
@@ -248,7 +264,13 @@ public final class Evaluator {
             if outOfPose > 6, mv.regression != nil, tier.regress { out.regress = true }
         }
 
-        if let rc = rep, let spec = mv.reps {
+        // THE REP COUNTER RUNS ONLY ONCE THE SET HAS ARMED. It used to update on
+        // every evaluated frame, including the whole of GET SET, so lowering yourself
+        // into position was fed to the same hysteresis that counts reps. arm() resets
+        // the count, so the leak never reached the big counter — it reached the
+        // telemetry panel and the CSV reps column. Priming helped and did not cure it:
+        // a squat's rest position IS standing, so walking into frame primes it.
+        if let rc = rep, let spec = mv.reps, armedAt != nil {
             if let driver = out.readings.first(where: { $0.target.id == spec.driver }) {
                 if let ev = rc.update(driver.v, now: now, dt: dt, minScale: tier.repMin ?? 1) {
                     // atPeak needs a branch of its OWN, ahead of the final else.
