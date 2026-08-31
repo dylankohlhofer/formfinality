@@ -17,7 +17,7 @@ never leaves the device. One-time £4.99, no subscription.
 form-coach-v4.8.html      the entire browser app — engine + shell in one file
 verify.mjs                replays conformance vectors against the build
 verify-mutations.mjs      breaks demo keyframes on purpose; asserts refGates catches it
-conformance-vectors.json  1,893 recorded cases: the executable specification
+conformance-vectors.json  1,896 recorded cases: the executable specification
 content-v4.8.json         all movements/plans/tiers/dialogue as data
 swift/                    the Swift port (FormCoachEngine SPM package)
 voice/                    rendered coach audio, indexed by manifest.json
@@ -55,21 +55,21 @@ makes a reading unreliable, suppress the cue and log the suppression. `cat-cow` 
 ## Before you commit
 
 ```bash
-node verify.mjs form-coach-v4.9.html   # must exit 0 — naming the build is required
+node verify.mjs form-coach-v4.10.html   # must exit 0 — naming the build is required
 ```
 
 If you touched `REF` or the `refGates` section, also run its mutation test — it is the only
 thing that proves that suite still bites:
 
 ```bash
-node verify-mutations.mjs form-coach-v4.9.html   # must exit 0
+node verify-mutations.mjs form-coach-v4.10.html   # must exit 0
 ```
 
 If you touched `drawRef`, `refFit` or the demo/ghost canvases, run the drawing check —
 `refGates` reads the keyframe numbers and cannot see the picture:
 
 ```bash
-node verify-draw.mjs form-coach-v4.9.html        # must exit 0
+node verify-draw.mjs form-coach-v4.10.html        # must exit 0
 ```
 
 Then the permanent static audits — each exists because a bug got past the previous set:
@@ -124,7 +124,7 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 
 ## Current state
 
-17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,071
+17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
@@ -137,6 +137,7 @@ as the movement.
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.
 
 ## Documentation
+
 `docs/` is an Obsidian vault — 17 markdown files, wikilinked. Read `docs/README.md`
 for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
