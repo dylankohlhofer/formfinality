@@ -762,9 +762,10 @@ geometry.
 to verify an implementation. Nothing to do with arrows. The name comes from cryptography,
 where "test vectors" have been published for decades.
 
-Your `conformance-vectors.json` is the second kind: 1,407 scoring rows, 167 metric readings,
-14 full scenarios, all recorded from the *running* browser engine. It's how the Swift port
-gets verified without me being able to run Swift:
+Your `conformance-vectors.json` is the second kind: 1,428 scoring rows, 169 metric readings,
+17 full evaluator scenarios and 282 other rows — 1,896 recorded cases in all, from the
+*running* browser engine. It's how the Swift port gets verified without hand-transcribing
+expected results:
 
 > **The browser engine is the specification. The vectors make the specification executable.**
 
@@ -784,7 +785,7 @@ was producing different results depending on hardware speed.
 
 ## 6.5 Testing strategy
 
-Your 4,071 checks across the vector harness are roughly:
+Your 4,127 checks across the vector harness are roughly:
 
 **Unit** — one function (`scoreTarget` across every target × tier).
 **Property** — invariants rather than examples ("the same physical movement scores the same
@@ -803,10 +804,15 @@ demonstrate. Elegant, because it makes the content check *itself*.~~
 > own gates. The idea was always right — **a category you can name but not run is worse than
 > one you never claimed**, because it buys the feeling of coverage at the price of the thing.
 
+Four permanent harnesses now hold different boundaries: `verify.mjs` replays the vectors,
+`verify-mutations.mjs` proves the demo-gate assertions can fail, `verify-draw.mjs` records
+the canvas geometry, and `verify-skip.mjs` checks 26 derived invariants for an interruption
+that cannot be represented as a recorded frame timeline.
+
 **And the one honest gap:** the UI shell has **almost no** automated coverage — `drawRef` is
-held by `verify-draw.mjs` (250 checks) since bug #43, and nothing else in the shell is. 4,071
+held by `verify-draw.mjs` (250 checks) since bug #43, and nothing else in the shell is. 4,127
 vector checks prove the core emits the right effects, not that the screen replays them. That's
-precisely why the desktop smoke test is Phase 1 of your task list.
+precisely why the desktop smoke test is Phase B of your task list.
 
 ## 6.6 Content as data
 

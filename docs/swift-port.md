@@ -1,7 +1,8 @@
 # Form Coach — the Swift port
 
 Merges the conversion plan and the go/no-go gate into one document. The old separate
-versions are in `archive/superseded-docs/`.
+versions lived only in the lost sandbox; `archive/superseded-docs/` has never existed in
+this repository, and this document is the surviving consolidation.
 
 ---
 
@@ -39,7 +40,8 @@ Already true; confirm on the day.
 |---|---|
 | `swift test` runs and names divergences | ✅ Xcode licensed, **15/15 passing** |
 | Content exported as data, zero hand-transcription | ✅ `content-v4.8.json` |
-| Vectors cover every engine behaviour | ✅ 1,893 rows · `verify.mjs` 4,071 checks, 0 divergences |
+| Vector specification is green | ✅ 1,896 rows · `verify.mjs` 4,127 checks, 0 divergences |
+| Browser-only invariants are executable | ✅ mutations 8/8 · drawing 250/250 · skip 26/26 |
 | No open engine bugs | ✅ eight reviews |
 
 ### The sequence
@@ -71,9 +73,11 @@ anything commercial — that gates *launch*, not *porting*.
 
 ### The method
 
-**The browser engine is the specification; the vectors make it executable.** Everything in
-`Vectors/` was recorded from the running v4.8 engine. Write Swift 1:1, run `swift test`, and
-failures name the exact divergence.
+**The browser engine is the specification; the vectors make it executable.** The tests read
+`conformance-vectors.json` from the repo root — not a copied `Vectors/` directory — and its
+`meta.source` names the v4.10 build it was last recorded from. v4.11's additive skip paths
+cannot be represented as frame timelines, so their 26 derived invariants live in
+`verify-skip.mjs`. Write Swift 1:1, run `swift test`, and failures name the exact divergence.
 
 **The anti-divergence rule, which matters more than any schedule:** never change behaviour in
 Swift first. Change the HTML → regenerate vectors → make Swift pass. Two implementations
@@ -96,7 +100,8 @@ drifting is the failure mode that kills ports.
 | `planExpansion` | 15 | sets × tier scaling |
 | `clipResolver` + `slug` | 12 | voice resolution and tokenisation |
 | `repScenarios` | 3 | priming, baseline drift, the crunch guard |
-| `evaluatorScenarios` | 14 | standing rejection, view gating, cue budgets |
+| `repDispatch` | 2 | the event dispatch around a counted rep, not only the count |
+| `evaluatorScenarios` | 17 | standing rejection, view gating, cue budgets |
 
 ### Seven weeks, gated
 
@@ -111,8 +116,9 @@ non-negotiable, and finding E (explicit `video.videoWidth` aspect) folds in here
 beginner test has passed.*
 
 **Week 2 — session + speech.** `SessionCore` and `CalibrationCore` port from the effect
-stream; `AVSpeechSynthesizer` plus the clip bank. **Note:** `CalibrationCore` isn't in the
-kit yet, so the corrected post-bug-#32 structure is what ports.
+stream; `AVSpeechSynthesizer` plus the clip bank. **Neither core is in the kit yet**, so the
+v4.11 structures port directly, including `score:null, skipped:true` and the calibration
+escape hatch that keeps whatever hold was completed.
 
 **Week 3 — SwiftUI screens.** `interface-principles.md` is the specification. Several of its
 rules are testable: the colour lanes, control gating (a visibility matrix), and the
@@ -129,6 +135,6 @@ recorded session; target ≤2° divergence.
 ### Model allocation
 
 The organising principle: **give the harder model the work no test can check; give the
-cheaper one the work the compiler and tests already check.** Week 0.2 (extending the
-conformance harness to the Session layer) was the highest-leverage task, because it converted
-Week 2 from careful translation into a red/green loop.
+cheaper one the work the compiler and tests already check.** Week 0.2 — extending the
+conformance harness to the Session layer — remains the highest-leverage task before Week 2,
+because it converts that port from careful translation into a red/green loop.

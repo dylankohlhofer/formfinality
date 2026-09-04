@@ -3,8 +3,9 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 27 July 2026 — after beginner test 01 (Max, 26 July), the v4.9 fixes, and
-the supine-demo keyframe correction that followed from re-diagnosing them.
+**Last updated:** 4 September 2026 — operational figures refreshed against v4.11. The
+product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
+has happened yet.
 
 ---
 
@@ -15,10 +16,10 @@ real-time form corrections and the red/amber body tint were what he liked about 
 the unproven bet everything rested on.
 
 **Zero wrong corrections** in the session — the gate criterion. But the app did confuse him
-about his own form via a stale banner, so v4.9 exists to close that and four other defects
+about his own form via a stale banner, so v4.9 was cut to close that and four other defects
 the test exposed.
 
-**One beginner session down, one to go.** Test 02 on v4.9 is the remaining gate requirement
+**One beginner session down, one to go.** Test 02 on v4.11 is the remaining gate requirement
 before the Swift port is justified.
 
 ---
@@ -27,8 +28,8 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.9.html` — single file, 203 KB, no dependencies but the pose model CDN |
-| **Verification** | `verify.mjs` — **4,071 checks passing, 0 divergences** against 1,893 recorded vectors · `swift test` 15/15 |
+| **Build** | `form-coach-v4.11.html` — single file, 215 KiB, no dependencies but the pose model CDN |
+| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 15/15 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | 1,351 clips planned · **210 pending render** (~£1–2.50) |
 | **Swift kit** | 12 sources, conformance vectors current |
@@ -41,7 +42,7 @@ lived only in an ephemeral sandbox and were lost when it reset. They were never 
 files.
 
 The **vectors survived**, and they held the valuable half: the expected outputs. `verify.mjs`
-reconstructs 4,071 checks from them, in a better shape than what it replaced — one file, one
+reconstructs 4,127 checks from them, in a better shape than what it replaced — one file, one
 source of truth, shared with the Swift tests so the two cannot drift.
 
 **The 23 divergences are closed, and all 23 were *harness* faults** — the build never diverged
@@ -72,10 +73,12 @@ is legible. The tint communicates.
 
 ## What is not proven
 
-**That the fixes worked.** v4.9 addresses five defects that test 01 found. Nobody has used it.
+**That the fixes worked for another beginner.** v4.9 addressed five defects that test 01
+found; v4.11 carries those fixes plus the later reference-drawing and skip work. Nobody has
+put the current build through beginner test 02.
 
 **That a beginner can complete a session unaided.** Max needed clarification on "side-on",
-and several movements had unregistered reps. Whether v4.9 resolves that is the open question.
+and several movements had unregistered reps. Whether v4.11 resolves that is the open question.
 
 **Device variation.** One phone, one room, one body.
 
@@ -83,15 +86,15 @@ and several movements had unregistered reps. Whether v4.9 resolves that is the o
 
 ## Critical path
 
-**Nothing engineering-side is gating.** `verify.mjs` exits 0, `swift test` passes 15/15, and
-every demo passes its own gates. Three steps stand between here and the port decision, and
-none of them is code.
+**Nothing engineering-side is gating.** All four browser harnesses exit 0, `swift test`
+passes 15/15, and every demo passes its own gates. Three steps stand between here and the
+port decision, and none of them is code.
 
 ```
 NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
         └─ mixed recorded/TTS was likely half the "overlapping voices" complaint
 
-    ──▶ smoke-test v4.9 yourself (15 min)
+    ──▶ smoke-test v4.11 yourself (15 min)
         └─ crunch and side plank — re-authored after test 01
         └─ GLUTE BRIDGE — step 2 of First Steps, the demo a beginner meets
            earliest of all, and the one that was never on anyone's list
@@ -103,7 +106,7 @@ NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
            fits a square: correct proportions, less of the box used. Judge
            it on screen — the canvas is one line if it wants changing
 
-    ──▶ ★ BEGINNER TEST 02 on v4.9 ★
+    ──▶ ★ BEGINNER TEST 02 on v4.11 ★
         └─ measures the fixes · ask the wrong-corrections question explicitly
 
     ──▶ score both sessions against swift-port.md

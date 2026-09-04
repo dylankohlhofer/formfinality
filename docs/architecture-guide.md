@@ -56,14 +56,17 @@ entirely about it.
 ## 3 · A tour of the repo
 
 ```
-form-coach-v4.9.html      the entire app — engine and shell, one file
+AGENTS.md                 project rules, audits and current build commands
+CLAUDE.md                 symlink to AGENTS.md so both tool conventions resolve
+form-coach-v4.11.html     the entire app — engine and shell, one file
 content-v4.8.json         all movements/plans/tiers/dialogue, as data
-conformance-vectors.json  1,893 recorded cases: the executable specification
+conformance-vectors.json  1,896 recorded cases: the executable specification
 verify.mjs                replays the vectors against the build
 verify-mutations.mjs      breaks demos on purpose, checks the tests notice
 verify-draw.mjs           checks the demo drawings are drawn correctly
+verify-skip.mjs           checks both cores record skips as null, never zero
 swift/                    the iOS port (a Swift package, engine only)
-voice/                    rendered coach audio — 1,478 clips across three
+voice/                    rendered coach audio — 1,294 clips across three
                           personas plus spoken numbers, indexed by manifest.json
 voice-render-kit/         the ElevenLabs tooling that produced them
 docs/                     this vault
@@ -77,7 +80,7 @@ a browser and that is the product. For a solo project whose next milestone is *w
 beginner use it*, the ability to change one line and refresh is worth more than module
 hygiene.
 
-The cost is real: 3,752 lines in one file, and your editor's outline view is the only
+The cost is real: 3,940 lines in one file, and your editor's outline view is the only
 navigation. That cost is paid down by the numbered section banners described next.
 
 ### The two halves of that file
@@ -86,8 +89,8 @@ The file has a hard internal seam at `const VERSION`:
 
 | | Lines | What lives there |
 |---|---|---|
-| **Engine** | ~505–2545 | Content declarations, geometry, scoring, evaluator, rep counter, session logic |
-| **Shell** | ~2545–3750 | Voice playback, DOM updates, screens, camera, the animation loop |
+| **Engine** | ~505–2740 | Content declarations, geometry, scoring, evaluator, rep counter, session logic |
+| **Shell** | ~2740–3940 | Voice playback, DOM updates, screens, camera, the animation loop |
 
 This is not a comment — it is load-bearing. `verify.mjs` literally slices the file at those
 two markers, and imports the engine as a module to test it headlessly. That is why the
@@ -235,7 +238,7 @@ shell function, `applyFx`, is a switch statement that replays each one onto the 
 **Why this is worth the ceremony:**
 
 - **The engine is testable in Node.** No browser, no screen, no camera. `verify.mjs` imports
-  it and replays 1,893 recorded cases in about a second.
+  it and replays 1,896 recorded cases in about a second.
 - **The engine is portable.** Swift can implement the same logic and prove it identical,
   because "identical" means *emits the same effects for the same input*.
 - **The shell is too thin to hide a bug.** If `applyFx` is only ever a switch statement, there
@@ -307,17 +310,22 @@ looking.
 
 There are no unit tests in the usual sense. There is a **recorded specification**.
 
-`conformance-vectors.json` holds 1,893 cases captured from a known-good build: inputs and the
-outputs they produced. Three harnesses replay them.
+`conformance-vectors.json` holds 1,896 cases captured from a known-good build: inputs and the
+outputs they produced. Four harnesses cover the recorded specification and the derived
+invariants that cannot be expressed as frame timelines.
 
 | Harness | Checks | What it proves |
 |---|---|---|
-| `verify.mjs` | 4,071 | The engine still behaves exactly as recorded |
+| `verify.mjs` | 4,127 | The engine still behaves exactly as recorded |
 | `verify-mutations.mjs` | 8 mutations | That the demo checks *still bite* — it breaks demos on purpose and confirms failure |
 | `verify-draw.mjs` | 250 | The demo figures are drawn in the proportions they were authored in |
+| `verify-skip.mjs` | 26 | A skipped phase is not attempted (`score:null`), never scored zero; calibration keeps the hold |
 
 ```bash
-node verify.mjs form-coach-v4.9.html        # must exit 0
+node verify.mjs form-coach-v4.11.html
+node verify-mutations.mjs form-coach-v4.11.html
+node verify-draw.mjs form-coach-v4.11.html
+node verify-skip.mjs form-coach-v4.11.html   # all four must exit 0
 ```
 
 **The rule that matters: fix the build, never the vectors.** A failing vector means behaviour
