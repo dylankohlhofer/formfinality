@@ -14,9 +14,12 @@ never leaves the device. One-time £4.99, no subscription.
 ## Repo layout
 
 ```
-form-coach-v4.8.html      the entire browser app — engine + shell in one file
+form-coach-v4.11.html     the entire browser app — engine + shell in one file
+                          (v4.8 and v4.9 are kept as historical snapshots only)
 verify.mjs                replays conformance vectors against the build
 verify-mutations.mjs      breaks demo keyframes on purpose; asserts refGates catches it
+verify-skip.mjs           the skip paths — a skipped phase is null, never zero
+verify-draw.mjs           records what drawRef draws; asserts authored proportions
 conformance-vectors.json  1,896 recorded cases: the executable specification
 content-v4.8.json         all movements/plans/tiers/dialogue as data
 swift/                    the Swift port (FormCoachEngine SPM package)
@@ -70,6 +73,14 @@ If you touched `drawRef`, `refFit` or the demo/ghost canvases, run the drawing c
 
 ```bash
 node verify-draw.mjs form-coach-v4.11.html        # must exit 0
+```
+
+If you touched either core's `skip`, `endPhase`, `finish` or `finishCore`, run the skip
+suite — the vectors do not reach a skip and cannot be made to, because a skip is an
+interruption rather than a recorded frame sequence:
+
+```bash
+node verify-skip.mjs form-coach-v4.11.html        # must exit 0
 ```
 
 Then the permanent static audits — each exists because a bug got past the previous set:
@@ -128,10 +139,12 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
-drawing has ever had. The rest of the UI shell still has **no** automated coverage; a manual
-smoke pass is its only test, and between them `refGates` and `verify-draw` prove a demo
-passes its gates and is drawn in the proportions it was authored in, but not that it *reads*
-as the movement.
+drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` — the vectors
+cannot reach a skip, because a skip is an interruption rather than a recorded frame
+sequence, so its assertions are derived invariants and not recorded outputs. The rest of the
+UI shell still has **no** automated coverage; a manual smoke pass is its only test, and
+between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the
+proportions it was authored in, but not that it *reads* as the movement.
 
 **The next milestone is not code.** It's two beginner test sessions
 (`docs/beginner-test-protocol.md`). See `docs/project-status.md`.
