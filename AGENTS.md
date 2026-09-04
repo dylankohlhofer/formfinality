@@ -151,7 +151,7 @@ proportions it was authored in, but not that it *reads* as the movement.
 
 ## Documentation
 
-`docs/` is an Obsidian vault — 17 markdown files, wikilinked. Read `docs/README.md`
-for the index and `docs/project-status.md` for current state (its figures are
+`docs/` is an Obsidian vault — 17 documents plus a README index, wikilinked. Read
+`docs/README.md` for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
 Session notes from user testing go in `docs/sessions/`.

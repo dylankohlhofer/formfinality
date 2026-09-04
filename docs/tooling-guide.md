@@ -86,14 +86,14 @@ Treat it as living: when a session makes a mistake worth not repeating, add a li
 formfinality/
 ├── AGENTS.md              ← project rules, read automatically
 ├── CLAUDE.md              ← symlink → AGENTS.md, so both names resolve
-├── form-coach-v4.9.html   ← the build
+├── form-coach-v4.11.html  ← the build
 ├── verify.mjs             ← run before every commit
 ├── conformance-vectors.json
 ├── content-v4.8.json
 ├── swift/                 ← unzip swift-port-kit here
 ├── voice/                 ← rendered clips + manifest
 ├── voice-render-kit/
-└── docs/                  ← the 15 documents + archive/
+└── docs/                  ← README + 17 documents, wikilinked
 ```
 
 ### What to hand it first
