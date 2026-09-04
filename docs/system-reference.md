@@ -1,6 +1,6 @@
 # Form Coach — system reference
 
-How the system actually works, at v4.9. Replaces `technical-documentation.md`,
+How the system actually works, at v4.11. Replaces `technical-documentation.md`,
 `data-model-spec.md` and `ux-spec.md`, which were written before the pivot and for a
 different audience. Plain language throughout; if you want the computer-science
 foundations underneath, read `concepts-deep-dive.md`.
@@ -217,14 +217,25 @@ calendar are designed but unbuilt — see `backlog.md`.
 
 ## Testing
 
-**4,071 vector checks**, all headless, 0 divergences; `swift test` passes 15/15 against the
-same JSON. Unit (one function across every target × tier), property (the same movement scores
-identically at 24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug).
+**Four harnesses**, each of which requires you to name the build it runs against:
 
-**The honest gap:** the UI shell has almost no automated coverage — `verify-draw.mjs` (250
-checks) now holds `drawRef`, and that is all of it. 4,071 vector checks prove the core emits
-the right effects, not that the screen replays them. That's why the desktop smoke test is
-Phase 1 of `next-steps-guide.md`.
+| Harness | What it holds | Size |
+|---|---|---|
+| `verify.mjs` | the engine, replayed against recorded vectors | **4,127 checks** / 1,896 vectors |
+| `verify-mutations.mjs` | that `refGates` still bites — breaks demo keyframes on purpose | 8 mutations, all caught |
+| `verify-draw.mjs` | `drawRef` — demos drawn in the proportions they were authored in | 250 checks |
+| `verify-skip.mjs` | both cores' skip paths — a skipped phase is null, never zero | 26 checks |
+
+All headless, 0 divergences; `swift test` passes 15/15 against the same JSON. Unit (one
+function across every target × tier), property (the same movement scores identically at
+24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug). The last two
+harnesses assert *derived invariants* rather than recorded outputs — a drawing and a skip are
+both things the vectors cannot reach.
+
+**The honest gap:** the UI shell has almost no automated coverage — `verify-draw.mjs` holds
+`drawRef` and that is all of it. 4,127 vector checks prove the core emits the right effects,
+not that the screen replays them. That's why the desktop smoke test is Phase B of
+`next-steps-guide.md`.
 
 **Self-consistency is back, as `refGates` (224 checks).** This section once claimed the
 category on the strength of a check inside `gen-refs.mjs` — which was lost, was never carried

@@ -1,10 +1,20 @@
 # Form Coach — engineering log
 
 Consolidates eight code reviews into one record: every bug found, why it happened, and what
-it taught. The individual reviews are in `archive/code-reviews/` if you want the raw
-working; nothing here is lost, only compressed.
+it taught. The individual reviews are **not** in this repo — `archive/code-reviews/` was a
+sandbox directory and `git log --all` shows it has never been tracked here. Nothing in it is
+lost that this file does not already compress.
 
-**Current state: `verify.mjs` — 4,071 checks against 1,893 recorded vectors, 0 divergences.**
+**Current state — four harnesses, all green against `form-coach-v4.11.html`:**
+
+| Harness | Result |
+|---|---|
+| `verify.mjs` | **4,127 checks** against 1,896 recorded vectors, 0 divergences |
+| `verify-mutations.mjs` | 8 of 8 mutations caught, control stayed green |
+| `verify-draw.mjs` | 250 checks |
+| `verify-skip.mjs` | 26 checks |
+
+Each requires the build to be named on the command line; none defaults to one.
 
 *The 17 JS suites this log used to cite were lost with an ephemeral sandbox; the vectors
 survived and `verify.mjs` reconstructs the coverage. See `project-status.md`.*
@@ -52,8 +62,8 @@ what the engine computes and what a person perceives. That is the argument for u
 stated as a number.
 
 Findings A–F from review #1 (frame-rate normalisation, loop error boundary, `minMs`
-enforcement, cooldown-at-source, explicit video aspect) are recorded in
-`archive/code-reviews/code-review-v4.8.md`. All are closed except **E** (explicit
+enforcement, cooldown-at-source, explicit video aspect) were recorded in a review document
+that lived in the sandbox and was never tracked here. All are closed except **E** (explicit
 `video.videoWidth`), scheduled for the port's Week 1 orientation gate.
 
 ---
@@ -164,6 +174,46 @@ in, `refFit` out), and held by `verify-draw.mjs`: 250 checks that fail 185 times
 pre-fix build. `refGates` passed clean throughout, and was right to — it verifies the authored
 numbers, and the authored numbers were never wrong.*
 
+**Take a false value out in one place and it can be waiting one level up.** The rule the skip
+work exists to enforce is that a phase nobody attempted is `score:null, skipped:true` and
+never `score:0` — a zero is a measurement claim, and for a movement nobody performed it is a
+false one. Building `verify-skip.mjs` found the same zero one tile over: skip *every* phase
+and `scoreN` never leaves 0, so the debrief's **AVG FORM** tile rendered a confident **0** for
+a session nobody watched. It had been unreachable until then, and only by accident of content
+— no plan is all-guided, so every completed session had scored frames — which means the skip
+path was the first way in and the tile had never been wrong before. `finish` now reads
+`scoreN ? Math.round(scoreSum/scoreN) : null` and the shell renders `—`.
+
+*Its sibling came out of the same section: skipped phases raise no insights, so
+`nothingWrong = !lead` was true, and a session skipped straight through was congratulated with
+"Nothing to fix — you held the shapes well". Two false claims, one root — an absence read as a
+measurement. Neither is reachable by a vector, because a skip is an interruption rather than a
+recorded frame sequence, which is the whole reason that harness had to exist. The lesson is
+about **blast radius**: the per-phase fix was correct and complete, and the aggregate that
+consumed it was still wrong. Ask where else the value goes.*
+
+**A config file that silently accepts a broken line is worse than one that errors.** The
+harness scratch entries in `.gitignore` were being extended from two patterns to four, and the
+first attempt annotated them the obvious way:
+
+```
+.engine-*.mjs  # verify.mjs
+.mutant-*.html # verify-mutations.mjs
+```
+
+git honours `#` only at the **start** of a line. Every line above is therefore one literal
+pattern — `.engine-*.mjs  # verify.mjs` — matching no file that will ever exist. A change
+meant to add two entries silently broke the two that already worked, and nothing anywhere
+reports it: an ignore rule matching nothing and an ignore rule doing its job look identical
+from the outside, and the debris only shows up on the day someone hits Ctrl-C at the wrong
+moment. Caught by testing it rather than reading it — `touch .engine-999.mjs .mutant-999.html
+.draw-999.mjs .skip-999.mjs`, then `git status -uall` — which is the only thing that can see
+it. The mapping now lives in a comment block *above* four bare patterns, with the trap named
+next to it so the next person to annotate them is warned in place.
+
+*Same family as bug #14 and as the `refGates` claim that outlived its script: the problem is
+never being wrong, it is being wrong in a way that emits no signal.*
+
 **When a broad new probe reports many failures at once, suspect the probe.** Twice in review
 #5 and once in #8, an alarming result was my harness, not the product — mirrored single-sided
 demo skeletons, static frames that can't drive reps, and measuring collections after they'd
@@ -187,6 +237,11 @@ These run every review. Each exists because a bug got past the previous set.
 - Every demo **passes the exercise it demonstrates** — `refGates` in `verify.mjs` *(bugs #40,
   #41; and #42, which is why its exceptions are asserted in both directions rather than
   merely listed)*
+- Every demo is **drawn in the proportions it was authored in** — `verify-draw.mjs` *(bug #43;
+  `refGates` reads the keyframe numbers and cannot see the picture)*
+- A skipped phase is **null, never zero**, and the session average contains only the frames
+  actually watched — `verify-skip.mjs` *(the vectors cannot reach a skip, so these are derived
+  invariants rather than recorded outputs)*
 
 ---
 

@@ -43,7 +43,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude --version && claude doctor
 
 cd ~/Documents/formfinality
-git init && git add -A && git commit -m "Form Coach v4.9"
+git init && git add -A && git commit -m "Form Coach v4.11"
 claude
 ```
 
@@ -88,6 +88,9 @@ formfinality/
 ├── CLAUDE.md              ← symlink → AGENTS.md, so both names resolve
 ├── form-coach-v4.11.html  ← the build
 ├── verify.mjs             ← run before every commit
+├── verify-mutations.mjs   ← also, if you touched REF or refGates
+├── verify-draw.mjs        ← also, if you touched drawRef or the canvases
+├── verify-skip.mjs        ← also, if you touched skip/endPhase/finish
 ├── conformance-vectors.json
 ├── content-v4.8.json
 ├── swift/                 ← unzip swift-port-kit here
@@ -99,8 +102,9 @@ formfinality/
 ### What to hand it first
 
 *The old first task — "reconcile the 23 divergences" — is **done**. `verify.mjs` exits 0 on
-4,071 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
-licensed. The safety net is restored; what follows extends it.*
+4,127 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
+licensed. The safety net is restored, and has grown to four harnesses — `verify.mjs`,
+`verify-mutations.mjs`, `verify-draw.mjs`, `verify-skip.mjs`; what follows extends it.*
 
 1. **"Add the lost behavioural suites."** The vectors cover engine *values*; what was lost
    were scenario tests (cooldown neutrality, plan completion, regression swaps). Rebuilding
@@ -169,8 +173,9 @@ Claude Code can dispatch several searches at once and report back. Useful when t
 is "where does X happen" across a 196 KB file plus a Swift package.
 
 **A review checklist as a slash command.** The permanent audits in `AGENTS.md` are exactly
-the kind of thing to codify — `/review` runs `verify.mjs`, then the static sweeps, then
-reports. Same checks every time, no reliance on remembering.
+the kind of thing to codify — `/review` runs all four harnesses, then the static sweeps, then
+reports. Same checks every time, no reliance on remembering. Four commands is already more
+than anyone reliably remembers, which is most of the argument.
 
 **What I'd avoid:** autonomous agents making unsupervised commits, elaborate orchestration
 between specialised roles, or anything that runs while you're not watching. This project's
@@ -182,12 +187,16 @@ commits without running `verify.mjs` erodes precisely what makes the codebase tr
 ## 4 · What I'd actually do this week
 
 **Today, 30 minutes:** git init, drop `AGENTS.md` in place, install Claude Code, run
-`node verify.mjs` once to see where you stand.
+`node verify.mjs form-coach-v4.11.html` once to see where you stand. Naming the build is
+required — every harness refuses to default to one, so a bare `node verify.mjs` prints usage
+and tests nothing.
 
 **This week, in this order:**
 1. Render the 210 pending voice clips (~£1–2.50)
 2. Desktop smoke pass — 15 minutes, the shell's only test. Watch crunch, side plank **and
-   glute bridge**: all three demos were re-authored and none has automated coverage
+   glute bridge**: all three demos were re-authored and none has automated coverage. Since
+   v4.9 the demos are also drawn in a corrected space and skip is a real user-facing path —
+   Phase B of `next-steps-guide.md` has the full list
 3. **Beginner test 02** — the thing everything else is waiting on
 4. *Then* the engineering items above, none of which gate the test
 
