@@ -285,6 +285,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
   text-transform:uppercase; margin-left:6px }
 .tag{ font-family:var(--mono); font-size:7.5px; letter-spacing:.14em; text-transform:uppercase;
   padding:2px 6px; border-radius:4px; border:1px solid var(--line-2); color:var(--bone-3); margin-left:6px }
+/* A skipped phase is the absence of a measurement, so it gets no colour at all —
+   amber would read as a form warning about a movement nobody performed. Muted
+   monochrome, one step further back than the rows that carry a real result. */
+.prow.skipped .pname{ color:var(--bone-3) }
+.prow.skipped .pval{ color:var(--bone-3) }
+.tag.skipped{ border-style:dashed }
 
 /* ═══ home / plans / tiers ═══ */
 /* ── cards ──
@@ -442,7 +448,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 <body>
 
 <header>
-  <h1>Form Coach <small><b id="verTag">v4.8</b><span class="subtitle"> · tiered coaching model</span></small></h1>
+  <h1>Form Coach <small><b id="verTag">v4.11</b><span class="subtitle"> · tiered coaching model</span></small></h1>
   <div class="seg" id="tierSeg" role="tablist" aria-label="Tier" hidden>
     <button data-tier="learning" aria-pressed="false">Learning</button>
     <button data-tier="building" aria-pressed="true">Building</button>
@@ -450,6 +456,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
   </div>
   <label class="ctl"><input type="checkbox" id="voice" checked> Voice</label>
   <button class="ctl" id="flipBtn" title="Flip camera" hidden>&#10227;</button>
+  <button class="ctl" id="skipExBtn" title="Skip this movement (S)" hidden>Skip &#8250;</button>
   <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
   <button class="ctl" id="startBtn">Start camera</button>
 </header>
@@ -1839,6 +1846,7 @@ class SessionCore {
   tick(frame, dt, now){ this._now = now; return this.cooled(this.tickRaw(frame, dt, now)); }
   retier(tierId){ return this.cooled(this.retierRaw(tierId)); }
   swapToRegression(){ return this.cooled(this.swapToRegressionRaw()); }
+  skip(reason){ return this.cooled(this.skipRaw(reason)); }
 
   startRaw(){
     const E = [];
@@ -2150,6 +2158,60 @@ class SessionCore {
     return E;
   }
 
+  /* ── SKIP ──
+     Abandon this step and move on. The phase is recorded as NOT ATTEMPTED —
+     `score:null, skipped:true` — and never as a zero.
+
+     A zero is a MEASUREMENT CLAIM, and here it would be a false one: nobody
+     performed badly, nobody performed at all. It is the same dishonesty the
+     honesty audit took out of the silent penalties, and it would drag the
+     session average down in a way no coach could defend. It is also the kinder
+     default, because a beginner who skips is usually skipping something they
+     cannot do yet.
+
+     NOTHING IS ACCUMULATED HERE. `scoreSum` is fed per FRAME in tickRaw, so the
+     frames actually watched before the skip are already in it and the frames
+     that never happened are already absent — a skipped movement contributes only
+     what was really seen, for free. A second accumulation in endPhase
+     double-counts those frames; do not add one.
+
+     TWIN OF endPhase: the `out` row is built in both places. A field added to
+     one belongs in the other. */
+  skipRaw(reason){
+    const E = [];
+    if(this.done) return E;
+    const st = this.steps[this.i];
+    if(!st) return E;   /* nothing running — skip before start() is a no-op */
+
+    E.push({t:"log", force:true, row:{ phase: st.rest != null ? "rest" : "set",
+      movement: st.rest != null ? "" : (this.mvId || ""), state:"skipped", event:"skipped",
+      cue: reason || "", reps:"", form_score:"", in_position:"", in_pose:"",
+      blocked_by:"", targets:{} }});
+
+    /* Skipping a REST is only "I'm ready now" — there is no phase to record. */
+    if(st.rest != null){ this.restLeft = 0; this.next(E); return E; }
+
+    const ev = this.ev;
+    if(ev){
+      const achieved = this.mv.kind === "reps" ? ev.rep?.display() ?? 0 : ev.hold;
+      const setLabel = st.setTotal > 1 ? ` (set ${st.setNo}/${st.setTotal})` : "";
+      this.out.push({ id:this.mvId, name:this.mv.name + setLabel, kind:this.mv.kind,
+                      target:this.target, achieved, score:null, skipped:true,
+                      reason: reason || null, early:this.degraded,
+                      log: ev.log.slice(), trace: ev.scoreTrace.slice(),
+                      repMs: ev.rep ? ev.rep.durations.slice() : [] });
+      /* What they DID do before skipping still happened — six reps are six reps,
+         and twelve seconds are twelve seconds. Only the phase VERDICT is withheld,
+         because only the verdict would be unearned. */
+      if(this.mv.kind === "hold" || this.mv.kind === "guided") this.bestHold = Math.max(this.bestHold, ev.hold);
+      else this.reps += achieved;
+      for(const [k,v] of Object.entries(ev.corrections)) this.corr[k] = (this.corr[k]||0) + v;
+    }
+    this.next(E);
+    return E;
+  }
+
+  /* TWIN OF skipRaw — see the note there: the `out` row is built in both. */
   endPhase(E){
     const ev = this.ev;
     if(ev){
@@ -2170,18 +2232,35 @@ class SessionCore {
 
   finish(E){
     this.done = true;
-    const avg = this.scoreN ? Math.round(this.scoreSum/this.scoreN) : 0;
+    /* NULL, NOT ZERO, for the same reason a skipped phase is null: with scoreN at 0
+       nothing was ever measured, and "AVG FORM 0" would be a verdict on a session
+       nobody watched. Unreachable before skip existed — no plan is all-guided, so
+       any completed session had scored frames — and the shell renders null as "—". */
+    const avg = this.scoreN ? Math.round(this.scoreSum/this.scoreN) : null;
     const insights = sessionInsights(this.out);
     const fatigue   = insights.find(i => i.kind === "fatigue");
     const technique = insights.find(i => i.kind === "technique");
     const tempo     = insights.find(i => i.kind === "tempo");
     const lead      = fatigue || technique || tempo || insights[0];
-    const nothingWrong = !lead;
-    const headline = nothingWrong
-      ? (this.tierId === "learning"
-          ? "Nothing to fix — you held the shapes well. That's real progress, and it's rarer than you'd think."
-          : "Nothing major to fix. Time to make it harder.")
-      : lead.text;
+    /* A SKIP IS NOT A CLEAN PERFORMANCE. Skipped phases raise no insights — there
+       is nothing to raise them from — so without this the old `nothingWrong = !lead`
+       would hand a session that was skipped straight through the headline "nothing
+       to fix, you held the shapes well". That is exactly the claim rule 6 forbids:
+       we watched nothing, so we cannot praise it. Unreachable until something has
+       actually been skipped; with no skips both lines below are the originals. */
+    const skipped = this.out.filter(o => o.skipped);
+    const names = skipped.map(o => o.name);
+    const nothingWrong = !lead && !skipped.length;
+    const headline = lead ? lead.text
+      : nothingWrong
+        ? (this.tierId === "learning"
+            ? "Nothing to fix — you held the shapes well. That's real progress, and it's rarer than you'd think."
+            : "Nothing major to fix. Time to make it harder.")
+      : skipped.length === this.out.length
+        ? "You skipped everything this time, so there's nothing I watched and nothing I can honestly tell you. No score, no judgement — come back and try one."
+        : `Nothing to fix in what you did. You skipped ${
+            names.length <= 2 ? names.join(" and ") : names.length + " movements"
+          } — no score for those, and they'll be here next time.`;
     E.push({t:"finish", payload:{ avg, insights, headline, nothingWrong,
       bestHold:this.bestHold, reps:this.reps, out:this.out, tierId:this.tierId }});
   }
@@ -2228,6 +2307,26 @@ class CalibrationCore {
   }
 
   tick(frame, dt, now){ this._now = now; return this.cooled(this.tickRaw(frame, dt, now)); }
+
+  /* ── SKIP ──
+     The escape hatch for someone who starts the calibration plank and finds they
+     cannot hold it. The welcome screen already offers "skip — pick my level"
+     BEFORE the hold begins; this is the same door from the inside, mid-hold.
+
+     WHATEVER THEY HELD STILL COUNTS — finishCore, not a discard. Five honest
+     seconds is a real measurement and it lands on Learning, which is both the
+     truthful verdict and the useful one. Throwing it away would leave a beginner
+     with nothing at the exact moment they told us the movement was too hard. */
+  skip(){ return this.cooled(this.skipRaw()); }
+  skipRaw(){
+    const E = [];
+    if(this.done) return E;
+    E.push({t:"log", force:true, row:{ phase:"calibration", movement:"plank",
+      state:"skipped", event:"skipped", cue:"", reps:"", form_score:"",
+      in_position:"", in_pose:"", blocked_by:"", targets:{} }});
+    this.finishCore(E);
+    return E;
+  }
 
   tickRaw(frame, dt, now){
     const E = [];
@@ -2639,7 +2738,7 @@ loadSavedRefs();
 /* ═══════════════════════════════════════════════════════════════
    7 · COACH VOICE — cascade lookup, priority queue
    ═══════════════════════════════════════════════════════════════ */
-const VERSION = "4.10";
+const VERSION = "4.11";
 console.log(`Form Coach v${VERSION}`);
 document.getElementById("verTag").textContent = `v${VERSION}`;   // one source of truth
 const $ = id => document.getElementById(id);
@@ -3101,6 +3200,7 @@ class Session {
   tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
   retier(){ applyFx(this, this.core.retier(tier)); }
   swapToRegression(){ applyFx(this, this.core.swapToRegression()); }
+  skip(reason){ applyFx(this, this.core.skip(reason)); }
 }
 
 function renderFinish(p){
@@ -3113,10 +3213,23 @@ function renderFinish(p){
   startBtn.textContent = "Start camera";
   startBtn.classList.remove("live");
   stopCam();
+  /* The stop button already did this; the two FINISH paths never did, so Flip has
+     been sitting on the debrief with no camera behind it. Skip makes that visible —
+     a live-looking "Skip" over a finished session is an invitation to nothing — so
+     both ends now agree: camera gone, camera chrome gone. */
+  showCamChrome(false);
 
   const rows = p.out.map(o => {
     const i = p.insights.find(x => x.movement === o.name);
     const badge = i ? `<span class="tag ${i.kind}">${i.kind}</span>` : "";
+    /* A skipped phase is NAMED, not numbered. Putting "4/10" here would present an
+       abandoned movement as a result, and the row is muted because it is the one
+       line on this screen that reports no measurement at all. */
+    if(o.skipped) return `
+      <div class="prow skipped">
+        <div class="pname">${o.name} <span class="tag skipped">skipped</span>${badge}</div>
+        <div class="pval">&mdash;</div>
+      </div>`;
     return `
       <div class="prow">
         <div class="pname">${o.name}${o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}</div>
@@ -3140,7 +3253,7 @@ function renderFinish(p){
       <div class="stats">
         <div><b>${clock(p.bestHold)}</b><span>BEST HOLD</span></div>
         <div><b>${p.reps}</b><span>TOTAL REPS</span></div>
-        <div><b>${TIERS[p.tierId].showScore ? p.avg : "—"}</b><span>AVG FORM</span></div>
+        <div><b>${TIERS[p.tierId].showScore ? (p.avg ?? "—") : "—"}</b><span>AVG FORM</span></div>
       </div>
       <div class="headline">${p.headline}</div>
       ${detail}
@@ -3203,6 +3316,7 @@ class Calibration {
   get ev(){ return this.core.ev; }
   get armed(){ return this.core.armed; }
   tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
+  skip(){ applyFx(this, this.core.skip()); }
 }
 
 function renderCalibFinish(p){
@@ -3210,7 +3324,7 @@ function renderCalibFinish(p){
   document.body.classList.remove("live");
   setTier(p.tierId);
   calib = null;
-  running = false; stopCam();
+  running = false; stopCam(); showCamChrome(false);   /* see the note in renderFinish */
   TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
   startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
 
@@ -3376,7 +3490,8 @@ function showHome(){
 /* ═══════════════════════════════════════════════════════════════
    12 · CAMERA + LOOP
    ═══════════════════════════════════════════════════════════════ */
-const video=$("cam"), canvas=$("overlay"), ctx=canvas.getContext("2d"), startBtn=$("startBtn");
+const video=$("cam"), canvas=$("overlay"), ctx=canvas.getContext("2d"), startBtn=$("startBtn"),
+      skipExBtn=$("skipExBtn");
 let landmarker=null, running=false, lastVideoTime=-1, lastT=0, pending=null;
 
 async function initModel(){
@@ -3389,7 +3504,9 @@ async function initModel(){
 }
 
 let camFacing = "user", wakeLock = null;
-function showCamChrome(on){ flipBtn.hidden = !on; }   /* flip only matters with a live feed */
+/* Flip and Skip only mean anything with a live feed, and they appear and vanish
+   together — one call, so neither can be left stranded on the home screen. */
+function showCamChrome(on){ flipBtn.hidden = !on; skipExBtn.hidden = !on; }
 async function openCamera(){
   msgInner.innerHTML = "<h2>Requesting camera…</h2>";
   msgEl.hidden = false;
@@ -3431,6 +3548,33 @@ $("flipBtn").onclick = async () => {
     document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
   }catch(e){ camFacing = camFacing === "user" ? "environment" : "user"; }
 };
+
+/* ── SKIP — one handler, both cores ──
+   Calibration and a session are the only two things that own the camera, and each
+   returns effects from its own `skip`. The handler picks whichever is live and
+   replays what comes back; it decides nothing itself, which is the whole point of
+   keeping the shell too thin to hide a bug. The recorder is deliberately excluded —
+   it is a six-second capture with its own end, not a phase to abandon. */
+function skipCurrent(){
+  if(!running || recMode) return false;
+  if(calib){ calib.skip(); return true; }
+  if(sess && !sess.done){ sess.skip("user"); return true; }
+  return false;
+}
+skipExBtn.onclick = () => skipCurrent();
+
+/* `S` is the one that matters: rapid testing happens from two metres away on the
+   floor, where reaching the header button is the slow part of the loop. It stays
+   out of the way of typing — the welcome screen has a name field, and a beginner
+   typing "Chris" must not skip three movements. */
+addEventListener("keydown", e => {
+  if(e.key !== "s" && e.key !== "S") return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;      /* ⌘S is Save, not Skip */
+  const el = document.activeElement;
+  const tag = el ? el.tagName : "";
+  if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || el?.isContentEditable) return;
+  if(skipCurrent()) e.preventDefault();
+});
 
 async function beginCalibration(){
   tierSegEl.hidden = true;

@@ -55,21 +55,21 @@ makes a reading unreliable, suppress the cue and log the suppression. `cat-cow` 
 ## Before you commit
 
 ```bash
-node verify.mjs form-coach-v4.10.html   # must exit 0 — naming the build is required
+node verify.mjs form-coach-v4.11.html   # must exit 0 — naming the build is required
 ```
 
 If you touched `REF` or the `refGates` section, also run its mutation test — it is the only
 thing that proves that suite still bites:
 
 ```bash
-node verify-mutations.mjs form-coach-v4.10.html   # must exit 0
+node verify-mutations.mjs form-coach-v4.11.html   # must exit 0
 ```
 
 If you touched `drawRef`, `refFit` or the demo/ghost canvases, run the drawing check —
 `refGates` reads the keyframe numbers and cannot see the picture:
 
 ```bash
-node verify-draw.mjs form-coach-v4.10.html        # must exit 0
+node verify-draw.mjs form-coach-v4.11.html        # must exit 0
 ```
 
 Then the permanent static audits — each exists because a bug got past the previous set:
