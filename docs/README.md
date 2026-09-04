@@ -76,13 +76,6 @@ Its `CLAUDE.md` then told you to run exactly that bare command. Restoring the ki
 have handed someone a green run and a reason to trust it, which is the one thing a
 recovery kit must never do.
 
-## `archive/`
-
-Nothing here is needed, nothing is lost. Superseded builds (`archive/builds/`), the eight
-individual code reviews now merged into `engineering-log.md`
-(`archive/code-reviews/`), and pre-pivot specifications written when the product was still
-"Ab Form Coach" (`archive/superseded-docs/`).
-
 ---
 
 ## The one-line status
