@@ -1,8 +1,17 @@
 .DS_Store
 .build/
 
-# Harness scratch. Both are removed in a `finally`, but a SIGINT during the import
+# Harness scratch. Each is removed in a `finally`, but a SIGINT during the import
 # or the child run leaves one behind — and `.mutant-*.html` is a deliberately broken
 # build sitting next to the real ones, which is not a thing to commit by accident.
+# One line per harness, because each writes its own name: miss one and its scratch
+# file shows up as an untracked ENGINE COPY of the build, which reads like a stray
+# source file rather than the debris it is.
+#   .engine-*  verify.mjs        .draw-*    verify-draw.mjs
+#   .mutant-*  verify-mutations  .skip-*    verify-skip.mjs
+# NO TRAILING COMMENTS — git only honours `#` at the START of a line, so
+# `.engine-*.mjs  # verify.mjs` is a literal pattern that matches nothing.
 .engine-*.mjs
 .mutant-*.html
+.draw-*.mjs
+.skip-*.mjs
