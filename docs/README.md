@@ -62,7 +62,21 @@ thing standing between here and the Swift port.
 | `conformance-vectors.json` | The executable specification — 1,893 recorded cases |
 | `render-plan-v4.8.json` | Voice render plan — 1,351 clips, 210 pending |
 | `voice-render-kit.zip` | The ElevenLabs render tooling |
-| `test-recovery-kit.zip` | `verify.mjs` + vectors + `AGENTS.md` — rebuilds the test safety net |
+
+`test-recovery-kit.zip` is **gone**. Every file it carried — `verify.mjs`,
+`conformance-vectors.json`, `content-v4.8.json`, `README-verify.md` and `AGENTS.md` (it
+predated the rename and called it `CLAUDE.md`) — is now tracked at the repo root, so git
+history is the recovery vehicle and the kit was a second copy of files that already had
+one. It had drifted from all five: 1,891 vectors against 1,896, missing the `repDispatch`
+section entirely, and a `verify.mjs` less than half the size of the tracked one.
+
+Worse than stale, it was **quietly wrong**. Its `verify.mjs` still had
+`process.argv[2] || "form-coach-v4.8.html"` — the default-build fallback removed from the
+tracked harness precisely because a bare `node verify.mjs` graded v4.9-recorded vectors
+against the v4.8 build and passed, proving nothing about the build anyone was editing.
+Its `CLAUDE.md` then told you to run exactly that bare command. Restoring the kit would
+have handed someone a green run and a reason to trust it, which is the one thing a
+recovery kit must never do.
 
 ## `archive/`
 

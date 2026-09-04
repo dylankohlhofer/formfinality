@@ -73,9 +73,10 @@ symlink to it, so a tool looking for either name finds the same file. Keep the s
 A tool that silently finds nothing looks exactly like a tool that read the rules and had
 nothing to say, which is the failure you cannot see.
 
-**One is included in `test-recovery-kit.zip`.** Put it at your repo root. It encodes the
-non-negotiable rules, the permanent audits, the architecture, and the traps that have
-already bitten — including the five that cost real bugs.
+**It lives at the repo root, tracked in git.** It encodes the non-negotiable rules, the
+permanent audits, the architecture, and the traps that have already bitten — including the
+five that cost real bugs. (It used to ship in a `test-recovery-kit.zip` as well. That zip
+is deleted: a second copy of tracked files drifts, and this one had — see `README.md`.)
 
 Treat it as living: when a session makes a mistake worth not repeating, add a line.
 
