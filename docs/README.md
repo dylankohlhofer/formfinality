@@ -62,7 +62,7 @@ thing standing between here and the Swift port.
 | `conformance-vectors.json` | The executable specification — 1,893 recorded cases |
 | `render-plan-v4.8.json` | Voice render plan — 1,351 clips, 210 pending |
 | `voice-render-kit.zip` | The ElevenLabs render tooling |
-| `test-recovery-kit.zip` | `verify.mjs` + vectors + `CLAUDE.md` — rebuilds the test safety net |
+| `test-recovery-kit.zip` | `verify.mjs` + vectors + `AGENTS.md` — rebuilds the test safety net |
 
 ## `archive/`
 

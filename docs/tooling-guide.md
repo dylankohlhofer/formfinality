@@ -62,11 +62,16 @@ Git first, genuinely. Claude Code edits files directly; `git diff` is how you se
 changed, and `git checkout .` is how you undo a bad session. Without version control you're
 trusting an agent with no undo.
 
-### The single highest-value file: `CLAUDE.md`
+### The single highest-value file: `AGENTS.md`
 
-Claude Code reads `CLAUDE.md` automatically at the start of every session. Without it, a
-fresh session doesn't know the anti-divergence rule, doesn't know colour means the body,
+Agent tools read it automatically at the start of every session. Without it, a fresh
+session doesn't know the anti-divergence rule, doesn't know colour means the body,
 doesn't know that `arm()` has a contract — and will cheerfully violate all three.
+
+It was called `CLAUDE.md` until the rename to the portable name; `CLAUDE.md` is now a
+symlink to it, so a tool looking for either name finds the same file. Keep the symlink.
+A tool that silently finds nothing looks exactly like a tool that read the rules and had
+nothing to say, which is the failure you cannot see.
 
 **One is included in `test-recovery-kit.zip`.** Put it at your repo root. It encodes the
 non-negotiable rules, the permanent audits, the architecture, and the traps that have
@@ -78,7 +83,8 @@ Treat it as living: when a session makes a mistake worth not repeating, add a li
 
 ```
 formfinality/
-├── CLAUDE.md              ← project rules, read automatically
+├── AGENTS.md              ← project rules, read automatically
+├── CLAUDE.md              ← symlink → AGENTS.md, so both names resolve
 ├── form-coach-v4.9.html   ← the build
 ├── verify.mjs             ← run before every commit
 ├── conformance-vectors.json
@@ -161,7 +167,7 @@ coordination overhead to a project that doesn't have a coordination problem.
 Claude Code can dispatch several searches at once and report back. Useful when the question
 is "where does X happen" across a 196 KB file plus a Swift package.
 
-**A review checklist as a slash command.** The permanent audits in `CLAUDE.md` are exactly
+**A review checklist as a slash command.** The permanent audits in `AGENTS.md` are exactly
 the kind of thing to codify — `/review` runs `verify.mjs`, then the static sweeps, then
 reports. Same checks every time, no reliance on remembering.
 
@@ -174,7 +180,7 @@ commits without running `verify.mjs` erodes precisely what makes the codebase tr
 
 ## 4 · What I'd actually do this week
 
-**Today, 30 minutes:** git init, drop `CLAUDE.md` in place, install Claude Code, run
+**Today, 30 minutes:** git init, drop `AGENTS.md` in place, install Claude Code, run
 `node verify.mjs` once to see where you stand.
 
 **This week, in this order:**
