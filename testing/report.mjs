@@ -17,6 +17,7 @@ export async function report(dir, run) {
     <p>${escape(r.description || r.reason || '')}</p>
     ${r.error ? `<pre>${escape(r.error)}</pre>` : ''}
     ${r.evidence ? `<p><a href="${escape(r.evidence)}/result.json">Full results &amp; effects</a> · <a href="${escape(r.evidence)}/scenario.json">Test case</a></p>` : ''}
+    ${r.evidence && r.movement && r.mode === 'engine' ? `<p><a href="${escape(r.evidence)}/events.json">Engine inputs and sampled event evidence</a></p>` : ''}
     ${r.evidence && r.mode !== 'engine' ? `<p><a href="${escape(r.evidence)}/trace.zip">Browser trace</a> · <a href="${escape(r.evidence)}/console.json">Console and exceptions</a></p>` : ''}
     <ul>${(r.checks || []).map(c => `<li>${c.pass ? 'PASS' : 'FAIL'}: ${escape(c.label)}${c.pass ? '' : `<pre>Expected: ${escape(JSON.stringify(c.expected))}\nActual: ${escape(JSON.stringify(c.actual))}</pre>`}
       ${r.mode !== 'engine' && c.step != null ? `<a href="${escape(r.evidence)}/step-${c.step}.png">Screenshot</a>` : ''}</li>`).join('')}</ul></section>`).join('');

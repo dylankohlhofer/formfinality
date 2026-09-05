@@ -64,6 +64,8 @@ export function exerciseSweep(E, inputs) {
     }
     const clipped = setup(); clipped.feed(4, inputs.frame(id, 0, { clipped: true }));
     check('Off-screen required body parts cannot arm a set', clipped.core.state, 'setup', 'framing');
+    evidence.push({ kind: 'clipped', seconds: 4, input: inputs.frame(id, 0, { clipped: true }), state: clipped.core.state,
+      effects: compactEffects(clipped.effects) });
     if (mv.kind !== 'guided') {
       const wrongView = setup(); wrongView.feed(4, inputs.frame(id, 0, { view: mv.view === 'front' ? 90 : 0 }));
       check('Wrong camera view cannot arm a judged set', wrongView.core.state, 'setup', 'view');

@@ -28,7 +28,21 @@ export async function librarySweep({ root, html, engine, frameFor, dir, mode, on
         r.reproduced = JSON.stringify(failing(r)) === JSON.stringify(failing(again));
         await writeFile(resolve(dir, evidence, 'reproduction.json'), JSON.stringify(failing(again), null, 2));
       }
-      await save(r, evidence, cases.find(s => s.id === r.id));
+      await save(r, evidence, {
+        schema: 'exercise-contract/1', id: r.id, movement: r.movement, tier: r.tier,
+        source: 'testing/exercise-sweep.mjs', oracle: r.oracle,
+        inputSource: 'testing/exercise-inputs.mjs', anchors: [inputs.frame(r.movement, 0), inputs.frame(r.movement, 1)],
+        variants: {
+          interrupted: ['start', 'no body 2s', 'zero confidence 2s', 'starting pose 3s', 'no body 2s', 'recover 1s', 'skip'],
+          completion: { setupSeconds: 3, seconds: r.kind === 'reps' ? 64 : 20, motion: r.kind === 'reps' ? 'four-second full cycles' : 'steady starting pose' },
+          clipped: { translationX: -2, seconds: 4, expectedState: 'setup', evidence: 'events.json: clipped' },
+          view: r.kind === 'guided' ? 'not applicable: no quality judgements' : 'opposite declared camera view, 4s, must remain setup',
+          regression: engine.M[r.movement].regression || 'not applicable',
+          timing: r.kind === 'hold' ? [15, 30, 60] : 'not applicable',
+          repFeedback: r.kind === 'reps' ? 'Controlled metric driver: complete cycle, subsequent fast cycle, shallow cycle; counter and explanatory cue assertions' : 'not applicable'
+        },
+        reproduce: `node testing/run.mjs --build ${resolve(dir, 'build.html')} --library-only --mode engine`
+      });
     }
   }
   if (mode !== 'engine') {

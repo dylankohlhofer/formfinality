@@ -75,6 +75,13 @@ path, asserting that rejected attempts are explained. Those metric-level tests
 are distinct from claims about anatomical form. Mutation self-tests deliberately
 invent zero skip scores and break a counter to verify that the checks fail.
 
+Engine contract-case files use `schema: "exercise-contract/1"`, not the browser
+timeline schema. They document their actual input anchors and variants (including
+clipping), and include a reproduction command for the engine sweep. Their
+`events.json` includes the clipped input and resulting state as well as sampled
+events. Do not pass a contract file to `--scenario-file`, which accepts timeline
+cases only; use its recorded `reproduce` command instead.
+
 Library event evidence retains all control, speech and event effects plus telemetry
 every 30 frames, rather than storing every repetitive UI update. Completion payloads
 retain their full 5Hz score traces. Original short scenarios keep their full effects.
