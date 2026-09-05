@@ -15,3 +15,9 @@
 .mutant-*.html
 .draw-*.mjs
 .skip-*.mjs
+
+# Reproducible test tooling is tracked; private video and run evidence are not.
+node_modules/
+test-results/
+testing/private/
+testing/assets/

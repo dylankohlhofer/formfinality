@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "skip-and-dropout",
+  "description": "No detected body, protected typing, both skip controls, and an entirely unattempted session.",
+  "oracle": "No observations must not become a score or praise. Typing S in a field must not advance a session.",
+  "tier": "learning",
+  "plan": "first-steps",
+  "steps": [
+    { "do": "start", "core": "session" },
+    { "do": "ui", "label": "Skip control appears during session", "selector": "#skipExBtn", "visible": true },
+    { "do": "frames", "pose": null, "seconds": 3 },
+    { "do": "check", "label": "No body produces no measured frames", "path": "scoreN", "equals": 0 },
+    { "do": "focusGuard" },
+    { "do": "check", "label": "Typing has not advanced the exercise", "path": "index", "equals": 0 },
+    { "do": "skip", "via": "button" },
+    { "do": "check", "label": "Button records an unattempted phase", "path": "out.0.score", "equals": null },
+    { "do": "skip", "via": "key" },
+    { "do": "finishBySkipping" },
+    { "do": "check", "label": "No false zero in average", "path": "finish.avg", "equals": null },
+    { "do": "check", "label": "No unearned praise", "path": "finish.nothingWrong", "equals": false },
+    { "do": "ui", "label": "Every movement is marked skipped", "selector": ".prow.skipped", "count": 5 },
+    { "do": "ui", "label": "Flip control also hides", "selector": "#flipBtn", "visible": false }
+  ]
+}

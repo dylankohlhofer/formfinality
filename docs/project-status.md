@@ -7,6 +7,15 @@ disagrees, this file wins.
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
+**5 September 2026 — automated test lab added.** `testing/README.md` describes a
+shared engine/browser/recorded-video test → reproduce → report loop. The original
+four harnesses still pass unchanged. New First Steps browser coverage reproduces
+an unfixed `hasDemo is not defined` exception during calibration on both desktop and
+narrow Chromium viewports; see `testing/findings/calibration-has-demo.md`. The new
+suite is intentionally red until that app defect is fixed. A synthetic blank-video
+smoke validates real local pose-inference wiring, not exercise accuracy. No human
+recordings or second beginner session have been added; that release gate remains.
+
 ---
 
 ## Executive summary

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "id": "first-steps",
+  "description": "A beginner holds calibration for about five measured seconds, accepts Learning, completes the plank, skips the remaining exercises and reviews the debrief.",
+  "oracle": "User requirement: mid-hold skip preserves observed work; unattempted phases are null, never zero. First Steps learning plank target is 11 seconds.",
+  "tier": "learning",
+  "plan": "first-steps",
+  "steps": [
+    { "do": "start", "core": "calibration" },
+    { "do": "frames", "pose": "plank", "seconds": 7 },
+    { "do": "check", "label": "Calibration actually watched a short hold", "path": "held", "between": [4, 6] },
+    { "do": "skip", "via": "key" },
+    { "do": "check", "label": "Short calibration produces Learning", "path": "calibration.tierId", "equals": "learning" },
+    { "do": "check", "label": "Calibration retains the work", "path": "calibration.held", "between": [4, 6] },
+    { "do": "ui", "label": "Learning verdict is visible", "selector": "#msgInner h2", "text": "Learning" },
+    { "do": "start", "core": "session" },
+    { "do": "frames", "pose": "plank", "seconds": 15 },
+    { "do": "check", "label": "Plank completed before skipping", "path": "out.0.achieved", "between": [11, 11.2] },
+    { "do": "skip", "via": "button" },
+    { "do": "check", "label": "Skipping rest advances to glute bridge", "path": "movement", "equals": "glute-bridge" },
+    { "do": "skip", "via": "key" },
+    { "do": "check", "label": "Skipped exercise has no score", "path": "out.1.score", "equals": null },
+    { "do": "check", "label": "Skipped exercise is identified", "path": "out.1.skipped", "equals": true },
+    { "do": "finishBySkipping" },
+    { "do": "check", "label": "Completed plus skipped phases retain measured average", "path": "finish.avg", "between": [1, 100] },
+    { "do": "ui", "label": "Debrief is visible", "selector": "#msgInner h2", "text": "Session complete" },
+    { "do": "ui", "label": "Skipped movements are named and tagged", "selector": ".prow.skipped", "count": 4 },
+    { "do": "ui", "label": "Skip control hides after finish", "selector": "#skipExBtn", "visible": false }
+  ]
+}

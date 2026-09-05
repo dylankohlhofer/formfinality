@@ -20,6 +20,7 @@ verify.mjs                replays conformance vectors against the build
 verify-mutations.mjs      breaks demo keyframes on purpose; asserts refGates catches it
 verify-skip.mjs           the skip paths — a skipped phase is null, never zero
 verify-draw.mjs           records what drawRef draws; asserts authored proportions
+testing/                 shared scenario test/reproduce/report loop; see testing/README.md
 conformance-vectors.json  1,896 recorded cases: the executable specification
 content-v4.8.json         all movements/plans/tiers/dialogue as data
 swift/                    the Swift port (FormCoachEngine SPM package)
@@ -76,12 +77,18 @@ node verify-draw.mjs form-coach-v4.11.html        # must exit 0
 ```
 
 If you touched either core's `skip`, `endPhase`, `finish` or `finishCore`, run the skip
-suite — the vectors do not reach a skip and cannot be made to, because a skip is an
-interruption rather than a recorded frame sequence:
+suite — the existing frame-only vectors do not reach a skip. The newer `testing/`
+scenarios can represent interruptions explicitly as timed actions:
 
 ```bash
 node verify-skip.mjs form-coach-v4.11.html        # must exit 0
 ```
+
+For shell or test-infrastructure changes, also run `npm test`. This includes the four
+original harnesses plus shared engine/browser scenarios and infrastructure self-tests.
+Read `testing/README.md`: the browser suite exposes the unfixed v4.11 calibration
+`hasDemo` exception (FC-LAB-001). Do not suppress it to get green. Missing recordings
+are a coverage gap, never a successful video test.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 
@@ -139,10 +146,11 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
-drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` — the vectors
-cannot reach a skip, because a skip is an interruption rather than a recorded frame
-sequence, so its assertions are derived invariants and not recorded outputs. The rest of the
-UI shell still has **no** automated coverage; a manual smoke pass is its only test, and
+drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
+invariants. `testing/` adds action-timeline engine/browser coverage for First Steps and
+skip/dropout paths, saving screenshots, traces and reports. It discovered the unfixed
+calibration `hasDemo` exception. Real-person recordings, audio playback and physical-device
+coverage remain absent. A manual smoke pass is still needed, and
 between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the
 proportions it was authored in, but not that it *reads* as the movement.
 

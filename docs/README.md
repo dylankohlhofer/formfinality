@@ -19,6 +19,7 @@ thing standing between here and the Swift port.
 | Document | Use it when |
 |---|---|
 | `next-steps-guide.md` | You want the phase-by-phase task list, with exact commands |
+| `../testing/README.md` | Run the automated scenario loop and review saved evidence, failures and coverage gaps |
 | `beginner-test-protocol.md` | You're running the beginner test — **test 02 is the current priority** |
 | `swift-port.md` | You're deciding whether to start the port, or doing it |
 

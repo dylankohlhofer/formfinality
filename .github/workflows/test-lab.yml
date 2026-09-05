@@ -1,0 +1,33 @@
+name: Local-first test lab
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies and Chromium
+        id: dependencies
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Infrastructure, original harnesses and shared scenarios
+        run: npm test
+      - name: Real inference on synthetic blank video (no people)
+        if: always() && steps.dependencies.outcome == 'success'
+        run: npm run test:setup-video && npm run test:video
+      - name: Preserve review evidence even when tests fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-review
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: warn
