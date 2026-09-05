@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 export const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export const hasScreenshot = (result, check) => result.mode !== 'engine' && check.step != null && !check.path;
 export function findings(results) {
   return results.flatMap(r => {
     if (r.status === 'blocked') return [{ kind: 'coverage gap', case: r.id, detail: r.reason }];
@@ -20,7 +21,7 @@ export async function report(dir, run) {
     ${r.evidence && r.movement && r.mode === 'engine' ? `<p><a href="${escape(r.evidence)}/events.json">Engine inputs and sampled event evidence</a></p>` : ''}
     ${r.evidence && r.mode !== 'engine' ? `<p><a href="${escape(r.evidence)}/trace.zip">Browser trace</a> · <a href="${escape(r.evidence)}/console.json">Console and exceptions</a></p>` : ''}
     <ul>${(r.checks || []).map(c => `<li>${c.pass ? 'PASS' : 'FAIL'}: ${escape(c.label)}${c.pass ? '' : `<pre>Expected: ${escape(JSON.stringify(c.expected))}\nActual: ${escape(JSON.stringify(c.actual))}</pre>`}
-      ${r.mode !== 'engine' && c.step != null ? `<a href="${escape(r.evidence)}/step-${c.step}.png">Screenshot</a>` : ''}</li>`).join('')}</ul></section>`).join('');
+      ${hasScreenshot(r, c) ? `<a href="${escape(r.evidence)}/step-${c.step}.png">Screenshot</a>` : ''}</li>`).join('')}</ul></section>`).join('');
   const status = cases => !cases.length ? 'not run' : `${cases.filter(c => c.status === 'passed').length}/${cases.length} passed`;
   const board = run.coverage ? `<h2>All-exercise coverage board</h2><p>Engine tests use synthetic geometry. Browser tests use test-only single-exercise plans and the original UI. No human recording is implied by a pass.</p>
     <table><thead><tr><th>Exercise</th><th>Engine</th><th>Browser</th><th>Human video</th></tr></thead><tbody>

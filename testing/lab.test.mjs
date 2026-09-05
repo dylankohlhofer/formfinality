@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError } from './lib.mjs';
-import { findings, escape } from './report.mjs';
+import { findings, escape, hasScreenshot } from './report.mjs';
 import { serve } from './browser.mjs';
 import { fileURLToPath } from 'node:url';
 import { loadEngine } from './lib.mjs';
@@ -28,6 +28,11 @@ test('effect snapshot retains last verdict', () => assert.equal(snapshot(null, [
 test('coverage gaps are not bugs or passes', () => assert.equal(findings([{ status: 'blocked', id: 'video', reason: 'no clip' }])[0].kind, 'coverage gap'));
 test('assertion failure is candidate, not confirmed product bug', () => assert.match(findings([{ checks: [{ pass: false, label: 'x' }] }])[0].kind, /candidate/));
 test('report escapes hostile HTML', () => assert.equal(escape('<script>"&'), '&lt;script&gt;&quot;&amp;'));
+test('report links UI screenshots, not uncaptured library core checkpoints', () => {
+  assert.equal(hasScreenshot({ mode: 'browser' }, { step: 7 }), true);
+  assert.equal(hasScreenshot({ mode: 'browser' }, { step: 6, path: 'done' }), false);
+  assert.equal(hasScreenshot({ mode: 'engine' }, { step: 7 }), false);
+});
 test('finish loop is bounded', async () => {
   let count = 0;
   await assert.rejects(runTimeline({ steps: [{ do: 'finishBySkipping' }] }, { snapshot: async () => ({ done: false }), skip: async () => count++ }), /30 skips/);
