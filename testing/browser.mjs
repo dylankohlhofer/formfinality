@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { chromium } from 'playwright';
-import { runTimeline, benignConsoleError } from './lib.mjs';
+import { runTimeline, benignConsoleError, compactEffects } from './lib.mjs';
 
 export async function serve(root, html, recording) {
   const bridge = await readFile(resolve(root, 'testing/bridge.js'), 'utf8');
@@ -44,12 +44,12 @@ export async function serve(root, html, recording) {
   return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise(resolve => server.close(resolve)) };
 }
 
-export async function runBrowser({ root, html, scenario, frameFor, dir, viewport, recording }) {
+export async function runBrowser({ root, html, scenario, frameFor, dir, viewport, recording, sharedBrowser }) {
   const server = await serve(root, html, recording);
   let browser, context, result;
   const errors = [], consoleLog = [];
   try {
-    browser = await chromium.launch();
+    browser = sharedBrowser || await chromium.launch();
     context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     const page = await context.newPage();
@@ -63,6 +63,7 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
       ? route.continue() : route.abort('blockedbyclient'));
     await page.goto(server.url);
     await page.waitForFunction(() => !!window.__testLab);
+    if (scenario.planSpec) await page.evaluate(plan => window.__testLab.installPlan(plan), scenario.planSpec);
     let started = false, videoReady = false, videoTime = 0;
     const adapter = {
       snapshot: () => page.evaluate(() => window.__testLab.snapshot()),
@@ -91,10 +92,10 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
             videoTime += dt;
           }
         } else {
-          const frame = frameFor(step.pose);
-          await page.evaluate(({ frame, dt, n }) => {
-            for (let i = 0; i < n; i++) window.__testLab.feed(frame, dt);
-          }, { frame, dt, n });
+          const frames = Array.from({ length: n }, (_, i) => frameFor(step.pose, i * dt));
+          await page.evaluate(({ frames, dt }) => {
+            for (const frame of frames) window.__testLab.feed(frame, dt);
+          }, { frames, dt });
         }
       },
       async skip(via) {
@@ -102,6 +103,31 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
         else { await page.locator('body').click({ position: { x: 1, y: 1 } }); await page.keyboard.press('s'); }
       },
       async ui(step, index) {
+        if (step.do === 'demo') {
+          await page.locator('#showBtn').click();
+          const visible = await page.locator('#demo').isVisible();
+          await page.evaluate(() => window.__testLab.drawDemo());
+          const demo = await page.locator('#demoCanvas').evaluate(c => {
+            const data = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            let lit = 0; for (let i = 0; i < data.length; i += 4) if (data[i] > 100) lit++;
+            return lit > 100;
+          });
+          await page.locator('#ghostChk').check();
+          await page.evaluate(() => window.__testLab.drawGhost());
+          const ghost = await page.locator('#overlay').evaluate(c => c.getContext('2d').getImageData(0, 0, c.width, c.height).data.some((v, i) => i % 4 === 3 && v > 0));
+          await page.screenshot({ path: resolve(dir, `step-${index}.png`), fullPage: true });
+          await page.locator('#showBtn').click();
+          return [{ label: step.label, step: index, actual: { visible, demo, ghost }, expected: { visible: true, demo: true, ghost: true }, pass: visible && demo && ghost }];
+        }
+        if (step.do === 'csv') {
+          const downloading = page.waitForEvent('download');
+          await page.locator('#csvDlBtn').click();
+          const download = await downloading;
+          const path = resolve(dir, 'telemetry.csv'); await download.saveAs(path);
+          const csv = await readFile(path, 'utf8'), header = csv.split(/\r?\n/)[0];
+          const pass = header.includes('movement') && header.includes('state') && csv.includes(scenario.movement || 'plank');
+          return [{ label: step.label, actual: { header, bytes: csv.length }, expected: 'CSV with movement and state data', pass }];
+        }
         if (step.do === 'focusGuard') {
           const checks = [];
           for (const tag of ['input', 'select', 'textarea', 'div']) {
@@ -131,6 +157,7 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
     };
     result = await runTimeline(scenario, adapter);
     result.effects = await page.evaluate(() => window.__testLab.effects());
+    if (scenario.movement) result.effects = compactEffects(result.effects);
     if (recording) {
       const landmarks = await page.evaluate(() => window.__testLab.landmarks());
       await writeFile(resolve(dir, 'landmarks.json'), JSON.stringify({ schema: 1, frames: landmarks }));
@@ -142,7 +169,8 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
   } finally {
     await writeFile(resolve(dir, 'console.json'), JSON.stringify(consoleLog, null, 2));
     if (context) await context.tracing.stop({ path: resolve(dir, 'trace.zip') });
-    if (browser) await browser.close();
+    if (context) await context.close();
+    if (browser && !sharedBrowser) await browser.close();
     await server.close();
   }
 }

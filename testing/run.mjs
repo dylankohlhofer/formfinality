@@ -6,13 +6,15 @@ import { spawnSync } from 'node:child_process';
 import { hash, validate, validateRecording, loadEngine, fixtures, engineAdapter, runTimeline } from './lib.mjs';
 import { runBrowser } from './browser.mjs';
 import { report } from './report.mjs';
+import { librarySweep } from './library.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2), options = {};
 for (let i = 0; i < args.length; i++) {
   const key = args[i];
-  if (!['--build', '--mode', '--scenario', '--scenario-file', '--landmarks', '--recording', '--require-video'].includes(key)) throw new Error(`Unknown argument ${key}`);
+  if (!['--build', '--mode', '--scenario', '--scenario-file', '--landmarks', '--recording', '--require-video', '--library-only'].includes(key)) throw new Error(`Unknown argument ${key}`);
   if (key === '--require-video') options.requireVideo = true;
+  else if (key === '--library-only') options.libraryOnly = true;
   else { if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(`Missing value for ${key}`); options[key.slice(2)] = args[++i]; }
 }
 if (!options.build) throw new Error('Usage: node testing/run.mjs --build <build.html> [--mode all|engine|browser|video] [--scenario id] [--recording private-file.mp4] [--require-video]');
@@ -21,6 +23,7 @@ if (!['all', 'engine', 'browser', 'video'].includes(options.mode)) throw new Err
 if ((options.recording || options.landmarks) && !(options.scenario || options['scenario-file'])) throw new Error('A recording must name its scenario');
 if (options.landmarks && options.mode !== 'engine') throw new Error('--landmarks is an engine replay input; specify --mode engine');
 if (options.scenario && options['scenario-file']) throw new Error('Choose --scenario or --scenario-file, not both');
+if (options.libraryOnly && (options.scenario || options['scenario-file'] || options.mode === 'video')) throw new Error('--library-only cannot select a scenario or video mode');
 const html = await readFile(resolve(options.build), 'utf8');
 const buildHash = hash(html), started = new Date().toISOString();
 const dir = resolve(root, 'test-results', started.replace(/[:.]/g, '-') + '-' + process.pid);
@@ -35,10 +38,14 @@ const run = { started, build: basename(options.build), buildHash, commit: git.st
     'No cloud AI/API calls, uploads, automatic app edits or changes to expected outputs occur in this runner. MediaPipe inference runs locally.'
   ] };
 run.limitations.push('External web fonts are removed in the offline test copy; screenshots use the app fallback fonts. Voice output is disabled, not acoustically tested.');
+run.limitations.push('The library sweep adds original camera-handler tests with a fake stream, and original Coach/AudioBank queue tests with simulated completion events. These do not validate physical hardware, actual sound, or webcam pose accuracy.');
 await writeFile(resolve(dir, 'build.html'), html);
 run.fixtureHash = hash(await readFile(resolve(root, 'conformance-vectors.json')));
 run.lockfileHash = hash(await readFile(resolve(root, 'package-lock.json')));
 run.bridgeHash = hash(await readFile(resolve(root, 'testing/bridge.js')));
+run.testSourceHashes = {};
+for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
+  run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
   for (const suite of ['verify.mjs', 'verify-mutations.mjs', 'verify-draw.mjs', 'verify-skip.mjs']) {
     const checked = spawnSync(process.execPath, [suite, resolve(options.build)], { cwd: root, encoding: 'utf8', timeout: 120000 });
@@ -58,7 +65,7 @@ for (const file of options['scenario-file'] ? [resolve(options['scenario-file'])
 }
 if (!scenarios.length) throw new Error('No matching scenario');
 const modes = options.mode === 'all' ? ['engine', 'browser', 'video'] : [options.mode];
-for (const scenario of scenarios) for (const mode of modes) {
+for (const scenario of options.libraryOnly ? [] : scenarios) for (const mode of modes) {
   if (mode === 'video' && !options.recording) {
     run.results.push({ id: `${scenario.id}/video`, mode, status: 'blocked', reason: 'No consented recording supplied. Synthetic pose fixtures are not real-video validation.' });
     continue;
@@ -114,6 +121,15 @@ for (const scenario of scenarios) for (const mode of modes) {
     // Write incrementally so evidence already collected survives later failures.
     run.status = 'running'; await report(dir, run);
   }
+}
+if (!options.scenario && !options['scenario-file'] && options.mode !== 'video') {
+  run.coverage = await librarySweep({ root, html, engine, frameFor, dir, mode: options.mode,
+    onResult: async result => {
+      run.results.push(result); run.status = 'running';
+      if (run.results.length % 10 === 0) await report(dir, run);
+    } });
+  await writeFile(resolve(dir, 'coverage.json'), JSON.stringify(run.coverage, null, 2));
+  run.results.push({ id: 'exercise-library/video', mode: 'video', status: 'blocked', reason: 'All 21 exercises still need consented human recordings with independently reviewed expectations.' });
 }
 const failed = run.results.some(r => ['failed', 'error'].includes(r.status));
 const blocked = run.results.some(r => r.status === 'blocked');

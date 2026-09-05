@@ -1,8 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
+import { exerciseInputs } from './exercise-inputs.mjs';
 
 export const hash = data => createHash('sha256').update(data).digest('hex');
+export function compactEffects(effects) {
+  let frame = 0;
+  const keep = new Set(['reset', 'say', 'num', 'repPeak', 'bigLabel', 'tip', 'demoOff', 'regressShow', 'regressHide', 'finish', 'calibFinish']);
+  return { sampling: 'All control/speech/event effects; telemetry every 30 frames; finish payload retains the full 5Hz score trace.',
+    total: effects.length, events: effects.filter(e => keep.has(e.t) || e.t === 'log' && (e.force || e.row.event) || e.t === 'telem' && frame++ % 30 === 0) };
+}
 // Emscripten routes this informational startup line to console.error. Keep it
 // in evidence, but classify ONLY this exact known line as info, never all stderr.
 export const benignConsoleError = text => text === 'INFO: Created TensorFlow Lite XNNPACK delegate for CPU.';
@@ -30,13 +37,15 @@ export function engineSource(html) {
 }
 export async function loadEngine(html) {
   return import('data:text/javascript;base64,' + Buffer.from(engineSource(html) +
-    '\nexport { SessionCore, CalibrationCore, PLANS, buildFrame };').toString('base64'));
+    '\nexport { SessionCore, CalibrationCore, PLANS, M, TIERS, Rep, Evaluator, neededJoints, buildFrame };').toString('base64'));
 }
 export function validate(s) {
   if (s.schema !== 1 || !/^[a-z0-9-]+$/.test(s.id ?? '') || !s.oracle ||
       !['learning', 'building', 'strong'].includes(s.tier) || !s.plan || !s.steps?.length)
     throw new Error('Invalid scenario header');
-  const kinds = ['start', 'frames', 'check', 'skip', 'finishBySkipping', 'ui', 'focusGuard'];
+  const kinds = ['start', 'frames', 'check', 'skip', 'finishBySkipping', 'ui', 'focusGuard', 'demo', 'csv'];
+  if (s.planSpec && (s.planSpec.id !== s.plan || !s.planSpec.steps?.length || !s.planSpec.steps.every(x => typeof x.ex === 'string' && Number.isFinite(x.t))))
+    throw new Error('Invalid test-only plan');
   if (s.steps[0].do !== 'start') throw new Error('Scenario must start a core');
   if (!s.steps.some(step => step.do === 'check')) throw new Error('Scenario must contain an independent engine assertion');
   for (const step of s.steps) {
@@ -72,8 +81,10 @@ export function snapshot(core, effects) {
 }
 export async function fixtures(root) {
   const vectors = JSON.parse(await readFile(new URL('../conformance-vectors.json', root), 'utf8'));
-  return pose => {
+  const exercise = exerciseInputs(vectors.poses);
+  return (pose, t = 0) => {
     if (pose === null) return null;
+    if (pose.startsWith('exercise:')) return exercise.resolve(pose, t);
     const joints = vectors.poses[pose];
     if (!joints) throw new Error(`Missing pose fixture: ${pose}`);
     const side = Object.fromEntries(Object.entries(joints).map(([k, [x, y]]) => [k, { x, y, c: .95 }]));
@@ -85,7 +96,7 @@ export async function runTimeline(scenario, adapter) {
   let seconds = 0;
   for (const [index, step] of scenario.steps.entries()) {
     if (step.do === 'check') checks.push({ ...assertion(step, await adapter.snapshot()), step: index, seconds });
-    else if (step.do === 'ui' || step.do === 'focusGuard') {
+    else if (['ui', 'focusGuard', 'demo', 'csv'].includes(step.do)) {
       if (adapter.ui) checks.push(...await adapter.ui(step, index));
     } else if (step.do === 'frames') {
       await adapter.frames(step, seconds); seconds += step.seconds;
@@ -96,7 +107,7 @@ export async function runTimeline(scenario, adapter) {
     } else await adapter[step.do](step.do === 'start' ? step.core : step.via);
     if (['check', 'ui'].includes(step.do)) {
       checkpoints.push({ step: index, seconds, state: structuredClone(await adapter.snapshot()) });
-      if (adapter.capture) await adapter.capture(index);
+      if (adapter.capture && (scenario.capture !== 'ui' || step.do === 'ui')) await adapter.capture(index);
     }
   }
   return { checks, checkpoints };
@@ -111,7 +122,7 @@ export function engineAdapter(engine, scenario, frameFor, recordedFrames) {
     async start(kind) {
       if (kind === 'calibration') core = new engine.CalibrationCore(env);
       else {
-        const plan = engine.PLANS.find(p => p.id === scenario.plan);
+        const plan = scenario.planSpec || engine.PLANS.find(p => p.id === scenario.plan);
         if (!plan) throw new Error(`Missing plan: ${scenario.plan}`);
         core = new engine.SessionCore(plan, scenario.tier, env); add(core.start());
       }
@@ -120,7 +131,7 @@ export function engineAdapter(engine, scenario, frameFor, recordedFrames) {
       const n = Math.ceil(step.seconds * 30), dt = step.seconds / n;
       for (let i = 0; i < n; i++) {
         const saved = recordedFrames?.[frameIndex++];
-        const frame = saved ? saved.landmarks ? engine.buildFrame(saved.landmarks, saved.aspect) : null : frameFor(step.pose);
+        const frame = saved ? saved.landmarks ? engine.buildFrame(saved.landmarks, saved.aspect) : null : frameFor(step.pose, i * dt);
         now += dt; add(core.tick(frame, dt, now));
       }
     },

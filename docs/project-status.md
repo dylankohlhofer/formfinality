@@ -16,6 +16,16 @@ shell-only fix now calls the existing helper, with the regression retained. A sy
 smoke validates real local pose-inference wiring, not exercise accuracy. No human
 recordings or second beginner session have been added; that release gate remains.
 
+**Expanded exercise sweep:** all 21 movements / 44 supported movement-tier pairs now
+have synthetic completion, interruption, tracking, framing and applicable counter
+checks. All 88 desktop/narrow exercise browser cases passed, including demos, ghosts,
+debriefs and CSV downloads. All 12 plan-tier selections passed, as did substituted
+camera lifecycle/denial and simulated voice-queue tests. The sweep found a second
+calibration demo-label defect (FC-LAB-002), and Cat–Cow can arm with its required
+torso points outside the frame at all three tiers (FC-LAB-003, open). These are
+recorded in `testing/findings/`; no failure was whitelisted. Real-video exercise
+accuracy remains untested. See `testing/README.md` and the per-run coverage board.
+
 ---
 
 ## Executive summary
@@ -95,9 +105,10 @@ and several movements had unregistered reps. Whether v4.11 resolves that is the 
 
 ## Critical path
 
-**Nothing engineering-side is gating.** All four browser harnesses exit 0, `swift test`
-passes 15/15, and every demo passes its own gates. Three steps stand between here and the
-port decision, and none of them is code.
+**Updated engineering gate:** the original four harnesses remain green, but the new
+shell/exercise coverage exposed defects listed above. Close or explicitly review those
+findings before treating engineering as clear. The earlier beginner-test and voice-render
+steps below remain relevant; synthetic coverage does not satisfy them.
 
 ```
 NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)

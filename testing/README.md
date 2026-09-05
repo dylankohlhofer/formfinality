@@ -16,12 +16,21 @@ npm test
 
 `npm test` runs infrastructure self-tests, all four original verification harnesses,
 then engine and desktop/narrow Chromium scenarios. An assertion failure exits 1.
+It also sweeps all **21 movements / 44 supported movement-tier pairs**, rendering
+each in both desktop and narrow viewports (**88 exercise browser cases**), and
+checks all 12 supported plan-tier combinations plus calibration, camera and voice
+queue paths. It does not invent support for unavailable exercise tiers.
 Missing human recordings are explicitly **coverage incomplete**, not a video pass.
 Use `--require-video` to make that coverage gap exit 2.
 
 **Regression retained:** First Steps discovered and now protects the fix for the
 v4.11 calibration exception. See [FC-LAB-001](findings/calibration-has-demo.md).
 Unexpected exceptions must fail; do not turn them into expected failures.
+
+**Open findings:** [guided off-screen start](findings/guided-offscreen-start.md)
+remains a failing invariant at all three Cat–Cow tiers. A separate
+[calibration demo rendering defect](findings/calibration-demo-label.md) was also
+discovered by the expanded shell sweep. Consult those records for fix status.
 
 ## The loop
 
@@ -41,6 +50,34 @@ The report includes expectations, actual results, evidence links and coverage
 boundaries. Each case keeps `scenario.json`, `result.json`, and browser screenshots,
 console/page errors and `trace.zip`. Use `npx playwright show-trace <trace.zip>` for
 an interactive reconstruction. Legacy suite output is in the four `.log` files.
+
+The report now opens with an **exercise coverage board**, also saved as
+`coverage.json`: every movement, supported tiers, engine and browser results,
+evidence links, and real-video/device gaps. `exercise-inputs.mjs` contains synthetic
+bilateral geometry derived from the surviving pose fixtures, not from the app's
+demo drawings. `exercise-sweep.mjs` declares independent behavioral expectations.
+`exerciseScenarios` builds the reviewable timeline saved for each exercise case.
+The test-only single-exercise plans are injected only into the served copy; real
+plan availability is tested separately through the original picker.
+
+Fast isolated library checks:
+
+```sh
+node testing/run.mjs --build form-coach-v4.11.html --library-only --mode engine
+node testing/run.mjs --build form-coach-v4.11.html --library-only --mode browser
+```
+
+The engine sweep checks arming, stationary reps, synthetic completion, skip/null
+scoring, tracking loss/recovery, clipping, wrong view, explicit regressions and
+hold timing at 15/30/60fps. Counter tests cover fast/shallow cycles; controlled
+driver metrics additionally exercise the real evaluator → counter → session cue
+path, asserting that rejected attempts are explained. Those metric-level tests
+are distinct from claims about anatomical form. Mutation self-tests deliberately
+invent zero skip scores and break a counter to verify that the checks fail.
+
+Library event evidence retains all control, speech and event effects plus telemetry
+every 30 frames, rather than storing every repetitive UI update. Completion payloads
+retain their full 5Hz score traces. Original short scenarios keep their full effects.
 
 Build, scenario, fixture, dependency-lock and test-bridge hashes identify inputs;
 `build.html` is saved per run. The Git commit is recorded too (the working tree may
@@ -119,5 +156,8 @@ development turn. Human review remains necessary for new movement judgements.
   One exact native `INFO` startup message is classified as informational and still
   saved; unexpected console errors and all uncaught page errors fail the test.
 - Viewport checks are not physical-device tests. Voice playback/overlap, permissions,
-  camera flipping, real-time performance and movement recognisability need more coverage.
+  camera flipping and real-time performance on actual devices need more coverage.
+  The dedicated shell sweep tests the real camera handlers with a substituted local
+  stream/permission error, and real voice queues with simulated audio completion.
+  All-exercise demos/ghosts are checked for successful drawing, not recognisability.
 - No human exercise recording has been supplied. Beginner test 02 is not replaced.

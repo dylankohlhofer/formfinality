@@ -89,6 +89,9 @@ original harnesses plus shared engine/browser scenarios and infrastructure self-
 Read `testing/README.md`: the browser suite protects the calibration `hasDemo` fix
 (FC-LAB-001). Do not suppress exceptions to get green. Missing recordings
 are a coverage gap, never a successful video test.
+The default run also includes all 21 exercises / 44 supported tier pairs, 88 exercise
+browser cases, all plan selections and dedicated shell checks. The guided off-screen
+start (FC-LAB-003) is an open failing invariant, not an expected failure to suppress.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 
@@ -147,10 +150,12 @@ checks from the surviving vectors and exits 0. `swift test` passes 15/15 against
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
-invariants. `testing/` adds action-timeline engine/browser coverage for First Steps and
-skip/dropout paths, saving screenshots, traces and reports. It discovered the now-fixed
-calibration `hasDemo` exception. Real-person recordings, audio playback and physical-device
-coverage remain absent. A manual smoke pass is still needed, and
+invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise
+coverage board, camera-handler tests with fake streams and simulated voice-queue tests.
+Reports save screenshots, traces, actual/expected results and explicit coverage gaps.
+It discovered calibration defects and an open guided off-screen arming defect.
+Real-person recordings, acoustic validation and physical-device coverage remain absent.
+A manual smoke pass is still needed, and
 between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the
 proportions it was authored in, but not that it *reads* as the movement.
 

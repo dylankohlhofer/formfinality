@@ -5,6 +5,9 @@ import { validate, validateRecording, assertion, engineSource, snapshot, runTime
 import { findings, escape } from './report.mjs';
 import { serve } from './browser.mjs';
 import { fileURLToPath } from 'node:url';
+import { loadEngine } from './lib.mjs';
+import { exerciseInputs } from './exercise-inputs.mjs';
+import { exerciseScenarios, exerciseSweep } from './exercise-sweep.mjs';
 const base = JSON.parse(await readFile(new URL('./scenarios/first-steps.json', import.meta.url)));
 test('committed scenario validates', () => assert.equal(validate(base).id, 'first-steps'));
 test('unknown actions fail loudly', () => assert.throws(() => validate({ ...base, steps: [{ do: 'start', core: 'session' }, { do: 'typo' }] })));
@@ -68,4 +71,26 @@ test('test instrumentation never rewrites the shipped file', async () => {
     assert.equal(await readFile(build, 'utf8'), html);
     assert.equal(html.includes('window.__testLab'), false);
   } finally { await server.close(); }
+});
+const engine = await loadEngine(await readFile(new URL('../form-coach-v4.11.html', import.meta.url), 'utf8'));
+const exercise = exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json', import.meta.url))).poses);
+test('every movement and supported tier has a committed scenario definition', () => {
+  const scenarios = exerciseScenarios(engine);
+  assert.equal(scenarios.length, 44);
+  assert.equal(new Set(scenarios.map(s => s.movement)).size, 21);
+  for (const s of scenarios) validate(s);
+});
+test('an unrecognised movement cannot silently borrow a fixture', () => assert.throws(() => exercise.frame('unknown-movement')));
+test('library sweep catches a deliberately invented zero on skip', () => {
+  class ZeroSkip extends engine.SessionCore {
+    skip(reason) { const effects = super.skip(reason); for (const row of this.out) if (row.skipped) row.score = 0; return effects; }
+  }
+  const result = exerciseSweep({ ...engine, SessionCore: ZeroSkip }, exercise);
+  assert.equal(result.filter(r => r.checks.some(c => c.label === 'Skipped phase score is null' && !c.pass)).length, 44);
+});
+test('library sweep catches a deliberately broken rep counter', () => {
+  class LostCount extends engine.Rep { display() { return 0; } }
+  const result = exerciseSweep({ ...engine, Rep: LostCount }, exercise);
+  assert.equal(result.filter(r => r.checks.some(c => c.label === 'One complete driver cycle counts once' && !c.pass)).length,
+    Object.values(engine.M).filter(m => m.kind === 'reps').reduce((n, m) => n + m.tiers.length, 0));
 });

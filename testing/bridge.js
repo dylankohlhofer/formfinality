@@ -6,6 +6,7 @@ voiceChk.checked = false;
 const testEffects = [];
 let testNow = 0, testCore = null;
 const testLandmarks = [];
+const testOriginalCamera = openCamera;
 const testApplyFx = applyFx;
 applyFx = (host, effects) => {
   testCore = host.core;
@@ -20,6 +21,16 @@ openCamera = async () => {
   showCamChrome(true);
 };
 window.__testLab = {
+  installPlan(plan) { if (PLANS.some(p => p.id === plan.id)) throw new Error('Duplicate test plan'); PLANS.push(plan); },
+  drawDemo(dt = 1 / 30) { drawDemo(dt); },
+  drawGhost() {
+    const id = (sess && sess.mvId) || calibMv, ref = refFor(id);
+    if (!ghostChk.checked || !ref) throw new Error('Ghost not enabled or reference missing');
+    drawRef(ctx, refPose(ref, testNow), canvas.width, canvas.height, true);
+  },
+  realCamera() { openCamera = testOriginalCamera; },
+  mockModel() { initModel = async () => ({ detectForVideo: () => ({ landmarks: [] }) }); },
+  audioAccess() { return { Coach, AudioBank, TTL }; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;
