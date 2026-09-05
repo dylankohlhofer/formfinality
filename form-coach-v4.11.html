@@ -3590,7 +3590,7 @@ async function beginCalibration(){
      beginner met the plank with no visual guide at all. Calibration has a demo
      (hasDemo('plank') is true) — surface it. */
   calibMv = "plank";
-  setupBar.classList.toggle("on", hasDemo("plank"));
+  setupBar.classList.toggle("on", shellEnv.hasDemo("plank"));
   /* raw() speaks literal text and never touches the clip bank; say() routes through
      the resolver so calibration uses the recorded coach like everything else. */
   coach.say("teach.plank", { vars:{t:30}, pri:3, style:"teach" });

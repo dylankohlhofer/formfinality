@@ -86,8 +86,8 @@ node verify-skip.mjs form-coach-v4.11.html        # must exit 0
 
 For shell or test-infrastructure changes, also run `npm test`. This includes the four
 original harnesses plus shared engine/browser scenarios and infrastructure self-tests.
-Read `testing/README.md`: the browser suite exposes the unfixed v4.11 calibration
-`hasDemo` exception (FC-LAB-001). Do not suppress it to get green. Missing recordings
+Read `testing/README.md`: the browser suite protects the calibration `hasDemo` fix
+(FC-LAB-001). Do not suppress exceptions to get green. Missing recordings
 are a coverage gap, never a successful video test.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
@@ -148,7 +148,7 @@ JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage for First Steps and
-skip/dropout paths, saving screenshots, traces and reports. It discovered the unfixed
+skip/dropout paths, saving screenshots, traces and reports. It discovered the now-fixed
 calibration `hasDemo` exception. Real-person recordings, audio playback and physical-device
 coverage remain absent. A manual smoke pass is still needed, and
 between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the

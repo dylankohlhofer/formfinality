@@ -1,6 +1,6 @@
 # FC-LAB-001: calibration references an undefined function
 
-Status: reproduced app bug; not fixed by the infrastructure change.
+Status: fixed in the browser shell on 5 September 2026; regression retained.
 
 Build: `form-coach-v4.11.html`, `beginCalibration`, line 3593.
 Scenario: `testing/scenarios/first-steps.json`; browser widths 1280 and 390.
@@ -18,6 +18,6 @@ Each failing run repeats in a fresh browser context and saves the initial and re
 results, trace, console log and screenshots. Inspect the page-error assertion in
 `result.json`; unhandled JS exceptions are distinct from console output.
 
-Review a separate minimal shell fix. Do not whitelist this exception, mark it expected,
-or change the core/vector expectations to silence it. The automated suite intentionally
-remains red until the app is fixed.
+The separate minimal fix calls `shellEnv.hasDemo`, the existing helper, rather than
+an undefined global. The scenario also asserts that calibration exposes its demo
+controls. No exception was whitelisted and no core/vector expectations changed.

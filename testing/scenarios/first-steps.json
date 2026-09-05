@@ -7,6 +7,7 @@
   "plan": "first-steps",
   "steps": [
     { "do": "start", "core": "calibration" },
+    { "do": "ui", "label": "Calibration exposes its demonstration controls", "selector": "#setupBar", "visible": true },
     { "do": "frames", "pose": "plank", "seconds": 7 },
     { "do": "check", "label": "Calibration actually watched a short hold", "path": "held", "between": [4, 6] },
     { "do": "skip", "via": "key" },

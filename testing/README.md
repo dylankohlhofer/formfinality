@@ -19,9 +19,9 @@ then engine and desktop/narrow Chromium scenarios. An assertion failure exits 1.
 Missing human recordings are explicitly **coverage incomplete**, not a video pass.
 Use `--require-video` to make that coverage gap exit 2.
 
-**Known red test:** First Steps discovers an actual v4.11 calibration exception.
-See [FC-LAB-001](findings/calibration-has-demo.md). Do not turn it into an expected
-failure to make CI green. All four original harnesses still pass.
+**Regression retained:** First Steps discovered and now protects the fix for the
+v4.11 calibration exception. See [FC-LAB-001](findings/calibration-has-demo.md).
+Unexpected exceptions must fail; do not turn them into expected failures.
 
 ## The loop
 
