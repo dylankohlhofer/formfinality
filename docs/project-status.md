@@ -21,7 +21,7 @@ have synthetic completion, interruption, tracking, framing and applicable counte
 checks. All 88 desktop/narrow exercise browser cases passed, including demos, ghosts,
 debriefs and CSV downloads. All 12 plan-tier selections passed, as did substituted
 camera lifecycle/denial and simulated voice-queue tests. The sweep found a second
-calibration demo-label defect (FC-LAB-002), and Cat–Cow can arm with its required
+calibration demo-label defect (FC-LAB-002, now fixed separately), and Cat–Cow can arm with its required
 torso points outside the frame at all three tiers (FC-LAB-003, open). These are
 recorded in `testing/findings/`; no failure was whitelisted. Real-video exercise
 accuracy remains untested. See `testing/README.md` and the per-run coverage board.

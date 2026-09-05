@@ -3714,7 +3714,7 @@ function drawDemo(dt){
     }
   }
   drawRef(dctx, pose, W, H, false);
-  demoLabel.textContent = `${sess.mv.name.toUpperCase()} — ${(pose._label || "this is the shape").toUpperCase()}`;
+  demoLabel.textContent = `${M[mvId].name.toUpperCase()} — ${(pose._label || "this is the shape").toUpperCase()}`;
 }
 
 /* ── REFERENCE RECORDER ──
