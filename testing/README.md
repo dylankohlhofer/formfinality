@@ -204,8 +204,11 @@ during sustained bad/missing input and speech continuing across Skip are **revie
 candidates**, not automatic proof that the wording is wrong. Thresholds are
 explicit test policies, not measurements of beginner comprehension.
 
-Open records: [old movement audio after Skip](findings/voice-after-skip.md) and
-[visibility reminder repetition](findings/voice-repetition.md). A passing signal
+Regression record: [old movement audio after Skip, now fixed](findings/voice-after-skip.md).
+The shell sweep also protects cancelled-clip callbacks, keyboard/button Skip,
+rest/debrief transitions and calibration verdict speech. The original capture
+case requires next-exercise teaching to play after cancellation.
+Open review: [visibility reminder repetition](findings/voice-repetition.md). A passing signal
 check is not approval of the coaching experience.
 
 Important limits:

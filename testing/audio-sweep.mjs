@@ -104,6 +104,17 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         check('Feedback case reaches an active set', evidence.events.some(e => e.type === 'effect' && e.effect.key === 'go'), true);
         check('Synthetic hip sag produces an actually started correction clip', evidence.events.some(e => e.type === 'clip-start' && e.item?.key === 'sag'), true);
       }
+      if (scenario.id === 'skip-during-teaching') {
+        const skip = evidence.events.find(e => e.type === 'action' && e.action === 'skip');
+        const boundary = evidence.events.find(e => e.ms > skip.ms && e.type === 'effect' && e.state.phase !== skip.state.phase);
+        const oldClips = new Set(evidence.events.filter(e => e.type === 'clip-start' &&
+          e.item?.requestedState.phase === skip.state.phase).map(e => e.playId));
+        check('Skip reaches the next phase', boundary?.state.movement, 'glute-bridge');
+        check('Abandoned clips are silent within 250ms of the phase change',
+          evidence.levels.some(l => oldClips.has(l.playId) && l.ms > boundary?.ms + 250 && l.rms > .001), false);
+        check('Next exercise teaching actually plays after Skip', evidence.events.some(e =>
+          e.type === 'clip-start' && e.ms > skip.ms && e.item?.key === 'teach.glute-bridge'), true);
+      }
       if (scenario.kind === 'queue') {
         check('An expired correction is actually discarded', evidence.events.some(e => e.type === 'dropped' && e.reason === 'expired' && e.item.key === 'sag'), true);
         check('Expired correction is never started', evidence.events.some(e => e.type === 'speech-start' && e.item.key === 'sag'), false);

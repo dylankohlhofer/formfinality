@@ -98,7 +98,9 @@ cases, and deliberate silence/overlap. Audio evidence text is intended wording,
 not transcription; native TTS waveforms and physical speakers remain untested.
 Repetitive/contextually questionable speech is saved for review, not automatically
 approved by a passing check. Read the voice section of `testing/README.md`.
-FC-LAB-004 is an open failing stale-audio invariant after Skip; do not whitelist it.
+FC-LAB-004 is fixed in the browser playback layer. Keep its stale-audio checks:
+Skip must cancel old current/pending speech before new teaching, and stopping a
+clip must invalidate delayed callbacks as well as pausing the media element.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 

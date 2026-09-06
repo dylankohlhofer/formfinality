@@ -2661,6 +2661,7 @@ const AudioBank = {
   enabled: false,          // flipped on automatically if a manifest is found
   manifest: new Set(),
   cache: new Map(),
+  playEpoch: 0,            // stop() invalidates every continuation of old speech
 
   stamp: "",               // changes whenever the bank is re-rendered
 
@@ -2718,8 +2719,10 @@ const AudioBank = {
   play(paths, onEnd){
     const queue = paths.map(p => this.get(p)).filter(Boolean);
     if(!queue.length){ onEnd?.(); return false; }
+    const epoch = this.playEpoch;
     let i = 0;
     const next = () => {
+      if(epoch !== this.playEpoch) return;
       if(i >= queue.length){ onEnd?.(); return; }
       const a = queue[i++];
       a.currentTime = 0;
@@ -2730,7 +2733,12 @@ const AudioBank = {
     return true;
   },
 
-  stop(){ for(const a of this.cache.values()){ try{ a.pause(); }catch(e){} } }
+  stop(){
+    /* pause() can reject an unresolved play() promise. Invalidate first, so its
+       catch — or a late ended callback — cannot start the next abandoned clip. */
+    this.playEpoch++;
+    for(const a of this.cache.values()){ try{ a.pause(); }catch(e){} }
+  }
 };
 AudioBank.init();
 loadSavedRefs();
@@ -3557,9 +3565,12 @@ $("flipBtn").onclick = async () => {
    it is a six-second capture with its own end, not a phase to abandon. */
 function skipCurrent(){
   if(!running || recMode) return false;
-  if(calib){ calib.skip(); return true; }
-  if(sess && !sess.done){ sess.skip("user"); return true; }
-  return false;
+  if(!calib && (!sess || sess.done)) return false;
+  /* Discard current AND pending speech before replaying the new phase's effects.
+     Resetting afterwards would erase its teaching (or calibration verdict). */
+  coach.reset();
+  if(calib) calib.skip(); else sess.skip("user");
+  return true;
 }
 skipExBtn.onclick = () => skipCurrent();
 

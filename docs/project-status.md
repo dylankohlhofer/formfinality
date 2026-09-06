@@ -35,16 +35,29 @@ saved for review; selected phrase text is **not** audio transcription. Native TT
 waveforms, speaker audibility and human comprehension remain untested. No app,
 vector or Swift behaviour was changed by this infrastructure work.
 The first captures found abandoned Plank teaching continuing after Skip, including
-new segments starting in the Glute Bridge phase (FC-LAB-004, open), and repeated
-visibility instructions (FC-LAB-005, usability review candidate). The former is
-now a failing audio invariant; the latter is flagged for listening and policy review.
-Final voice run: **12/13 cases pass, 237/238 assertions pass**, with only the
+new segments starting in the Glute Bridge phase (FC-LAB-004, subsequently fixed
+below), and repeated visibility instructions (FC-LAB-005, usability review candidate).
+The former became a failing audio invariant; the latter is flagged for listening
+and policy review. Initial voice run before the fix: **12/13 cases pass, 237/238 assertions pass**, with only the
 reproduced stale-segment failure remaining. All nine persona/tier number samples
 pass. The original four harnesses, 92 browser cases and 17 shell cases remained
 green; the three previously known Cat–Cow engine failures remain. The capture
 harness's omitted-initial-silence defect was fixed and retained as a regression;
 it is not an application bug. Use the current audio report rather than those
 earlier misaligned recordings.
+
+**6 September 2026 — Skip speech fixed (FC-LAB-004).** The browser now cancels
+current/pending speech before applying Skip's new-phase effects. Stopped clip
+sequences also ignore delayed rejection/completion callbacks. The original audio
+case now passes, including explicit proof that Glute Bridge teaching plays after
+abandoning Plank. New shell regressions protect both controls, focus guards,
+rest/debrief transitions and the five-second calibration verdict. No engine,
+vector or Swift behaviour changed. Reminder frequency is unchanged (FC-LAB-005).
+Full verification: **13/13 audio cases (240 checks), 20/20 shell cases (115 checks),
+92/92 browser cases (670 checks), and 54/54 infrastructure self-tests pass**.
+All four original harnesses pass unchanged. The full run still exits 1 solely for
+the three known Cat–Cow engine failures; none are suppressed. Evidence:
+`test-results/2026-09-06T17-41-45-725Z-2348/` (local/ignored).
 
 ---
 
