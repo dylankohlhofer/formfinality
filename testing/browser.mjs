@@ -5,15 +5,16 @@ import { resolve, sep, extname } from 'node:path';
 import { chromium } from 'playwright';
 import { runTimeline, benignConsoleError, compactEffects } from './lib.mjs';
 
-export async function serve(root, html, recording) {
-  const bridge = await readFile(resolve(root, 'testing/bridge.js'), 'utf8');
+export async function serve(root, html, recording, { audio = false } = {}) {
+  const bridge = await readFile(resolve(root, 'testing/bridge.js'), 'utf8') +
+    (audio ? '\n' + await readFile(resolve(root, 'testing/audio-bridge.js'), 'utf8') : '');
   const remoteImport = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
   if (!html.includes(remoteImport)) throw new Error('MediaPipe import boundary changed; review browser adapter');
   const instrumented = html.replace(remoteImport, '/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs')
     .replace(/<link[^>]+https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/g, '')
     .replace('</script>', '\n' + bridge + '\n</script>');
   const types = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm',
-    '.json': 'application/json', '.mp4': 'video/mp4', '.webm': 'video/webm', '.css': 'text/css' };
+    '.json': 'application/json', '.mp3': 'audio/mpeg', '.mp4': 'video/mp4', '.webm': 'video/webm', '.css': 'text/css' };
   const server = createServer(async (req, res) => {
     try {
       const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);

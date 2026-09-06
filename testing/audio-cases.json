@@ -1,0 +1,29 @@
+[
+  {
+    "id": "plank-feedback", "kind": "session", "tier": "building", "persona": "steady",
+    "description": "Actual coach playback during a stable plank, sustained synthetic hip sag, recovery and tracking loss.",
+    "oracle": "The authored hip translation is a controlled fault, not human ground truth. Speech must belong to the current phase, fit its TTL and never overlap another clip. Repetition and unsupported praise are review candidates.",
+    "steps": [{"ex":"plank","t":120},{"ex":"glute-bridge","t":12}],
+    "segments": [{"pose":"good","seconds":18},{"pose":"sag","seconds":12},{"pose":"good","seconds":10},{"pose":"lost","seconds":10}]
+  },
+  {
+    "id": "skip-during-teaching", "kind": "session", "tier": "learning", "persona": "warm",
+    "description": "A beginner skips Plank while its teaching audio is playing, then stops the session.",
+    "oracle": "After skipping, newly started speech must not describe the abandoned movement. Speech already playing at skip is a separate stale-speech review candidate. Stop must stop actual playback.",
+    "steps": [{"ex":"plank","t":30},{"ex":"glute-bridge","t":12}],
+    "segments": [{"pose":"good","seconds":10},{"action":"skip"},{"pose":"good","seconds":12},{"action":"stop"},{"pose":"none","seconds":2}]
+  },
+  {
+    "id": "tracking-loss", "kind": "session", "tier": "strong", "persona": "energy",
+    "description": "No body is visible for 24 seconds; inspect how often visibility instructions are actually spoken.",
+    "oracle": "No body means no arming, form praise or rep count. Repeated visibility instructions are flagged for human review, not silently accepted as good coaching.",
+    "steps": [{"ex":"plank","t":30}],
+    "segments": [{"pose":"lost","seconds":24}]
+  },
+  {
+    "id": "queue-expiry", "kind": "queue", "tier": "learning", "persona": "steady",
+    "description": "A real long teaching clip blocks a correction until that correction is obsolete.",
+    "oracle": "The correction has an explicit 200ms TTL and must not start after it expires. This drives the real Coach directly; it is not an engine-generated correction.",
+    "seconds": 19
+  }
+]

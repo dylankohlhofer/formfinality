@@ -20,6 +20,8 @@ It also sweeps all **21 movements / 44 supported movement-tier pairs**, renderin
 each in both desktop and narrow viewports (**88 exercise browser cases**), and
 checks all 12 supported plan-tier combinations plus calibration, camera and voice
 queue paths. It does not invent support for unavailable exercise tiers.
+It also runs real-time audio capture cases and deliberate audio-capture mutations
+(a healthy control, muted clips, overlapping playback and preserved initial silence).
 Missing human recordings are explicitly **coverage incomplete**, not a video pass.
 Use `--require-video` to make that coverage gap exit 2.
 
@@ -153,6 +155,79 @@ unattended AI agent that edits code, invents test oracles or spends API credits.
 An agent can add scenarios and fix reviewed defects using this evidence in a later
 development turn. Human review remains necessary for new movement judgements.
 
+## Recorded voice and coaching review
+
+```sh
+npm run test:audio
+npm run test:audio -- --scenario skip-during-teaching
+npm run test:audio:mutations
+```
+
+This is part of `npm test`, the default watcher, and the existing GitHub Actions
+workflow once pushed. The watcher also reruns on voice MP3/manifest changes.
+Thirteen cases cover sustained plank feedback, hip-sag input and recovery,
+tracking loss, Skip/Stop during teaching, expired queue items, and real number
+clips for all nine persona/tier selections. The last nine are **playback samples**,
+not full exercise sessions. They give both numbers an explicit 3000ms deadline;
+they do not represent two simultaneous rep events with the app's shorter deadline.
+
+Open **Listen and review the speech timeline** in the main report. Each case saves:
+
+- `audio.webm`: the actual decoded MP3 mix recorded by Chromium, playable locally.
+- `audio-review.html`: seekable audio, intended wording, exercise/input state,
+  clip start/end, queue drops, review candidates and coverage gaps.
+- `audio.json`: wall-clock events, per-clip signal levels, decoded recording
+  measurements, manifest and used-clip hashes.
+- `screen.webm`: a separate silent screen recording; its startup offset is **not
+  measured**, so use the audio/event timeline for timing assertions.
+- `scenario.json`, session `inputs.json`, screenshots, browser trace and errors.
+
+`audio-cases.json` contains the longer case inputs and independent expectations.
+Audio case files use `schema: "audio-case/1"`, not the accelerated timeline schema;
+use their saved `--mode audio --scenario <id>` reproduction command. Source/clip
+hashes identify changes between runs; real playback timing is not bit-for-bit
+deterministic. Failing rules and review candidates repeat in a fresh browser context and retain both
+captures. Matching failed rule names indicates reproduction, not identical timing.
+
+The engine runs at wall-clock speed with original `Coach.speaking()` gating and
+actual media completion events. No fast-forwarding while clips play. The test-only
+Web Audio tap routes media elements into a recorder instead of the speakers.
+An always-running zero-signal source preserves silence before the first clip;
+otherwise some captures omit that wait and misalign the timeline. A permanent
+check verifies the captured duration and that the saved local review plays/seeks.
+It measures silence and overlapping signal, checks expiry and stale phase context,
+and catches unresolved placeholders or rapid identical speech restarts.
+New segments of a spliced sentence are also checked against the current phase;
+an utterance starting before Skip does not exempt its later clips.
+Repetition (three occurrences of a cue in 60 seconds, excluding numbers), praise
+during sustained bad/missing input and speech continuing across Skip are **review
+candidates**, not automatic proof that the wording is wrong. Thresholds are
+explicit test policies, not measurements of beginner comprehension.
+
+Open records: [old movement audio after Skip](findings/voice-after-skip.md) and
+[visibility reminder repetition](findings/voice-repetition.md). A passing signal
+check is not approval of the coaching experience.
+
+Important limits:
+
+- Text is the app's selected wording, **not a transcription**. Wrong words inside
+  an MP3, pronunciation, encouraging tone and meaning still need listening/review.
+- Browser-generated `SpeechSynthesis` audio is **not in the captured waveform**.
+  Native local voice start/end/error events are logged; missing local voices are
+  labelled unavailable, not simulated as successful speech. Remote voices are
+  blocked to avoid sending text outside the device. TTS use appears as a coverage
+  gap even when other checks pass. Captured silence cannot establish TTS silence.
+- Media-element capture is not microphone/system-audio capture, speaker audibility
+  or physical-device validation. These scenarios use synthetic landmarks; they
+  do not yet combine audio with the accelerated MediaPipe video replay mode.
+- There are no cloud transcriptions, model calls, uploads or changed production
+  code. Reports and recordings stay in ignored `test-results/` locally; CI uploads
+  synthetic-test evidence only. No microphone/camera permission is requested.
+
+Implementation references: [media-element routing](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaElementSource),
+[recordable audio destination](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaStreamDestination)
+and [MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder).
+
 ## Boundaries
 
 - Landmark browser mode runs real DOM handlers, effects and debrief. Camera
@@ -162,9 +237,10 @@ development turn. Human review remains necessary for new movement judgements.
 - Tests use fallback fonts, no external requests, and loopback-only asset serving.
   One exact native `INFO` startup message is classified as informational and still
   saved; unexpected console errors and all uncaught page errors fail the test.
-- Viewport checks are not physical-device tests. Voice playback/overlap, permissions,
+- Viewport checks are not physical-device tests. Speaker/native-TTS audio, permissions,
   camera flipping and real-time performance on actual devices need more coverage.
   The dedicated shell sweep tests the real camera handlers with a substituted local
   stream/permission error, and real voice queues with simulated audio completion.
   All-exercise demos/ghosts are checked for successful drawing, not recognisability.
+  Dedicated audio cases add actual recorded-clip playback/signal coverage separately.
 - No human exercise recording has been supplied. Beginner test 02 is not replaced.

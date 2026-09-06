@@ -26,6 +26,26 @@ torso points outside the frame at all three tiers (FC-LAB-003, open). These are
 recorded in `testing/findings/`; no failure was whitelisted. Real-video exercise
 accuracy remains untested. See `testing/README.md` and the per-run coverage board.
 
+**6 September 2026 — actual voice capture added.** Dedicated wall-clock cases now
+record Chromium's decoded MP3 output and retain a speech/exercise timeline, measured
+signal, queue decisions and silent screen recording. This closes part of the old
+simulated-audio gap. Thirteen cases and permanent silence/overlap mutations are
+included in the default test/watch workflow. Repetition and context concerns are
+saved for review; selected phrase text is **not** audio transcription. Native TTS
+waveforms, speaker audibility and human comprehension remain untested. No app,
+vector or Swift behaviour was changed by this infrastructure work.
+The first captures found abandoned Plank teaching continuing after Skip, including
+new segments starting in the Glute Bridge phase (FC-LAB-004, open), and repeated
+visibility instructions (FC-LAB-005, usability review candidate). The former is
+now a failing audio invariant; the latter is flagged for listening and policy review.
+Final voice run: **12/13 cases pass, 237/238 assertions pass**, with only the
+reproduced stale-segment failure remaining. All nine persona/tier number samples
+pass. The original four harnesses, 92 browser cases and 17 shell cases remained
+green; the three previously known Cat–Cow engine failures remain. The capture
+harness's omitted-initial-silence defect was fixed and retained as a regression;
+it is not an application bug. Use the current audio report rather than those
+earlier misaligned recordings.
+
 ---
 
 ## Executive summary

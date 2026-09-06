@@ -92,6 +92,13 @@ are a coverage gap, never a successful video test.
 The default run also includes all 21 exercises / 44 supported tier pairs, 88 exercise
 browser cases, all plan selections and dedicated shell checks. The guided off-screen
 start (FC-LAB-003) is an open failing invariant, not an expected failure to suppress.
+Voice changes also require `npm run test:audio` and `npm run test:audio:mutations`.
+These are included in `npm test`: actual recorded-clip capture, wall-clock coaching
+cases, and deliberate silence/overlap. Audio evidence text is intended wording,
+not transcription; native TTS waveforms and physical speakers remain untested.
+Repetitive/contextually questionable speech is saved for review, not automatically
+approved by a passing check. Read the voice section of `testing/README.md`.
+FC-LAB-004 is an open failing stale-audio invariant after Skip; do not whitelist it.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 
@@ -154,7 +161,8 @@ invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exerci
 coverage board, camera-handler tests with fake streams and simulated voice-queue tests.
 Reports save screenshots, traces, actual/expected results and explicit coverage gaps.
 It discovered calibration defects and an open guided off-screen arming defect.
-Real-person recordings, acoustic validation and physical-device coverage remain absent.
+Dedicated real-time voice cases now capture and measure actual recorded-clip output.
+Real-person recordings, native-TTS waveforms and physical-device coverage remain absent.
 A manual smoke pass is still needed, and
 between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the
 proportions it was authored in, but not that it *reads* as the movement.

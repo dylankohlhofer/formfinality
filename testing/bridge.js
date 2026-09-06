@@ -30,7 +30,7 @@ window.__testLab = {
   },
   realCamera() { openCamera = testOriginalCamera; },
   mockModel() { initModel = async () => ({ detectForVideo: () => ({ landmarks: [] }) }); },
-  audioAccess() { return { Coach, AudioBank, TTL }; },
+  audioAccess() { return { Coach, AudioBank, TTL, coach }; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;

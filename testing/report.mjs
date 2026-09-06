@@ -6,9 +6,11 @@ export function findings(results) {
   return results.flatMap(r => {
     if (r.status === 'blocked') return [{ kind: 'coverage gap', case: r.id, detail: r.reason }];
     if (r.error) return [{ kind: 'execution error — needs triage', case: r.id, detail: r.error }];
-    return (r.checks || []).filter(c => !c.pass).map(c => ({ kind: 'assertion failure — bug candidate',
+    return [...(r.concerns || []).map(c => ({ kind: 'voice review candidate — human judgement needed', case: r.id, detail: c.detail, ms: c.ms })),
+      ...(r.audioGaps || []).map(detail => ({ kind: 'coverage gap', case: r.id, detail })),
+      ...(r.checks || []).filter(c => !c.pass).map(c => ({ kind: 'assertion failure — bug candidate',
       case: r.id, detail: c.label, step: c.step, actual: c.actual, expected: c.expected,
-      reproduced: r.reproduced ?? false }));
+      reproduced: r.reproduced ?? false }))];
   });
 }
 export async function report(dir, run) {
@@ -17,6 +19,8 @@ export async function report(dir, run) {
   const cards = run.results.map(r => `<section><h2>${escape(r.id)} — ${escape(r.status)}</h2>
     <p>${escape(r.description || r.reason || '')}</p>
     ${r.error ? `<pre>${escape(r.error)}</pre>` : ''}
+    ${r.audio ? `<p><a href="${escape(r.evidence)}/audio-review.html">Listen and review the speech timeline</a></p><audio controls preload="none" src="${escape(r.evidence)}/audio.webm"></audio>
+      <p>${escape(r.concerns?.length || 0)} voice review candidates. ${escape((r.audioGaps || []).join(' '))}</p>` : ''}
     ${r.evidence ? `<p><a href="${escape(r.evidence)}/result.json">Full results &amp; effects</a> · <a href="${escape(r.evidence)}/scenario.json">Test case</a></p>` : ''}
     ${r.evidence && r.movement && r.mode === 'engine' ? `<p><a href="${escape(r.evidence)}/events.json">Engine inputs and sampled event evidence</a></p>` : ''}
     ${r.evidence && r.mode !== 'engine' ? `<p><a href="${escape(r.evidence)}/trace.zip">Browser trace</a> · <a href="${escape(r.evidence)}/console.json">Console and exceptions</a></p>` : ''}
