@@ -34,6 +34,7 @@ window.__testLab = {
     return { detectForVideo: () => ({ landmarks: [] }) };
   }; },
   audioAccess() { return { Coach, AudioBank, TTL, coach }; },
+  diagnosticAccess() { return { diagnostics, DiagnosticBuffer }; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;

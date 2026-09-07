@@ -357,6 +357,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 #tip b{ color:var(--bone); font-weight:600 }
 #priv{ margin:0; padding:9px var(--pad) 14px; font-size:7.5px; color:var(--bone-3);
   letter-spacing:.2em; text-align:center }
+#speechStatus{ margin:0; padding:10px var(--pad); font-size:12px; color:var(--bone-2);
+  border-top:1px solid var(--line); line-height:1.5 }
+#diagPanel{ margin:12px var(--pad); padding:12px; border:1px solid var(--line); font-size:12px; color:var(--bone-2) }
+#diagPanel summary{ cursor:pointer; color:var(--bone) }
+#diagPanel button,#diagPanel input{ margin:5px 3px }
+#diagPanel input{ accent-color:var(--iris) }
+#diagCanvas{ display:block; width:100%; max-width:640px; background:var(--void); border:1px solid var(--line) }
+#diagSeek{ width:min(100%,640px); accent-color:var(--iris) }
+#diagReadout{ white-space:pre-wrap; overflow-wrap:anywhere; max-height:220px; overflow:auto }
 
 /* ═══════════════════════════════════════════════════════════════
    MOBILE — not a smaller desktop. The phone is PROPPED UP two to three
@@ -499,7 +508,29 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 
 <div id="tel"></div>
 <p id="tip"></p>
+<p id="speechStatus" role="status" hidden></p>
 <p id="priv">Runs on-device &middot; video never leaves your browser</p>
+<details id="diagPanel">
+  <summary>Private diagnostics</summary>
+  <p>Optional: retain joint coordinates, measurements and coaching text in memory. No video or audio is recorded; nothing is uploaded. These details can be personal. Reloading clears them. Export only if you choose to share.</p>
+  <label><input id="diagConsent" type="checkbox"> I want to record diagnostic details on this device</label><br>
+  <button class="ctl" id="diagStart" disabled>Start recording</button>
+  <button class="ctl" id="diagStop" disabled>Pause recording</button>
+  <button class="ctl" id="diagFlag" disabled>Flag this moment</button>
+  <button class="ctl" id="diagExport" disabled>Export details</button>
+  <button class="ctl" id="diagClear">Clear details</button>
+  <p id="diagStatus" role="status">Off. Nothing recorded.</p>
+  <button class="ctl" id="diagReview">Review retained details</button>
+  <label>Open an exported diagnostic file <input id="diagImport" type="file" accept="application/json,.json"></label>
+  <p>Stop the camera before reviewing. Replay shows saved observations and decisions, not a new form assessment. Older entries are discarded when the memory limit is reached.</p>
+  <div id="diagViewer" hidden>
+    <button class="ctl" id="diagPlay">Play</button>
+    <label>Timeline <input id="diagSeek" type="range" min="0" max="0" value="0" step="1"></label>
+    <canvas id="diagCanvas" width="640" height="360" aria-label="Saved joint positions, not camera video"></canvas>
+    <p id="diagSummary"></p>
+    <details><summary>Technical details</summary><pre id="diagReadout"></pre></details>
+  </div>
+</details>
 
 
 <script type="module">
@@ -1150,12 +1181,23 @@ function framingCue(f){
    reset the budget and produce a carousel of spoken instructions. */
 function readinessFx(core, key, now, E){
   core.readinessActive = true;
+  const context = E.find(e => e.t === "coachContext");
+  if(context) context.readiness = key;
   const text = NOT_READY_TEXT[key] || BASE[key]?.[0] || NOT_READY_TEXT.setupShape;
   E.push({t:"banner", text:(core.state === "active" && core.ev.rep ? "Counting paused. " : "") + text, style:"teach"});
   if(!core.env.speaking() && now - (core.notReadyAt ?? -1e9) >= 30){
-    E.push({t:"say", key, pri:2, style:"teach"});
+    E.push({t:"say", key, pri:2, style:"teach", topic:"readiness"});
     core.notReadyAt = now;
   }
+}
+// These are current measurable facts, not a new score or a second cue selector.
+// They allow playback to withdraw an old instruction even during cue cooldown.
+function coachingFacts(r, mv){
+  const observed = !!r?.ok && !r.repPaused;
+  const keys = observed ? r.readings.filter(x => x.cue && !x.t.pos &&
+    (!mv.reps || x.t.id !== mv.reps.driver) &&
+    !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168)).map(x => x.cue) : [];
+  return {t:"coachContext", keys, positive:observed && r.inPose && r.score > 80, readiness:null};
 }
 /* Which joints does this movement actually measure? Derived from the metric specs
    themselves — the same content-as-data trick as the tint, so no new authoring.
@@ -2034,6 +2076,7 @@ class SessionCore {
     }
 
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
+    E.push(coachingFacts(r, this.mv));
     if(!r || !r.ok){
       this.ev.interrupt(); this.armT = 0; this.pendingFix = null;
       readinessFx(this, "trackingLost", now, E);
@@ -2133,7 +2176,7 @@ class SessionCore {
 
     if(r.cue){
       E.push({t:"log", force:true, row:snap("cue")});
-      E.push({t:"say", key:r.cue, pri:2});
+      E.push({t:"say", key:r.cue, pri:2, topic:"form"});
       this.pendingFix = {key:r.cue, at:now, low:r.score ?? 100};
       this.corr[r.cue] = (this.corr[r.cue] || 0) + 1;
     } else if(this.pendingFix){
@@ -2146,11 +2189,11 @@ class SessionCore {
       this.pendingFix.low = Math.min(this.pendingFix.low, r.score ?? 100);
       if(now - this.pendingFix.at >= 6) this.pendingFix = null;
       else if(this.pendingFix.low <= 78 && r.score > 80){
-        if(this.mv.kind === "hold") E.push({t:"say", key:"fixed", pri:2, cool:8000, style:"good"});
+        if(this.mv.kind === "hold") E.push({t:"say", key:"fixed", pri:2, cool:8000, style:"good", topic:"positive"});
         this.pendingFix = null;
       }
     } else if(this.mv.kind === "hold" && r.inPose && r.score > 85){
-      E.push({t:"say", key:"goodhold", pri:0, cool:this.tierId === "learning" ? 11000 : 15000, style:"good"});
+      E.push({t:"say", key:"goodhold", pri:0, cool:this.tierId === "learning" ? 11000 : 15000, style:"good", topic:"positive"});
     }
 
     if(this.mv.kind === "hold"){
@@ -2415,6 +2458,7 @@ class CalibrationCore {
     const E = [];
     if(this.done) return E;
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
+    E.push(coachingFacts(r, M.plank));
     if(!r || !r.ok){
       this.armT = 0;
       readinessFx(this, "trackingLost", now, E);
@@ -2805,17 +2849,18 @@ const AudioBank = {
 
   /** Play a sequence of clips back to back. Resolves when done. */
   play(paths, onEnd){
-    const queue = paths.map(p => this.get(p)).filter(Boolean);
-    if(!queue.length){ onEnd?.(); return false; }
+    const queue = paths.map(path => ({path, audio:this.get(path)})).filter(x => x.audio);
+    if(!queue.length) return false;
     const epoch = this.playEpoch;
-    let i = 0;
+    let i = 0, failed = queue.length !== paths.length;
     const next = () => {
       if(epoch !== this.playEpoch) return;
-      if(i >= queue.length){ onEnd?.(); return; }
-      const a = queue[i++];
+      if(i >= queue.length){ onEnd?.({failed}); return; }
+      const {audio:a, path} = queue[i++];
       a.currentTime = 0;
-      a.onended = next;
-      a.play().catch(() => next());
+      a.onplaying = () => { if(epoch === this.playEpoch) diagnosticEvent("speech", {event:"clip-playing", path}); };
+      a.onended = () => { if(epoch !== this.playEpoch) return; diagnosticEvent("speech", {event:"clip-ended", path}); next(); };
+      a.play().catch(() => { if(epoch !== this.playEpoch) return; failed = true; diagnosticEvent("speech", {event:"clip-error", path}); next(); });
     };
     next();
     return true;
@@ -2846,6 +2891,177 @@ let persona = "steady", userName = "", tier = "building";
    the field corruption is real, the fix is four lines, and it costs nothing. */
 const esc = t => String(t).replace(/[&<>"']/g, c =>
   ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+/* DIAGNOSTIC BUFFER START — browser-local evidence, not exercise judgement.
+   Kept pure so limits and import validation can be tested without the DOM. */
+class DiagnosticBuffer {
+  static maxBytes = 4 * 1024 * 1024;
+  static maxEntries = 4000;
+  constructor(){ this.clear(); }
+  clear(){ this.active = false; this.items = []; this.bytes = 0; this.dropped = 0; this.meta = null; this.lastAt = 0; }
+  start(meta){ this.clear(); this.meta = structuredClone(meta); this.active = true; }
+  add(kind, at, data){
+    if(!this.active) return;
+    if(!Number.isFinite(at) || at < this.lastAt) throw new Error("Diagnostic clock moved backwards");
+    const entry = { kind, at, data }, text = JSON.stringify(entry, (_key,value) => {
+      if(typeof value === "number" && !Number.isFinite(value)) throw new Error("Invalid diagnostic number");
+      return value;
+    });
+    const size = new TextEncoder().encode(text).length;
+    if(size > 65536) throw new Error("Diagnostic entry is too large");
+    while(this.items.length && (this.bytes + size > DiagnosticBuffer.maxBytes - 16384 || this.items.length >= DiagnosticBuffer.maxEntries)){
+      this.bytes -= this.items.shift().size; this.dropped++;
+    }
+    this.items.push({ text, size }); this.bytes += size; this.lastAt = at;
+  }
+  snapshot(){ return { schema:"formcoach-diagnostic/1", meta:structuredClone(this.meta), dropped:this.dropped,
+    replay:"saved observations only; not model inference or engine re-evaluation", entries:this.items.map(x => JSON.parse(x.text)) }; }
+  static parse(text){
+    if(new TextEncoder().encode(text).length > this.maxBytes) throw new Error("Diagnostic file exceeds the 4 MiB limit");
+    const data = JSON.parse(text);
+    if(data.schema !== "formcoach-diagnostic/1" || !data.meta || typeof data.meta !== "object" ||
+       typeof data.meta.version !== "string" || data.meta.version.length > 100 || !/^[a-f0-9]{64}$/.test(data.meta.scriptSha256) ||
+       !Number.isSafeInteger(data.dropped) || data.dropped < 0 || !Array.isArray(data.entries) || data.entries.length > this.maxEntries)
+      throw new Error("Invalid diagnostic header");
+    let nodes = 0;
+    const finiteTree = (x, depth = 0) => {
+      if(++nodes > 600000 || depth > 12) throw new Error("Diagnostic data is too complex");
+      if(typeof x === "number" && !Number.isFinite(x)) throw new Error("Invalid diagnostic number");
+      if(x && typeof x === "object") for(const v of Object.values(x)) finiteTree(v, depth + 1);
+    };
+    finiteTree(data);
+    let last = 0;
+    for(const e of data.entries){
+      if(!["frame","effect","speech","flag","control"].includes(e.kind) || !Number.isFinite(e.at) || e.at < last ||
+         !e.data || typeof e.data !== "object") throw new Error("Invalid diagnostic timeline");
+      last = e.at;
+      if(e.kind === "frame"){
+        const f = e.data.frame;
+        if(f !== null){
+          if(!f || !["left","right"].includes(f.cam) || !Number.isFinite(f.aspect) || f.aspect < .1 || f.aspect > 10)
+            throw new Error("Invalid diagnostic frame");
+          for(const side of ["left","right"]){
+            if(!f[side] || typeof f[side] !== "object") throw new Error("Missing diagnostic side");
+            for(const p of Object.values(f[side])) if(!p || ![p.x,p.y,p.c].every(Number.isFinite)) throw new Error("Invalid diagnostic joint");
+          }
+        }
+      }
+    }
+    return data;
+  }
+}
+/* DIAGNOSTIC BUFFER END */
+const diagnostics = new DiagnosticBuffer();
+const POSE_SOURCE = { runtime:"@mediapipe/tasks-vision@0.10.14", delegate:"GPU",
+  model:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
+let diagnosticOrigin = 0, diagnosticEpoch = 0, diagnosticReview = null, diagnosticTimer = 0;
+function diagnosticEvent(kind, data){
+  if(!diagnostics.active) return;
+  try{ diagnostics.add(kind, performance.now() - diagnosticOrigin, data); $("diagExport").disabled = false; }
+  catch(error){
+    diagnostics.active = false;
+    console.error("Diagnostic recording stopped", error);
+    $("diagStatus").textContent = "Diagnostic recording stopped: " + error.message;
+    diagnosticControls();
+  }
+}
+function diagnosticFrame(stamp, frame, dt, now, effects){
+  if(!diagnostics.active) return;
+  const r = effects.find(e => e.t === "telem")?.r;
+  // Allowlist the pose contract: never copy a video element, pixels or arbitrary input properties.
+  const pose = frame ? { cam:frame.cam, aspect:frame.aspect || 1, conf:frame.conf, sideness:frame.sideness,
+    ...Object.fromEntries(["left","right"].map(side => [side, Object.fromEntries(JOINTS.filter(j => frame[side]?.[j]).map(j => {
+      const p = frame[side][j]; return [j, {x:p.x, y:p.y, z:p.z, c:p.c}];
+    }))])) } : null;
+  diagnosticEvent("frame", { frame:pose, dt, engineTime:now, cameraTime:video.currentTime,
+    phase:stamp.phase, movement:stamp.movement, stateBefore:stamp.state, after:stamp.after,
+    reps:r?.reps ?? stamp.ev?.rep?.display() ?? 0, held:stamp.ev?.hold ?? 0, score:r?.score ?? null,
+    blocked:r?.blocking || (frame === null ? ["tracking"] : []), suppressed:r?.suppressed || [],
+    readings:(r?.readings || []).map(x => ({id:x.t.id, value:x.v, score:x.s, cue:x.cue})),
+    counter:stamp.ev?.rep ? {state:stamp.ev.rep.state, primed:stamp.ev.rep.primed, base:stamp.ev.rep.base,
+      peak:stamp.ev.rep.peak, progressMax:stamp.ev.rep.pMax} : null,
+    repEvent:r?.rep || r?.tooFast || r?.short || null });
+}
+function diagnosticSpeech(event, item, reason){
+  diagnosticEvent("speech", {event, key:item?.key ?? "raw", text:item?.text ?? "", reason:reason || "",
+    clips:item?.clips || [], mode:item?.mode || "unresolved", topic:item?.topic || null});
+}
+function diagnosticControls(){
+  $("diagStart").disabled = !$("diagConsent").checked || diagnostics.active;
+  $("diagStart").textContent = diagnostics.meta && !diagnostics.active ? "Resume recording" : "Start recording";
+  $("diagStop").disabled = !diagnostics.active;
+  $("diagFlag").disabled = !diagnostics.active;
+  $("diagExport").disabled = !diagnostics.items.length;
+}
+function diagnosticPause(){
+  diagnosticEvent("control", {action:"pause recording"}); diagnostics.active = false; diagnosticControls();
+  $("diagStatus").textContent = `Paused. ${diagnostics.items.length} entries retained; ${diagnostics.dropped} older entries discarded. Reload or Clear erases them.`;
+}
+function diagnosticStopReplay(){ clearInterval(diagnosticTimer); diagnosticTimer = 0; $("diagPlay").textContent = "Play"; }
+function diagnosticDraw(){
+  const entries = diagnosticReview?.entries || [], i = Number($("diagSeek").value), e = entries[i];
+  if(!e) return;
+  let observation = null;
+  for(let n = i; n >= 0; n--) if(entries[n].kind === "frame"){ observation = entries[n]; break; }
+  const canvas = $("diagCanvas"), ctx = canvas.getContext("2d"), f = observation?.data.frame;
+  canvas.height = f ? Math.round(640 / f.aspect) : 360;
+  ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#D9D7D1"; ctx.fillStyle = "#D9D7D1"; ctx.lineWidth = 2;
+  if(f) for(const side of ["left","right"]){
+    const p = f[side];
+    for(const [a,b] of [["ear","shoulder"],["shoulder","elbow"],["elbow","wrist"],["shoulder","hip"],["hip","knee"],["knee","ankle"],["ankle","toe"]]){
+      if(!p[a] || !p[b] || p[a].c < .5 || p[b].c < .5) continue;
+      ctx.beginPath(); ctx.moveTo(p[a].x * canvas.width, p[a].y * canvas.height); ctx.lineTo(p[b].x * canvas.width, p[b].y * canvas.height); ctx.stroke();
+    }
+  }
+  $("diagReadout").textContent = `${(e.at / 1000).toFixed(2)}s · ${e.kind}\n${JSON.stringify(e.data, null, 2)}\n` +
+    `Saved observations, unmirrored. ${diagnosticReview.dropped} older entries omitted.\nBuild: ${diagnosticReview.meta.version}; script SHA-256: ${diagnosticReview.meta.scriptSha256}`;
+  const d = e.data;
+  $("diagSummary").textContent = `${(e.at / 1000).toFixed(2)}s · ` + (e.kind === "frame"
+    ? `${M[d.movement]?.name || d.movement} · ${d.reps} reps · form ${d.score ?? "not scored"}. ${d.blocked?.length ? "Blocked by: " + d.blocked.join(", ") : "No recorded blockers."}`
+    : e.kind === "speech" ? `${d.event}: ${d.text || d.path || ""}${d.reason ? " — " + d.reason : ""}`
+    : e.kind === "flag" ? "You flagged this moment." : d.action || d.event || d.type || e.kind);
+}
+function diagnosticOpen(data){
+  if(running) throw new Error("Stop the camera before reviewing diagnostic details.");
+  diagnosticStopReplay(); diagnosticReview = data;
+  $("diagViewer").hidden = !data.entries.length;
+  $("diagSeek").max = Math.max(0, data.entries.length - 1); $("diagSeek").value = 0; diagnosticDraw();
+}
+function diagnosticClear(){
+  diagnosticEpoch++; diagnostics.clear(); diagnosticReview = null; diagnosticStopReplay();
+  $("diagConsent").checked = false; $("diagViewer").hidden = true; $("diagReadout").textContent = "";
+  $("diagSummary").textContent = "";
+  const c = $("diagCanvas"); c.getContext("2d").clearRect(0, 0, c.width, c.height);
+  $("diagImport").value = ""; $("diagStatus").textContent = "Off. Nothing recorded."; diagnosticControls();
+}
+async function diagnosticStart(){
+  if(!$("diagConsent").checked) return;
+  if(diagnostics.meta){
+    diagnostics.active = true; diagnosticEvent("control", {action:"recording resumed"}); diagnosticControls();
+    $("diagStatus").textContent = "Recording resumed locally; earlier retained details are preserved."; return;
+  }
+  const epoch = ++diagnosticEpoch; $("diagStart").disabled = true;
+  try{
+    const script = document.querySelector('script[type="module"]').textContent;
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
+    if(epoch !== diagnosticEpoch || !$("diagConsent").checked) return;
+    diagnosticOrigin = performance.now();
+    diagnostics.start({version:VERSION, scriptSha256:Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2,"0")).join(""),
+      poseSource:{...POSE_SOURCE}, modelBytesHash:"not measured", timestampUnit:"milliseconds since diagnostic start", capture:"joint coordinates and intended speech text; no pixels or audio"});
+    diagnosticEvent("control", {action:"recording started", duringSession:running}); diagnosticControls();
+    $("diagStatus").textContent = "Recording locally, up to 4 MiB / 4,000 entries. Older entries roll off. Pause or clear at any time.";
+  }catch(error){
+    console.error("Cannot start diagnostics", error); $("diagStatus").textContent = "Cannot start diagnostics: " + error.message; diagnosticControls();
+  }
+}
+function diagnosticTick(host, frame, dt, now){
+  const c = host.core;
+  const stamp = {phase:c.i ?? "calibration", movement:c.mvId || (c instanceof CalibrationCore ? "plank" : "rest"),
+    state:c.state || (c.armed ? "active" : "setup"), ev:c.ev};
+  const effects = c.tick(frame, dt, now);
+  stamp.after = {phase:c.i ?? "calibration", state:c.state || (c.armed ? "active" : "setup"), done:c.done};
+  diagnosticFrame(stamp, frame, dt, now, effects); applyFx(host, effects);
+}
 
 const lastPick = {};
 let lastVariant = 0;
@@ -2918,30 +3134,37 @@ function phrase(key, vars={}){
    pri 3 = session control (never expires) · 2 = corrections & counts · 1 = milestones · 0 = ambient */
 const TTL = { 3: Infinity, 2: 1500, 1: 2500, 0: 1200 };
 
+function localVoices(){
+  return typeof speechSynthesis === "undefined" ? [] : speechSynthesis.getVoices()
+    .filter(v => v.localService === true && (v.lang || "").startsWith("en"));
+}
+function setSpeechStatus(message = ""){
+  const el = $("speechStatus");
+  el.textContent = message; el.hidden = !message;
+}
+
 class Coach {
   constructor(){
     this.cur = null; this.pending = null; this.last = {};
     this.watchdog = null; this.voice = null;
+    this.context = {keys:[], readiness:null, positive:false}; this.completed = new Map();
   }
 
   speaking(){ return !!this.cur; }
 
-  /* The browser hands us whatever voice it feels like — usually the worst one it has.
-     Rank them: premium/enhanced first, then Google's remote voices (markedly better
-     than the local ones), then anything. This alone is most of the "it sounds like a
-     robot" complaint. */
+  /* Privacy is an eligibility rule, not a ranking preference. Never let the
+     browser choose an unspecified default voice, which may use a remote service. */
   pickVoice(){
-    const vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+    const vs = localVoices();
     if(!vs.length) return null;
     const score = v =>
       (/premium|enhanced|natural|siri/i.test(v.name) ? 100 : 0) +
-      (!v.localService ? 50 : 0) +
       (/google/i.test(v.name) ? 30 : 0) +
       (/daniel|serena|samantha|karen|moira/i.test(v.name) ? 10 : 0);
     return vs.slice().sort((a,b) => score(b) - score(a))[0];
   }
 
-  say(key, {vars={}, pri=1, cool=0, style="", ttl=null} = {}){
+  say(key, {vars={}, pri=1, cool=0, style="", ttl=null, topic=null} = {}){
     const text = phrase(key, vars);
     if(!text) return;
     const now = performance.now();
@@ -2958,7 +3181,7 @@ class Coach {
       clips = clipPlanFor(persona, tier, key, lastVariant, vars, tmpl, q => AudioBank.has(q));
       if(!clips) console.log(`AudioBank: TTS fallback — ${key}: "${text}"`);
     }
-    this.push({ text, clips, pri, at: now, ttl: ttl ?? TTL[pri] ?? 1500 });
+    this.push({ key, topic, text, clips, pri, at: now, ttl: ttl ?? TTL[pri] ?? 1500 });
   }
 
   /** Raw text (rep counts). Must be instant or not at all — "seven" said late is just wrong. */
@@ -2967,38 +3190,79 @@ class Coach {
     const n = Number(text);
     const clips = (!isNaN(n) && AudioBank.has(AudioBank.numPath(n)))
       ? [AudioBank.numPath(n)] : null;
-    this.push({ text, clips, pri, at: performance.now(), ttl });
+    this.push({ key:"number", text, clips, pri, at: performance.now(), ttl });
+  }
+
+  relevant(item){
+    if(item.topic === "form") return this.context.keys.includes(item.key);
+    if(item.topic === "readiness") return this.context.readiness === item.key;
+    if(item.topic === "positive") return this.context.positive;
+    return true; // rep events, teaching and controls retain their own TTL/phase rules
+  }
+  updateContext(context){
+    this.context = context;
+    for(const id of this.completed.keys()){
+      const [topic,key] = id.split(":"); if(!this.relevant({topic,key})) this.completed.delete(id);
+    }
+    if(this.pending && !this.relevant(this.pending)){
+      diagnosticSpeech("dropped", this.pending, "condition no longer present"); this.pending = null;
+    }
+    if(this.cur && !this.relevant(this.cur)){
+      this.cancelCurrent("condition no longer present"); this.drain();
+    }
+  }
+  cancelCurrent(reason){
+    const old = this.cur; this.cur = null; clearTimeout(this.watchdog);
+    if(old) diagnosticSpeech("cancelled", old, reason);
+    AudioBank.stop();
+    try{ speechSynthesis.cancel(); }catch(e){}
   }
 
   push(item){
+    diagnosticSpeech("requested", item);
+    if(!this.relevant(item)){ diagnosticSpeech("dropped", item, "condition no longer present"); return; }
+    if(item.topic && ([this.cur,this.pending].some(x => x?.topic === item.topic && x.key === item.key) ||
+       performance.now() - (this.completed.get(item.topic + ":" + item.key) ?? -Infinity) < 20000)){
+      diagnosticSpeech("dropped", item, "same continuing condition already addressed"); return;
+    }
     if(!this.cur){ this.start(item); return; }
     if(item.pri > this.cur.pri){          // interrupt — don't wait behind lower-priority chatter
-      this.cur = null;
-      clearTimeout(this.watchdog);
-      AudioBank.stop();
-      try{ speechSynthesis.cancel(); }catch(e){}
+      this.cancelCurrent("higher priority");
       this.start(item);
       return;
     }
     // Otherwise hold it as the single pending item, if it beats what's already waiting.
-    if(!this.pending || item.pri > this.pending.pri) this.pending = item;
+    if(!this.pending || item.pri > this.pending.pri){
+      if(this.pending) diagnosticSpeech("dropped", this.pending, "pending replaced");
+      this.pending = item; diagnosticSpeech("queued", item);
+    } else diagnosticSpeech("dropped", item, "lower queue priority");
   }
 
   start(item){
+    if(!this.relevant(item)){ diagnosticSpeech("dropped", item, "condition no longer present"); return; }
     this.cur = item;
     clearTimeout(this.watchdog);
 
-    const finish = () => {
+    const finish = (result = {}) => {
       if(this.cur !== item) return;
       clearTimeout(this.watchdog);
+      diagnosticSpeech(result.failed ? "failed" : "completed", item, result.reason);
+      if(item.topic && !result.failed) this.completed.set(item.topic + ":" + item.key, performance.now());
       this.cur = null;
       this.drain();
+    };
+    const timedOut = () => {
+      if(this.cur !== item) return;
+      this.cancelCurrent("playback timeout");
+      setSpeechStatus("Speech did not finish normally. Follow the on-screen instruction."); this.drain();
     };
 
     /* Recorded clip first — a real human voice, instantly, from a local file.
        Only fall back to robot-TTS if we don't have this line recorded. */
+    item.mode = item.clips ? "recorded" : "local-tts";
     if(item.clips && AudioBank.play(item.clips, finish)){
-      this.watchdog = setTimeout(finish, 25000);
+      diagnosticSpeech("play-request", item);
+      this.watchdog = setTimeout(timedOut, 25000);
       return;
     }
 
@@ -3009,33 +3273,52 @@ class Coach {
     const rate  = PERSONAS[persona].rate || 1;
     const words = item.text.split(/\s+/).filter(Boolean).length;
     const estMs = (words / (2.6 * rate)) * 1000 + 900;      // ~2.6 words/sec, plus slack
-    this.watchdog = setTimeout(finish, Math.min(estMs * 1.9, 22000));
+    this.watchdog = setTimeout(timedOut, Math.min(estMs * 1.9, 22000));
+    item.mode = "local-tts";
 
     try{
+      // Revalidate at every utterance, including previously selected/cached voices.
+      const available = localVoices();
+      this.voice = available.find(v => v.name === chosenVoiceName) ||
+        available.find(v => v.voiceURI === this.voice?.voiceURI && v.name === this.voice?.name) || this.pickVoice();
       if(!this.voice){
-        this.voice = (chosenVoiceName &&
-          speechSynthesis.getVoices().find(v => v.name === chosenVoiceName)) || this.pickVoice();
+        setSpeechStatus("Local English voice unavailable. Unrecorded instructions are shown on screen; recorded clips still work. No remote voice is used.");
+        finish({failed:true, reason:"local voice unavailable"}); return;
       }
       const u = new SpeechSynthesisUtterance(item.text);
       u.rate  = 1.0 * rate;
       u.pitch = PERSONAS[persona].pitch;
-      if(this.voice) u.voice = this.voice;
-      u.onend = u.onerror = finish;
+      u.voice = this.voice;
+      u.onstart = () => { if(this.cur !== item) return; setSpeechStatus(); diagnosticSpeech("tts-started", item); };
+      u.onend = finish;
+      u.onerror = () => {
+        if(this.cur !== item) return;
+        setSpeechStatus("Local speech could not play. Follow the on-screen instruction; no remote voice is used.");
+        finish({failed:true, reason:"local speech error"});
+      };
+      diagnosticSpeech("play-request", item);
       speechSynthesis.speak(u);
-    }catch(e){ finish(); }
+    }catch(e){
+      console.warn("Local speech unavailable", e);
+      setSpeechStatus("Local speech unavailable. Follow the on-screen instruction; no remote voice is used.");
+      finish({failed:true, reason:"local speech exception"});
+    }
   }
 
   drain(){
     const p = this.pending;
     this.pending = null;
     if(!p) return;
-    if(performance.now() - p.at > p.ttl) return;   // STALE — late coaching is wrong coaching
+    if(performance.now() - p.at > p.ttl){ diagnosticSpeech("dropped", p, "expired"); return; }
     this.start(p);
   }
 
   reset(){
+    if(this.cur) diagnosticSpeech("cancelled", this.cur, "phase reset or stop");
+    if(this.pending) diagnosticSpeech("dropped", this.pending, "phase reset or stop");
     clearTimeout(this.watchdog);
     this.cur = null; this.pending = null; this.last = {};
+    this.context = {keys:[], readiness:null, positive:false}; this.completed.clear();
     AudioBank.stop();
     try{ speechSynthesis.cancel(); }catch(e){}
   }
@@ -3057,29 +3340,29 @@ function fillVoices(){
   /* Brave's fingerprint shielding farbles getVoices() — it can legitimately return
      nothing, and voiceschanged may never fire. The picker is only the TTS fallback,
      so when the platform offers no choices, the row says so instead of sitting empty. */
-  const vs = (speechSynthesis.getVoices() || []).filter(v => (v.lang || "").startsWith("en"));
+  const vs = localVoices();
   const note = $("voiceNote");
+  sel.replaceChildren();
   /* With the bank present the picker is dead weight — the recordings ARE the voice.
      It only appears when we've genuinely fallen back to the browser's synthesiser. */
   if(AudioBank.enabled){
     sel.hidden = true;
-    if(note) note.textContent = "recorded coach voice";
+    if(note) note.textContent = "recorded coach voice · fallback uses local voices only";
     return;
   }
   if(!vs.length){
     sel.hidden = true;
-    if(note) note.textContent = "browser voice — the recorded coach voices ship with the app";
+    if(note) note.textContent = "No local English voice available — instructions remain on screen; recorded clips still work.";
     return;
   }
   sel.hidden = false;
-  if(note) note.textContent = "browser voice (fallback) — the real coach voices are recordings";
+  if(note) note.textContent = "local browser voice (fallback) — no remote speech";
   const best = coach.pickVoice();
-  sel.innerHTML = vs
-    .sort((a,b) => (b.name === best?.name) - (a.name === best?.name))
-    .map(v => `<option ${chosenVoiceName ? (v.name===chosenVoiceName?"selected":"")
-                                         : (best && v.name===best.name?"selected":"")}>${v.name}</option>`).join("");
+  sel.replaceChildren(...vs.sort((a,b) => (b.name === best?.name) - (a.name === best?.name)).map(v => {
+    const option = document.createElement("option"); option.textContent = v.name; option.value = v.name;
+    option.selected = v.name === (chosenVoiceName || best?.name); return option;
+  }));
 }
-try{ speechSynthesis.onvoiceschanged = fillVoices; }catch(e){}
 
 /* ── TELEMETRY LOG → CSV ──────────────────────────────────────────────
    For threshold tuning from screen recordings. The trick is a SHARED CLOCK:
@@ -3142,7 +3425,7 @@ const clockTag = () => TelLog.active
   ? `<span class="t meta">&#9201; <b>${TelLog.clock().toFixed(1)}</b></span>` : "";
 // voices load async in Chrome
 if(typeof speechSynthesis !== "undefined"){
-  speechSynthesis.onvoiceschanged = () => { coach.voice = coach.pickVoice(); };
+  speechSynthesis.onvoiceschanged = () => { coach.voice = coach.pickVoice(); fillVoices(); };
 }
 
 const POSITIVE = new Set(["fixed","goodhold","goodrep","pr","half","twomore","done","encourage"]);
@@ -3229,9 +3512,12 @@ const shellEnv = {
 
 function applyFx(host, E){
   for(const e of E){
+    if(["say","num","reset","clearBanner","finish","calibFinish"].includes(e.t) || e.t === "log" && (e.force || e.row.event === "armed"))
+      diagnosticEvent("effect", {type:e.t, key:e.key, number:e.n, event:e.row?.event, movement:e.row?.movement, state:e.row?.state});
     switch(e.t){
       case "reset": coach.reset(); break;
-      case "say": coach.say(e.key, {vars:e.vars || {}, pri:e.pri, cool:e.cool ?? 0, style:e.style || ""}); break;
+      case "say": coach.say(e.key, {vars:e.vars || {}, pri:e.pri, cool:e.cool ?? 0, style:e.style || "", topic:e.topic || null}); break;
+      case "coachContext": coach.updateContext(e); break;
       /* coach.raw() already resolves a numeric string to its clip AND routes it
          through the speech queue with priority, TTL and interruption. Playing the
          clip directly skipped all of that, so "3 · 2 · 1" fired on top of whatever
@@ -3294,7 +3580,7 @@ class Session {
   get done(){ return this.core.done; }
   get ev(){ return this.core.ev; }
   start(){ applyFx(this, this.core.start()); }
-  tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
+  tick(frame, dt, now){ diagnosticTick(this, frame, dt, now); }
   retier(){ applyFx(this, this.core.retier(tier)); }
   swapToRegression(){ applyFx(this, this.core.swapToRegression()); }
   skip(reason){ applyFx(this, this.core.skip(reason)); }
@@ -3412,7 +3698,7 @@ class Calibration {
   constructor(){ this.core = new CalibrationCore(shellEnv); }
   get ev(){ return this.core.ev; }
   get armed(){ return this.core.armed; }
-  tick(frame, dt, now){ applyFx(this, this.core.tick(frame, dt, now)); }
+  tick(frame, dt, now){ diagnosticTick(this, frame, dt, now); }
   skip(){ applyFx(this, this.core.skip()); }
 }
 
@@ -3524,13 +3810,10 @@ function showWelcome(){
       const bank = over.fixed || over.goodhold || over.go
                 || (TIER_LINES[tier] || {}).fixed || BASE.fixed;
       const line = bank[0];
-      const u = new SpeechSynthesisUtterance(line.replace(/\{n\}/g, ""));
-      const v = speechSynthesis.getVoices().find(x => x.name === $("voiceSel").value);
-      if(v) u.voice = v;
-      const style = { steady:{rate:.92,pitch:.95}, warm:{rate:1.0,pitch:1.0},
-                      energy:{rate:1.12,pitch:1.08} }[persona] || {};
-      u.rate = style.rate ?? 1; u.pitch = style.pitch ?? 1;
-      speechSynthesis.speak(u);
+      // Preview obeys the same privacy/queue rules as session speech.
+      coach.reset();
+      const text = line.replace(/\{n\}/g, ""); banner(text);
+      coach.push({key:"preview", text, clips:null, pri:3, at:performance.now(), ttl:1500});
     }catch(e){}
   };
   $("calBtn").onclick = () => beginCalibration();   // uses plankKnown, set above
@@ -3595,7 +3878,7 @@ async function initModel(){
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
   return PoseLandmarker.createFromOptions(vision, {
-    baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+    baseOptions:{ modelAssetPath:POSE_SOURCE.model,
                   delegate:"GPU" },
     runningMode:"VIDEO", numPoses:1 });
 }
@@ -4050,6 +4333,51 @@ const clock = s => { s = Math.max(0,s);
   return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`; };
 const setBig = v => { bigEl.textContent = v; };
 const pop = () => { bigEl.classList.add("pop"); setTimeout(()=>bigEl.classList.remove("pop"),130); };
+
+$("diagConsent").onchange = () => { if(!$("diagConsent").checked) diagnosticClear(); else diagnosticControls(); };
+$("diagStart").onclick = diagnosticStart;
+$("diagStop").onclick = diagnosticPause;
+$("diagFlag").onclick = () => { diagnosticEvent("flag", {note:"User flagged this moment"}); $("diagStatus").textContent = "Moment flagged. Recording continues locally."; };
+$("diagClear").onclick = diagnosticClear;
+$("diagExport").onclick = () => {
+  if(!diagnostics.items.length) return;
+  const text = JSON.stringify(diagnostics.snapshot()); DiagnosticBuffer.parse(text);
+  const url = URL.createObjectURL(new Blob([text], {type:"application/json"}));
+  const a = document.createElement("a"); a.href = url; a.download = "formcoach-private-diagnostic.json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+$("diagReview").onclick = () => {
+  try{ diagnosticOpen(DiagnosticBuffer.parse(JSON.stringify(diagnostics.snapshot()))); }
+  catch(error){ $("diagStatus").textContent = error.message; }
+};
+$("diagImport").onchange = async e => {
+  const file = e.target.files[0], epoch = diagnosticEpoch;
+  if(!file) return;
+  try{
+    if(file.size > DiagnosticBuffer.maxBytes) throw new Error("Diagnostic file exceeds the 4 MiB limit");
+    const data = DiagnosticBuffer.parse(await file.text());
+    if(epoch !== diagnosticEpoch) return;
+    diagnosticOpen(data);
+    $("diagStatus").textContent = "Opened locally for review. Nothing uploaded; imported data is not added to the recording.";
+  }catch(error){ diagnosticStopReplay(); diagnosticReview = null; $("diagViewer").hidden = true; $("diagStatus").textContent = error.message; }
+  e.target.value = "";
+};
+$("diagSeek").oninput = () => { diagnosticStopReplay(); diagnosticDraw(); };
+$("diagPlay").onclick = () => {
+  if(diagnosticTimer){ diagnosticStopReplay(); return; }
+  if(running || !diagnosticReview?.entries.length) return;
+  const entries = diagnosticReview.entries;
+  if(Number($("diagSeek").value) >= entries.length - 1) $("diagSeek").value = 0;
+  const start = performance.now(), first = entries[Number($("diagSeek").value)].at;
+  $("diagPlay").textContent = "Pause";
+  diagnosticTimer = setInterval(() => {
+    if(running || !$("diagPanel").open){ diagnosticStopReplay(); return; }
+    let i = Number($("diagSeek").value), at = first + performance.now() - start;
+    while(i < entries.length - 1 && entries[i + 1].at <= at) i++;
+    $("diagSeek").value = i; diagnosticDraw();
+    if(i === entries.length - 1) diagnosticStopReplay();
+  }, 33);
+};
 
 setTier("building");
 showWelcome();

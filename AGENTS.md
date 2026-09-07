@@ -110,6 +110,20 @@ Rep drivers measure cycle range/tempo, not static FORM; exclude them from frame
 score/tint. No remaining quality measurement means null (bridge), not zero or 100.
 Five new readiness/framing keys use TTS fallback until recorded clips are rendered;
 do not reuse old head/feet clips for the new edge-based wording.
+Speech fallback and preview now require an explicitly local English voice at each
+utterance. Never invoke an unspecified/remote default voice; unavailable speech must
+release the queue and explain the limitation visually. Keep the privacy shell cases.
+Current coaching facts cancel obsolete form/readiness/praise speech; cooldown is
+not evidence that a fault disappeared. Completed topic instructions have a 20-second
+continuing-condition budget; resolved/recurrent conditions and failed playback are
+handled separately. Do not suppress rep-event explanations or counting controls.
+Private diagnostics are opt-in, memory-only, bounded to 4 MiB / 4,000 entries, with
+explicit export, pause/resume and erase. Joint/text exports are personal data, not
+anonymous; never upload them automatically. Replay displays saved observations,
+not re-inference or a new form judgement. Preserve import validation and consent tests.
+`testing/worker-*` is an isolated prototype, not the live camera path. Its queue
+invariants run in the default suite; `npm run test:worker` runs the local CPU
+benchmark. Benchmark evidence from blank frames is not exercise/device validation.
 Historical screen recordings have now been reviewed, but are not
 clean camera inputs or recovered-landmark replay coverage; see the dated review
 in `docs/sessions/` and `testing/findings/active-rep-position-loss.md`.

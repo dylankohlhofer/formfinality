@@ -2,11 +2,14 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { serve } from './browser.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';
+import { privacyCases } from './privacy-cases.mjs';
+import { diagnosticCases } from './diagnostic-cases.mjs';
+import { coachingCases } from './coaching-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
   async function runCase(id, description, task) {
-    if (only && id !== only) return;
+    if (only && id !== only && !(only.endsWith('*') && id.startsWith(only.slice(0, -1)))) return;
     const evidence = `shell-${id}`, target = resolve(dir, evidence); await mkdir(target);
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
@@ -19,7 +22,10 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     try {
       await page.route('**/*', route => new URL(route.request().url()).origin === server.url ? route.continue() : route.abort());
       await page.goto(server.url); await page.waitForFunction(() => !!window.__testLab);
-      await task(page, check);
+      await task(page, check, async name => {
+        if (!/^[a-z-]+$/.test(name)) throw new Error('Invalid screenshot name');
+        await page.screenshot({path:resolve(target, `${name}.png`),fullPage:true});
+      });
       check('No uncaught browser errors', errors, []);
     } catch (e) { error = e.message; }
     finally {
@@ -34,6 +40,9 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     results.push(result); console.log(`${result.status.toUpperCase()} shell/${id}`);
   }
   try {
+    await privacyCases(runCase);
+    await diagnosticCases(runCase);
+    await coachingCases(runCase);
     await runCase('calibration-demo', 'A beginner choosing Show me first sees a rendered calibration demonstration.', async (page, check) => {
       await page.locator('[data-know="no"]').click(); await page.locator('#calBtn').click();
       await page.locator('#demo').waitFor({ state: 'visible' });
@@ -152,6 +161,8 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         AudioBank.stop = () => stopped++;
         speechSynthesis.cancel = () => cancelled++;
         speechSynthesis.speak = u => spoken.push(u);
+        speechSynthesis.getVoices = () => [{ name: 'Local test voice', voiceURI: 'test', lang: 'en-GB', localService: true }];
+        window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
         const c = new Coach(), item = (text, pri, ttl = 800) => ({ text, pri, ttl, at: now, clips: ['test.mp3'] });
         c.push(item('ambient', 0)); c.push(item('control', 3));
         const interrupted = c.cur.text === 'control' && stopped === 1 && cancelled === 1;
@@ -223,6 +234,8 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         AudioBank.stop = () => {};
         speechSynthesis.cancel = () => {};
         speechSynthesis.speak = u => window.clipEnds.push(() => u.onend());
+        speechSynthesis.getVoices = () => [{ name: 'Local test voice', voiceURI: 'test', lang: 'en-GB', localService: true }];
+        window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
         window.seedOldSpeech = () => {
           coach.reset();
           const item = text => ({ text, clips: ['test.mp3'], pri: 3, at: performance.now(), ttl: Infinity });

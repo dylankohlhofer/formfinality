@@ -18,7 +18,7 @@ window.__audioLab = (() => {
     const e = { type, ms: now(), state: state(), ...data }; events.push(e); return e;
   };
   const describe = item => {
-    if (!items.has(item)) items.set(item, { id: ++sequence, key: invoking?.key ?? 'raw',
+    if (!items.has(item)) items.set(item, { id: ++sequence, key: item.key ?? invoking?.key ?? 'raw',
       text: item.text, clips: item.clips, priority: item.pri,
       requestedMs: item.at - origin, ttl: Number.isFinite(item.ttl) ? item.ttl : null,
       requestedState: state(), vars: invoking?.vars ?? {} });
@@ -57,6 +57,17 @@ window.__audioLab = (() => {
     return result;
   };
   coach.reset = function() { log('reset'); activeItem = null; return reset.call(this); };
+  // Production now blocks unavailable/remote fallback BEFORE speak(). Preserve
+  // that coverage gap instead of mistaking "never attempted" for tested silence.
+  const decision = diagnosticSpeech;
+  diagnosticSpeech = (event, item, reason) => {
+    if (item) log('coach-decision', { event, item: describe(item), reason });
+    if (event === 'failed' && reason === 'local voice unavailable') {
+      log('tts-request', { item: describe(item), text: item.text, waveformCaptured: false });
+      log('tts-unavailable', { item: describe(item), reason: 'Production rejected fallback: no verified local English voice.' });
+    }
+    return decision(event, item, reason);
+  };
   const fx = applyFx;
   applyFx = (host, effects) => {
     latest = effects.findLast(e => e.t === 'telem')?.r ?? latest;

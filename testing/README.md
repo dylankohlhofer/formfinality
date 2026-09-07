@@ -57,6 +57,38 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Local-first stack improvements (7 September):** the default suite now also runs
+six diagnostic-buffer tests and nine worker-queue tests, plus 17 speech-privacy,
+three diagnostic UI and three coaching-context shell cases. The original 18
+coaching regressions remain. `coach-regressions.log`, `diagnostics.log` and
+`worker-queue.log` retain their results against the saved run build where applicable.
+The production recorder lives under **Private diagnostics** below the camera.
+It is off by default; no video/audio or automatic upload is added. Its imported
+JSON is validated and displayed as text. Exports include the running module's
+SHA-256 and configured pose-model identity, not independently verified model bytes.
+See [the local-stack handover](../docs/sessions/local-stack-2026-09-07.md).
+
+Focused interface cases (same cases as the default suite):
+
+```sh
+node testing/check-shell.mjs form-coach-v4.11.html 'privacy-*'
+node testing/check-shell.mjs form-coach-v4.11.html 'diagnostic-*'
+node testing/check-shell.mjs form-coach-v4.11.html 'coaching-*'
+```
+
+The isolated worker experiment is not shipped in the live camera loop:
+
+```sh
+npm run test:worker                           # queue tests + local CPU benchmark
+node testing/worker-benchmark.mjs GPU         # separate, explicitly labelled GPU run
+```
+
+Both paths process blank synthetic frames through the real pinned MediaPipe model.
+Reports include latency, main-thread timer delay, dropped frames and errors, with
+the model checksum. Run benchmarks without other test browsers/watchers competing
+for resources. A passing benchmark proves wiring, not real-exercise accuracy,
+mobile GPU speed, battery life or thermal stability. See the handover for results.
+
 ```sh
 npm run test:watch
 ```
@@ -241,6 +273,9 @@ Important limits:
   labelled unavailable, not simulated as successful speech. Remote voices are
   blocked to avoid sending text outside the device. TTS use appears as a coverage
   gap even when other checks pass. Captured silence cannot establish TTS silence.
+  The production app now enforces local-only routing too, including preview.
+  The harness records a coverage gap when production rejects an unavailable local
+  voice before calling `speak()`; it must not mistake that for tested audio output.
 - Media-element capture is not microphone/system-audio capture, speaker audibility
   or physical-device validation. These scenarios use synthetic landmarks; they
   do not yet combine audio with the accelerated MediaPipe video replay mode.

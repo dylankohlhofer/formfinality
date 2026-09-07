@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 7 September 2026 — historical review and test results against v4.11. The
+**Last updated:** 7 September 2026 — local-first stack improvements and verification against v4.11. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -63,6 +63,30 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**7 September 2026 — local-first stack improvements.** Session speech and the preview
+now require an explicitly local English voice; unavailable speech is explained visually
+without blocking the workout or using a remote default. Opt-in, memory-only diagnostics
+retain bounded joint/measurement/coaching evidence, with flagging, pause/resume, explicit
+export and local timeline review. Replay shows saved observations, not new inference.
+Current coaching facts withdraw obsolete speech and limit repetition without treating
+cue cooldown as recovery. See `sessions/local-stack-2026-09-07.md` for the privacy
+boundaries, retained tests and benchmark evidence.
+
+The pose worker remains an **isolated experiment**, not the live app loop. A desktop
+blank-frame CPU benchmark reduced p95 main-thread timer delay from 10.7ms to 1.1ms;
+the headless GPU run was much slower and discarded stale frames. Neither proves
+real-exercise accuracy or phone performance. Physical-phone testing is required before
+adoption. No vector expectations or Swift source changed in this follow-up.
+
+**Local-first verification:** `npm test` exits 0: 59 infrastructure tests, 18 coaching
+regressions, six diagnostics tests, nine worker-queue tests; **48/48 engine cases
+(1,207 checks), 96/96 browser cases (694 checks), 50/50 shell cases (293 checks),
+13/13 audio cases (238 checks)**. The original four harnesses and Swift 18/18 also
+pass. Evidence: `test-results/2026-09-07T18-21-56-328Z-32487/`; precise artifact
+hashes are in the linked local-stack handover. Five video gaps and two native-TTS
+waveform gaps remain. A new user recording supplied after this run reports further
+real-world failures; these are not disproved by synthetic green checks.
+
 **7 September 2026 — historical fixes implemented.** The browser now rejects
 active-state false reps and interrupted returns, explains quality-blocked setup,
 withdraws recovered tracking warnings, gives specific camera-error advice and
@@ -75,7 +99,7 @@ refreshed, with unchanged tolerances and other expectations. See
 `sessions/historical-fixes-2026-09-07.md` for the policy, regressions and remaining
 real-person/audio coverage limits. The review baseline below predates these fixes.
 
-**Final post-fix verification:** `npm test` exits 0: **59/59 infrastructure tests,
+**Historical-fix baseline verification (before the local-first follow-up):** `npm test` exits 0: **59/59 infrastructure tests,
 18/18 coaching regressions, 48/48 engine cases (1,207 checks), 96/96 browser cases
 (694 checks), 27/27 shell cases (140 checks), and 13/13 audio cases (237 checks)**.
 All four original harnesses pass, as do **18/18 Swift tests**. All 21 exercises /
@@ -123,10 +147,10 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 221 KiB, no dependencies but the pose model CDN |
+| **Build** | `form-coach-v4.11.html` — single file, 247,525 bytes (242 KiB); existing external runtime, model and font assets remain; not yet an offline package |
 | **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 18/18 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
-| **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys now also need recorded clips; these use TTS fallback, not the old recordings. No new render/cost estimate is claimed. |
+| **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |
 | **Swift kit** | 12 sources, conformance vectors current |
 | **Beginner tests** | **1 of 2 complete** — see `test-01-max.md` |
 
@@ -181,10 +205,11 @@ and several movements had unregistered reps. Whether v4.11 resolves that is the 
 
 ## Critical path
 
-**Updated engineering gate:** the original four harnesses remain green, but the new
-shell/exercise coverage exposed defects listed above. Close or explicitly review those
-findings before treating engineering as clear. The earlier beginner-test and voice-render
-steps below remain relevant; synthetic coverage does not satisfy them.
+**Updated engineering gate:** the reproduced historical counting, framing and stale-audio
+defects have regression-protected fixes. Use the latest full-run evidence above, not the
+earlier failing baselines. Remaining release checks include local voice availability on
+target phones, missing recorded phrases and beginner test 02. Diagnostic exports can
+explain future failures, but synthetic coverage and replay do not satisfy human checks.
 
 ```
 NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
@@ -196,7 +221,7 @@ NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)
            earliest of all, and the one that was never on anyone's list
         └─ REF has coverage (refGates) and so does its DRAWING (verify-draw,
            after bug #43 — every demo was being stretched by the canvas
-           aspect); the rest of the SHELL still has none, and no test can
+           aspect); the shell now has automated coverage, but no test can
            tell you a demo reads as the movement — only you can
         └─ the demos are now drawn ~29% smaller in the 480x340 box, which
            fits a square: correct proportions, less of the box used. Judge

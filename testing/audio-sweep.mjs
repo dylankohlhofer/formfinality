@@ -108,6 +108,11 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
       if (scenario.id === 'plank-feedback') {
         check('Feedback case reaches an active set', evidence.events.some(e => e.type === 'effect' && e.effect.key === 'go'), true);
         check('Synthetic hip sag produces an actually started correction clip', evidence.events.some(e => e.type === 'clip-start' && e.item?.key === 'sag'), true);
+        const sag = evidence.events.find(e => e.type === 'observation' && e.state.observation.pose === 'sag');
+        const recovered = evidence.events.find(e => e.type === 'observation' && e.ms > sag?.ms && e.state.observation.pose === 'good');
+        const sagClips = new Set(evidence.events.filter(e => e.type === 'clip-start' && e.item?.key === 'sag').map(e => e.playId));
+        check('Recovery is present in the audio timeline', !!recovered, true);
+        check('Resolved sag is not spoken after two seconds of recovery', evidence.levels.some(l => sagClips.has(l.playId) && l.ms > recovered?.ms + 2000 && l.rms > .001), false);
       }
       if (scenario.id === 'skip-during-teaching') {
         const skip = evidence.events.find(e => e.type === 'action' && e.action === 'skip');

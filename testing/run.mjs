@@ -50,13 +50,15 @@ run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  const checked = spawnSync(process.execPath, ['--test', 'testing/coach-regressions.test.mjs'], {
-    cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(options.build) }
-  });
-  await writeFile(resolve(dir, 'coach-regressions.log'), (checked.stdout || '') + (checked.stderr || ''));
-  run.results.push({ id: 'coach-regressions', mode: 'regression', status: checked.status === 0 ? 'passed' : 'failed',
-    checks: [{ label: 'Historical coaching regressions pass against the selected build', pass: checked.status === 0,
-      actual: checked.status, expected: 0 }], error: checked.error?.message });
+  for (const suite of ['coach-regressions', 'diagnostics', 'worker-queue']) {
+    const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
+      cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
+    });
+    await writeFile(resolve(dir, `${suite}.log`), (checked.stdout || '') + (checked.stderr || ''));
+    run.results.push({ id: suite, mode: 'regression', status: checked.status === 0 ? 'passed' : 'failed',
+      checks: [{ label: `${suite} passes against this saved run`, pass: checked.status === 0,
+        actual: checked.status, expected: 0 }], error: checked.error?.message });
+  }
   for (const suite of ['verify.mjs', 'verify-mutations.mjs', 'verify-draw.mjs', 'verify-skip.mjs']) {
     const checked = spawnSync(process.execPath, [suite, resolve(options.build)], { cwd: root, encoding: 'utf8', timeout: 120000 });
     await writeFile(resolve(dir, suite + '.log'), (checked.stdout || '') + (checked.stderr || ''));
