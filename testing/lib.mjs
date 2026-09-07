@@ -37,7 +37,7 @@ export function engineSource(html) {
 }
 export async function loadEngine(html) {
   return import('data:text/javascript;base64,' + Buffer.from(engineSource(html) +
-    '\nexport { SessionCore, CalibrationCore, PLANS, M, TIERS, Rep, Evaluator, neededJoints, buildFrame };').toString('base64'));
+    '\nexport { SessionCore, CalibrationCore, PLANS, M, TIERS, Rep, Evaluator, neededJoints, buildFrame, framing, framingCue, BASE };').toString('base64'));
 }
 export function validate(s) {
   if (s.schema !== 1 || !/^[a-z0-9-]+$/.test(s.id ?? '') || !s.oracle ||

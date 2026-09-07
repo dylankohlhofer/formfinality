@@ -100,6 +100,11 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         catch (e) { evidence.clipHashes[path] = `unavailable: ${e.code}`; }
       }
       audit = auditAudio(evidence);
+      if (scenario.id === 'tracking-loss') {
+        const reminders = evidence.events.filter(e => e.type === 'effect' && e.effect.t === 'say' && ['vis', 'trackingLost'].includes(e.effect.key));
+        check('Persistent missing tracking requests at most one reminder in 24 seconds', reminders.length <= 1, true);
+        check('Tracking loss still receives an explanation after teaching', reminders.length >= 1, true);
+      }
       if (scenario.id === 'plank-feedback') {
         check('Feedback case reaches an active set', evidence.events.some(e => e.type === 'effect' && e.effect.key === 'go'), true);
         check('Synthetic hip sag produces an actually started correction clip', evidence.events.some(e => e.type === 'clip-start' && e.item?.key === 'sag'), true);

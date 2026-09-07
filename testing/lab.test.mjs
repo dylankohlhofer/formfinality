@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError } from './lib.mjs';
 import { findings, escape, hasScreenshot } from './report.mjs';
 import { serve } from './browser.mjs';
@@ -9,6 +10,16 @@ import { loadEngine } from './lib.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';
 import { exerciseScenarios, exerciseSweep } from './exercise-sweep.mjs';
 const base = JSON.parse(await readFile(new URL('./scenarios/first-steps.json', import.meta.url)));
+test('served app and both browser instrumentation layers parse before launching a browser', async () => {
+  const html = await readFile(new URL('../form-coach-v4.11.html', import.meta.url), 'utf8');
+  const app = html.split('<script type="module">')[1].split('</script>')[0];
+  const bridge = await readFile(new URL('./bridge.js', import.meta.url), 'utf8');
+  const audio = await readFile(new URL('./audio-bridge.js', import.meta.url), 'utf8');
+  for (const source of [app, app + '\n' + bridge, app + '\n' + bridge + '\n' + audio]) {
+    const r = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: source, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+  }
+});
 test('committed scenario validates', () => assert.equal(validate(base).id, 'first-steps'));
 test('unknown actions fail loudly', () => assert.throws(() => validate({ ...base, steps: [{ do: 'start', core: 'session' }, { do: 'typo' }] })));
 test('missing oracle rejected', () => assert.throws(() => validate({ ...base, oracle: '' })));

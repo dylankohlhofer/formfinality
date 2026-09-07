@@ -47,9 +47,63 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
       });
       await page.locator('#calBtn').click();
       await page.getByRole('heading', { name: 'Camera unavailable' }).waitFor();
+      check('Permission denial names permission, not a localhost setup problem',
+        /permission was not granted/i.test(await page.locator('#msgInner').innerText()), true);
+      check('No obsolete build address is suggested', /form-coach-v4\.html|python3/i.test(await page.locator('#msgInner').innerText()), false);
       check('Skip stays hidden after denied permission', await page.locator('#skipExBtn').isVisible(), false);
       await page.locator('#backBtn').click();
       check('Back returns to session selection', await page.locator('.plancard').count() > 0, true);
+    });
+    for (const [name, advice] of [['NotFoundError', 'No camera was found'], ['NotReadableError', 'Close other apps'],
+      ['OverconstrainedError', 'requested video settings'], ['AbortError', 'startup was interrupted']]) {
+      await runCase(`camera-${name}`, `Camera failure ${name} gives specific recovery advice.`, async (page, check) => {
+        await page.evaluate(name => {
+          window.__testLab.realCamera(); navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('Test error', name); };
+        }, name);
+        await page.locator('#calBtn').click(); await page.locator('#backBtn').waitFor();
+        check('Recovery advice matches the actual failure', (await page.locator('#msgInner').innerText()).includes(advice), true);
+        check('Failed startup leaves Skip hidden', await page.locator('#skipExBtn').isVisible(), false);
+      });
+    }
+    await runCase('model-failure-cleanup', 'A model startup error is distinguished from camera permission and releases the opened track.', async (page, check) => {
+      await page.evaluate(() => {
+        window.__testLab.realCamera(); window.__testLab.mockModel(true); window.testStopped = 0;
+        navigator.mediaDevices.getUserMedia = async () => {
+          const c = document.createElement('canvas'); c.width = 640; c.height = 360;
+          const ctx = c.getContext('2d'), stream = c.captureStream(10);
+          const timer = setInterval(() => ctx.fillRect(0, 0, c.width, c.height), 100);
+          for (const t of stream.getTracks()) { const stop = t.stop.bind(t); t.stop = () => { clearInterval(timer); window.testStopped++; stop(); }; }
+          return stream;
+        };
+      });
+      await page.locator('#calBtn').click(); await page.locator('#backBtn').waitFor();
+      check('Model error is named accurately', /pose model could not start/.test(await page.locator('#msgInner').innerText()), true);
+      check('Acquired track is stopped after model failure', await page.evaluate(() => window.testStopped), 1);
+      check('Camera element releases failed stream', await page.locator('#cam').evaluate(v => v.srcObject === null), true);
+    });
+    await runCase('tracking-warning-recovery', 'The paused-counting warning disappears on recovery, not seven seconds later.', async (page, check) => {
+      await page.evaluate(() => window.__testLab.installPlan({ id: 'pause-recovery', name: 'Core Strength', tiers: ['building'], steps: [{ ex: 'push-up', t: 100 }] }));
+      await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
+      await page.locator('[data-plan="pause-recovery"]').click();
+      const frame = exerciseInputs(JSON.parse(await readFile(resolve(root, 'conformance-vectors.json'))).poses).frame('push-up');
+      await page.evaluate(frame => { for (let i = 0; i < 90; i++) window.__testLab.feed(frame, 1 / 30); window.__testLab.feed(null, 1 / 30); }, frame);
+      check('Tracking loss has a visible explanation', await page.locator('#cue').evaluate(el =>
+        el.classList.contains('show') && /counting (?:is )?paused/i.test(el.innerText)), true);
+      await page.evaluate(frame => window.__testLab.feed(frame, 1 / 30), frame);
+      check('Recovered tracking withdraws the old pause banner', await page.locator('#cue').evaluate(el => el.classList.contains('show')), false);
+    });
+    await runCase('bridge-unscored-ui', 'Bridge setup/active/debrief show counted reps without an invented FORM grade.', async (page, check) => {
+      await page.evaluate(() => window.__testLab.installPlan({ id: 'bridge-score', name: 'Core Strength', tiers: ['building'], steps: [{ ex: 'glute-bridge', t: 5 }] }));
+      await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
+      await page.locator('[data-plan="bridge-score"]').click();
+      check('Unscorable exercise hides FORM immediately', await page.locator('#scoreCol').evaluate(el => el.classList.contains('on')), false);
+      const inputs = exerciseInputs(JSON.parse(await readFile(resolve(root, 'conformance-vectors.json'))).poses);
+      const frames = [...Array.from({ length: 90 }, () => inputs.frame('glute-bridge')),
+        ...Array.from({ length: 600 }, (_, i) => inputs.resolve('exercise:glute-bridge:cycle', i / 30))];
+      await page.evaluate(frames => { for (const f of frames) window.__testLab.feed(f, 1 / 30); }, frames);
+      const p = await page.evaluate(() => window.__testLab.snapshot().finish);
+      check('Completed bridge retains five reps with no form score', p.reps === 5 && p.avg === null && p.out[0].score === null, true);
+      check('Debrief names the missing form assessment', /form not scored/i.test(await page.locator('.prow').innerText()), true);
     });
     await runCase('camera-start-flip-stop', 'Original camera acquisition and animation loop with a fake local stream and no-detection model. No hardware access.', async (page, check) => {
       await page.evaluate(() => {

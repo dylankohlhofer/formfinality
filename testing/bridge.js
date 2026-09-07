@@ -29,7 +29,10 @@ window.__testLab = {
     drawRef(ctx, refPose(ref, testNow), canvas.width, canvas.height, true);
   },
   realCamera() { openCamera = testOriginalCamera; },
-  mockModel() { initModel = async () => ({ detectForVideo: () => ({ landmarks: [] }) }); },
+  mockModel(fail = false) { initModel = async () => {
+    if (fail) throw new Error('Deliberate model startup failure');
+    return { detectForVideo: () => ({ landmarks: [] }) };
+  }; },
   audioAccess() { return { Coach, AudioBank, TTL, coach }; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
