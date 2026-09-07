@@ -22,8 +22,10 @@ test('FC-LAB-007: easier-movement suggestion withdraws when setup recovers and t
   const read = core.ev.read.bind(core.ev); let blocked = true, now = 0, shown = false, hidden = false;
   core.ev.read = (t, frame) => blocked && t.id === 'bodyLine' ? 100 : read(t, frame);
   const frame = input.frame('plank');
-  for(let i=0;i<300;i++){
-    if(i===210) blocked=false;
+  // The later offer is intentional: 5s setup grace + 6s measured difficulty.
+  // Keep the original offer -> recover -> auto-dismiss expectation intact.
+  for(let i=0;i<450;i++){
+    if(i===360) blocked=false;
     now+=1/30;
     for(const e of core.tick(frame,1/30,now)){
       if(e.t==='regressShow') shown=true;

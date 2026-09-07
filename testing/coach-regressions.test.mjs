@@ -111,7 +111,8 @@ test('quality-blocked Learning setup can offer its declared easier movement', ()
   // Controlled gate failure without altering the position gate.
   const read = s.core.ev.read.bind(s.core.ev);
   s.core.ev.read = (t, frame) => t.id === 'bodyLine' ? 100 : read(t, frame);
-  s.feed(8, f);
+  // Deliberate FC-LAB-007 policy: 5s setup grace, then 6s sustained difficulty.
+  s.feed(12, f);
   assert.equal(s.core.state, 'setup'); assert.ok(s.effects.some(e => e.t === 'regressShow'));
 });
 test('completed bridge-only session names the absence of a form assessment', () => {

@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 7 September 2026 — current recording review and parallel local-first audit against v4.11. The
+**Last updated:** 7 September 2026 — recorder usability/retention and optional-help fixes against v4.11. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -63,14 +63,38 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
-**Latest user recording — engineering gate reopened.** The post-verification review
-confirms real-world stalls, intrusive controls and failed speech, with three new
-failing automated cases retained in `testing/reported-session.test.mjs`. Two positive/
-negative controls pass. The default loop now includes this suite and must report the
-failures; the older green baseline below is not the current release verdict.
-See `sessions/current-recording-review-2026-09-07.md`. A diagnostic rolloff gap removed
-the early exercise landmarks; the side-plank numeral 6 is present, while the target
-shortening/ring jump is confirmed. No fixes for this new review are claimed yet.
+**Latest user recording — engineering gate remains open.** The review confirmed
+real-world stalls, intrusive controls and failed speech. The first implementation
+phase now fixes prompt recovery and mobile recorder access: four of the five cases
+in `testing/reported-session.test.mjs` pass. The partially cropped Crunch case still
+fails and remains in the default loop. The older green baseline is not the current
+release verdict. See `sessions/current-recording-review-2026-09-07.md`.
+
+**Recorder and optional-help fixes:** the recorder opens in a fixed, scrollable header
+drawer without resizing the stage; starting capture closes it and leaves a quick flag
+button. Schema 2 protects events/periodic summaries and up to eight available ±10s
+flagged windows at up to 5Hz. Unprotected recent frames roll off; protected-space
+exhaustion visibly pauses capture without replacing saved evidence. Legacy imports
+remain readable. Everything stays opt-in and memory-only, with explicit export/erase.
+
+Optional help now requires five seconds of setup grace followed by six continuous
+seconds of observed difficulty, known view and visible passing position targets.
+Recovery immediately withdraws the choice; an unaccepted alternative is visual only.
+This is a usability policy, not an ability measurement. No evaluator thresholds,
+vector expectations or Swift code changed. See
+`sessions/recorder-prompt-fixes-2026-09-07.md` for policies, tests and verification.
+The earlier lost landmarks cannot be recovered; partial-view counting, native speech
+startup and side-plank target shortening remain separate open work.
+
+**Latest verification:** `npm test` exits **1 solely for partial-view Crunch** in the
+five-case reported-session suite (four pass, one fails). All other suites pass:
+60 infrastructure, 18 historical coaching, 120 prompt, 17 diagnostic-buffer and 13
+worker-queue tests; **48 engine cases / 1,207 checks, 96 browser cases / 694 checks,
+61 shell cases / 628 checks, 13 audio cases / 238 checks**. All four original harnesses
+pass unchanged. Evidence: `test-results/2026-09-07T22-38-12-040Z-47950/`;
+the linked recorder/prompt handover records the exact artifact hashes and remaining
+five video / two native-TTS coverage gaps. Swift is unchanged and was not rerun in
+this phase; the earlier 18/18 result remains its last verification.
 
 **Parallel audit fixes:** turning automatic Voice off now stops current/pending
 speech, active camera-angle instructions withdraw on recovery, and recorded playback
@@ -81,7 +105,7 @@ without damaging its queue, and counts only results actually delivered to its co
 four new unit tests protect that hardening. These are not claimed fixes for the
 recording's native speech timeouts or partial-visibility failures.
 
-**Latest integration verification:** `npm test` exits **1 solely for the new
+**Previous parallel-audit verification:** `npm test` exited **1 solely for the new
 `reported-session` suite** (two controls pass, three cases fail). All other checks
 pass: 60 infrastructure tests, 18 historical coaching regressions, six diagnostic
 tests, 13 worker-queue tests; **48/48 engine cases (1,207 checks), 96/96 browser
@@ -174,7 +198,7 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 248,737 bytes (243 KiB); existing external runtime, model and font assets remain; not yet an offline package |
+| **Build** | `form-coach-v4.11.html` — single file, 262,138 bytes (256 KiB); existing external runtime, model and font assets remain; not yet an offline package |
 | **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 18/18 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |
@@ -232,9 +256,9 @@ and several movements had unregistered reps. Whether v4.11 resolves that is the 
 
 ## Critical path
 
-**Updated engineering gate:** historical fixes remain, but the latest user review adds
-three failing automated cases and further speech/timing issues. Resolve the newly linked
-findings before treating engineering as clear. Priorities are usable mobile diagnostics,
+**Updated engineering gate:** recorder usability/retention and prompt recovery are now
+fixed. The partial-view Crunch case and further speech/timing issues remain open.
+Resolve the linked findings before treating engineering as clear. Next priorities are
 separate movement/form evidence, stable hold behaviour and a consistent bundled voice.
 Physical-phone checks and beginner test 02 remain necessary; replay does not replace them.
 

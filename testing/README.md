@@ -57,25 +57,43 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
-**Local-first stack improvements (7 September):** the default suite now also runs
-six diagnostic-buffer tests and thirteen worker-queue tests, plus 17 speech-privacy,
-three diagnostic UI and ten coaching-context/lifecycle shell cases. The original 18
+**Local-first stack improvements (7 September):** the default suite also runs
+17 diagnostic-buffer tests, 120 setup-prompt tests and thirteen worker-queue tests,
+plus 17 speech-privacy, seven diagnostic UI and ten coaching-context/lifecycle shell cases. The original 18
 coaching regressions remain. `coach-regressions.log`, `diagnostics.log` and
 `worker-queue.log` retain their results against the saved run build where applicable.
-The production recorder lives under **Private diagnostics** below the camera.
+`setup-prompt.log` retains timing, observation and recovery checks at 15/30/60fps.
+The production recorder lives under **Private diagnostics** in the header.
 It is off by default; no video/audio or automatic upload is added. Its imported
 JSON is validated and displayed as text. Exports include the running module's
 SHA-256 and configured pose-model identity, not independently verified model bytes.
 See [the local-stack handover](../docs/sessions/local-stack-2026-09-07.md).
 
 **New user review, after that green baseline:** `reported-session.test.mjs` retains
-five checks in the default loop. Three currently **fail**: the easier-movement prompt
-survives recovery, a neck-only clipping event cancels otherwise observed crunch cycles,
-and the mobile diagnostic control is covered. Two controls pass (toe-only clipping
-does not veto leg raises; entirely off-screen cycles cannot earn reps). These are
-open application failures, not whitelisted expected outcomes. Run just these with
+five checks in the default loop. Four now pass: easier-movement prompt recovery,
+mobile recorder access, toe-only leg-raise clipping and the wholly off-screen negative
+control. The neck-only clipping case still **fails**, cancelling otherwise observed
+crunch cycles. This is an open application failure, not a whitelisted expected outcome. Run just these with
 `node --test testing/reported-session.test.mjs`; details and recording limitations
 are in `docs/sessions/current-recording-review-2026-09-07.md`.
+
+**Recorder/prompt follow-up:** `docs/sessions/recorder-prompt-fixes-2026-09-07.md`
+documents the implementation and deliberate policy changes. The fixed, scrollable
+diagnostic drawer does not resize the camera. Start/Resume closes it; a header quick
+flag remains available during exercise. The session timeline records events plus
+periodic/changed-state summaries; recent full-rate frames roll off. Up to eight flags
+retain available ±10-second joint windows at up to 5Hz, not complete full-rate replay.
+The 4 MiB serialized-export / 4,000-entry limit remains. If protected records fill it,
+capture pauses with a visible notice and preserves existing evidence. Clear/reload
+still erase everything. Schema 2 exports record retention boundaries; schema 1
+imports do not acquire invented protection. No camera video or sound is recorded.
+
+Optional easier-movement help has a 5s setup grace then requires 6s continuous visible
+quality difficulty, known camera view and observed passing position targets. Recovery
+or missing evidence immediately withdraws it; each movement can offer once. It stays
+visual until accepted. Earlier 7s/8s tests deliberately now hold difficulty for 12s,
+preserving their original offer/recovery assertions. Evaluator thresholds and vectors
+are unchanged. Physical-phone usability and beginner interpretation remain unvalidated.
 
 Focused interface cases (same cases as the default suite):
 

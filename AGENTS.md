@@ -121,12 +121,24 @@ Private diagnostics are opt-in, memory-only, bounded to 4 MiB / 4,000 entries, w
 explicit export, pause/resume and erase. Joint/text exports are personal data, not
 anonymous; never upload them automatically. Replay displays saved observations,
 not re-inference or a new form judgement. Preserve import validation and consent tests.
+The byte cap is the serialized export budget, not a measured JavaScript heap limit.
+Schema 2 protects the session event/summary timeline and up to eight flagged windows
+(available ±10s at up to 5Hz) while unprotected recent frames roll off. Protected-space
+exhaustion pauses capture visibly; never replace a saved flag silently. Schema 1 imports
+remain readable without claiming their old rolling flags were protected. Drawer opening
+must not resize the camera; starting capture closes it and leaves a quick flag control.
+`testing/setup-prompt.test.mjs` protects optional easier-movement help: 5s setup grace,
+then 6s continuous observed difficulty, known view and visible passing position gates.
+Recovery/observation loss withdraws the offer immediately; arming resets difficulty,
+not the once-per-movement offer budget. This timing is an explicit UX policy, not a
+validated measure of ability. Keep it visual until the user accepts the alternative.
 `testing/worker-*` is an isolated prototype, not the live camera path. Its queue
 invariants run in the default suite; `npm run test:worker` runs the local CPU
 benchmark. Benchmark evidence from blank frames is not exercise/device validation.
 The subsequent user recording exposed further failures: `testing/reported-session.test.mjs`
-is now in the default loop and is intentionally red until the app is fixed (three
-failing assertions/cases, two passing controls). Do not whitelist or invert them.
+is now in the default loop. Prompt recovery and mobile recorder access are fixed;
+the partial-view Crunch case remains red (four cases pass, one fails). Do not
+whitelist or invert it, or confuse these two fixes with tolerant movement recognition.
 See `docs/sessions/current-recording-review-2026-09-07.md` for exact evidence and
 the distinction between observed movement, missing form measurements and hidden motion.
 Historical screen recordings have now been reviewed, but are not

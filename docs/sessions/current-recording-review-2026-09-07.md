@@ -8,6 +8,11 @@ side-plank timer jumps. These are not dismissed by the prior synthetic green run
 Three independent new cases now fail in the default loop; two controls pass.
 This review diagnoses and retains failures; it does not implement their fixes.
 
+**Subsequent implementation:** [recorder/prompt follow-up](recorder-prompt-fixes-2026-09-07.md)
+fixes FC-LAB-007 and the recorder usability/retention issues in FC-LAB-008. The original
+five-case suite is now four pass / one fail; partial-view Crunch remains open. The
+evidence and baseline counts below describe the recording review, not that later build.
+
 The engineering priority should shift from worker performance to **tolerant movement
 recognition, restrained feedback and usable mobile testing**. Preserve on-device
 processing and distinguish evidence sufficient to count movement from evidence

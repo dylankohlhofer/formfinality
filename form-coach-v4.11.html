@@ -220,13 +220,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 /* ═══ overlays on the stage ═══ */
 #regress,#demo,#setupBar,#msg{ position:absolute; z-index:8 }
 #regress{
-  display:none; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:min(420px,86%); padding:24px; border-radius:var(--r);
+  display:none; left:var(--pad); top:var(--pad); z-index:24;
+  width:min(380px,86%); padding:14px; border-radius:var(--r);
   background:rgba(20,22,20,.96); backdrop-filter:blur(18px); border:1px solid var(--line-2);
-  text-align:center;
+  text-align:left;
 }
 #regress.on{ display:block }
-#regress p{ margin:0 0 18px; font-size:15px; color:var(--bone-2); line-height:1.55 }
+#regress p{ margin:0 0 10px; font-size:14px; color:var(--bone-2); line-height:1.55 }
 #regress .ctl{ margin:0 4px }
 
 #demo{ display:none; right:var(--pad); top:var(--pad); border-radius:var(--r);
@@ -359,10 +359,24 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
   letter-spacing:.2em; text-align:center }
 #speechStatus{ margin:0; padding:10px var(--pad); font-size:12px; color:var(--bone-2);
   border-top:1px solid var(--line); line-height:1.5 }
-#diagPanel{ margin:12px var(--pad); padding:12px; border:1px solid var(--line); font-size:12px; color:var(--bone-2) }
-#diagPanel summary{ cursor:pointer; color:var(--bone) }
-#diagPanel button,#diagPanel input{ margin:5px 3px }
+#diagPanel{ font-size:12px; color:var(--bone-2) }
+#diagPanel > summary{ cursor:pointer; list-style:none }
+#diagPanel > summary::-webkit-details-marker{ display:none }
+#diagPanel[open] > summary{ border-color:var(--iris); color:var(--bone) }
+body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hidden])){ opacity:1 }
+#diagBody{ position:fixed; z-index:60; inset:0 0 0 auto; width:min(520px,100%);
+  height:100dvh; overflow:auto; overscroll-behavior:contain; background:var(--ground);
+  border-left:1px solid var(--line-2); padding:calc(env(safe-area-inset-top) + 16px) 20px
+  calc(env(safe-area-inset-bottom) + 24px); box-shadow:-12px 0 40px rgba(0,0,0,.35);
+  font-family:var(--sans); font-size:14px; line-height:1.6 }
+#diagBody h2{ font-size:20px; color:var(--bone) }
+#diagBody button,#diagBody input{ margin:5px 3px }
+#diagBody button{ min-height:44px }
+#diagBody input[type="file"]{ width:100%; min-width:0 }
+#diagClose{ position:sticky; top:0; background:var(--ground-2); float:right }
 #diagPanel input{ accent-color:var(--iris) }
+#diagQuickFlag{ border-color:var(--iris); color:var(--bone) }
+#diagNotice{ flex-basis:100%; font-size:12px; color:var(--bone); margin:0 }
 #diagCanvas{ display:block; width:100%; max-width:640px; background:var(--void); border:1px solid var(--line) }
 #diagSeek{ width:min(100%,640px); accent-color:var(--iris) }
 #diagReadout{ white-space:pre-wrap; overflow-wrap:anywhere; max-height:220px; overflow:auto }
@@ -415,6 +429,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
   #demo.on{ display:flex }
   #demoCanvas{ width:min(92vw,520px) }
   #setupBar{ bottom:calc(env(safe-area-inset-bottom) + 78px); z-index:22 }
+  #regress{ top:calc(env(safe-area-inset-top) + 112px) }
 }
 
 /* PORTRAIT — the camera letterboxes, so the black bar below it is free real
@@ -446,6 +461,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 }
 
 /* No hover on touch, so dimmed chrome would never come back. Tap reveals it. */
+@media(max-width:900px) and (max-height:560px) and (orientation:landscape){
+  /* Keep the optional choice and the drawing side by side on short phones. */
+  #regress{ width:44% }
+  #stage:has(#regress.on) #demo.on{ padding-left:48% }
+  #stage:has(#regress.on) #demoCanvas{ width:min(44vw,calc(140dvh - 182px)) }
+}
+
 @media(hover:none){
   body.live header{ opacity:.3 }
   body.live.chrome header{ opacity:1 }
@@ -468,6 +490,34 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
   <button class="ctl" id="skipExBtn" title="Skip this movement (S)" hidden>Skip &#8250;</button>
   <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
   <button class="ctl" id="startBtn">Start camera</button>
+  <button class="ctl" id="diagQuickFlag" hidden>Flag moment</button>
+  <details id="diagPanel">
+    <summary class="ctl" id="diagToggle">Private diagnostics</summary>
+    <div id="diagBody" role="region" aria-label="Private diagnostics">
+      <button class="ctl" id="diagClose">Close diagnostics</button>
+      <h2>Private diagnostics</h2>
+      <p>Optional: retain joint coordinates, measurements and coaching text in memory. No video or audio is recorded; nothing is uploaded. These details can be personal. Reloading clears them. Export only if you choose to share.</p>
+      <label><input id="diagConsent" type="checkbox"> I want to record diagnostic details on this device</label><br>
+      <button class="ctl" id="diagStart" disabled>Start recording</button>
+      <button class="ctl" id="diagStop" disabled>Pause recording</button>
+      <button class="ctl" id="diagFlag" disabled>Flag this moment</button>
+      <button class="ctl" id="diagExport" disabled>Export details</button>
+      <button class="ctl" id="diagClear">Clear details</button>
+      <p id="diagStatus" role="status">Off. Nothing recorded.</p>
+      <p id="diagCoverage">Up to 4 MiB / 4,000 entries. A lightweight session timeline is kept alongside recent full-rate detail. Up to eight flags preserve available frames from 10 seconds before and after, sampled at up to 5 per second. Capture pauses if protected space fills; saved flags are never silently replaced.</p>
+      <button class="ctl" id="diagReview">Review retained details</button>
+      <label>Open an exported diagnostic file <input id="diagImport" type="file" accept="application/json,.json"></label>
+      <p>Stop the camera before reviewing. Replay shows saved observations and decisions, not a new form assessment. Missing or sampled detail is not a complete exercise replay.</p>
+      <div id="diagViewer" hidden>
+        <button class="ctl" id="diagPlay">Play</button>
+        <label>Timeline <input id="diagSeek" type="range" min="0" max="0" value="0" step="1"></label>
+        <canvas id="diagCanvas" width="640" height="360" aria-label="Saved joint positions, not camera video"></canvas>
+        <p id="diagSummary"></p>
+        <details><summary>Technical details</summary><pre id="diagReadout"></pre></details>
+      </div>
+    </div>
+  </details>
+  <p id="diagNotice" role="status" hidden></p>
 </header>
 
 <div id="stage">
@@ -510,27 +560,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 <p id="tip"></p>
 <p id="speechStatus" role="status" hidden></p>
 <p id="priv">Runs on-device &middot; video never leaves your browser</p>
-<details id="diagPanel">
-  <summary>Private diagnostics</summary>
-  <p>Optional: retain joint coordinates, measurements and coaching text in memory. No video or audio is recorded; nothing is uploaded. These details can be personal. Reloading clears them. Export only if you choose to share.</p>
-  <label><input id="diagConsent" type="checkbox"> I want to record diagnostic details on this device</label><br>
-  <button class="ctl" id="diagStart" disabled>Start recording</button>
-  <button class="ctl" id="diagStop" disabled>Pause recording</button>
-  <button class="ctl" id="diagFlag" disabled>Flag this moment</button>
-  <button class="ctl" id="diagExport" disabled>Export details</button>
-  <button class="ctl" id="diagClear">Clear details</button>
-  <p id="diagStatus" role="status">Off. Nothing recorded.</p>
-  <button class="ctl" id="diagReview">Review retained details</button>
-  <label>Open an exported diagnostic file <input id="diagImport" type="file" accept="application/json,.json"></label>
-  <p>Stop the camera before reviewing. Replay shows saved observations and decisions, not a new form assessment. Older entries are discarded when the memory limit is reached.</p>
-  <div id="diagViewer" hidden>
-    <button class="ctl" id="diagPlay">Play</button>
-    <label>Timeline <input id="diagSeek" type="range" min="0" max="0" value="0" step="1"></label>
-    <canvas id="diagCanvas" width="640" height="360" aria-label="Saved joint positions, not camera video"></canvas>
-    <p id="diagSummary"></p>
-    <details><summary>Technical details</summary><pre id="diagReadout"></pre></details>
-  </div>
-</details>
 
 
 <script type="module">
@@ -1915,6 +1944,7 @@ class SessionCore {
     this.ev = null; this.mv = null; this.mvId = null;
     this.restLeft = 0; this.marks = new Set(); this.degraded = false;
     this.pendingFix = null; this.regressOffered = false;
+    this.regressVisible = false; this.regressT = 0; this.setupGraceLeft = 5;
     this.breathT = 0; this.breathIn = true;
     this.state = "setup";
     this.portraitTipped = false;
@@ -1966,7 +1996,8 @@ class SessionCore {
                              shouldn't be muted because the last one just said it */
     this.notReadyAt = null;
     this.readinessActive = false;
-    this.regressOffered = false; E.push({t:"regressHide"});
+    this.regressOffered = false; this.regressVisible = false; this.regressT = 0; this.setupGraceLeft = 5;
+    E.push({t:"regressHide"});
 
     if(this.i >= this.steps.length){ this.finish(E); return; }
     const st = this.steps[this.i];
@@ -2011,6 +2042,40 @@ class SessionCore {
     }
   }
 
+  hideRegression(E){
+    this.regressT = 0;
+    if(this.regressVisible) E.push({t:"regressHide"});
+    this.regressVisible = false;
+  }
+
+  updateRegression(r, frame, dt, E){
+    // Optional help is not an ability verdict. Five seconds to get set, then six
+    // continuous seconds of observed quality-gate difficulty; never tracking or
+    // positioning time. The evaluator's outOfPose clock has a different purpose.
+    const elapsed = Number.isFinite(dt) && dt > 0 && dt <= .25 ? dt : 0;
+    const grace = this.state === "setup" ? Math.min(this.setupGraceLeft, elapsed) : 0;
+    this.setupGraceLeft -= grace;
+    const visibleGate = x => {
+      const sides = (x.t.m.agg || "camera") === "camera" ? [frame.cam] : ["left","right"];
+      return sides.every(side => [...neededJoints({targets:[x.t]})].every(j => {
+        const p = frame[side]?.[j];
+        return p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.c >= .5 &&
+          p.x >= .02 && p.x <= .98 && p.y >= .02 && p.y <= .98;
+      }));
+    };
+    const difficult = elapsed > 0 && this.mv.kind === "hold" && TIERS[this.tierId].regress && this.mv.regression &&
+      r?.ok && Number.isFinite(frame?.sideness) && r.inPosition && !r.inPose && !r.viewLimited && !r.viewCue && r.framing?.verdict === "framed" &&
+      this.mv.targets.filter(t => t.pos).every(t => r.readings.some(x => x.t.id === t.id && x.s > 0 && visibleGate(x))) &&
+      r.readings.some(x => x.t.gate && !x.t.pos && x.s <= 0 && visibleGate(x));
+    if(!difficult){ this.hideRegression(E); return; }
+    this.regressT += elapsed - grace;
+    if(this.regressT + 1e-9 < 6 || this.regressOffered) return;
+    this.regressOffered = true; this.regressVisible = true;
+    E.push({t:"regressShow", text:`Prefer an easier option? Try the ${M[this.mv.regression].name.toLowerCase()}.`});
+    // Do not announce a change the person has not chosen. Accepting the option
+    // already emits the easier movement's teaching through swapToRegression.
+  }
+
   tryArm(inPosition, inPose, dt, now, E){
     /* BOTH conditions must hold CONTINUOUSLY, not merely coincide at the end.
        Position alone was timed, and quality was checked only on the final frame —
@@ -2025,6 +2090,7 @@ class SessionCore {
     if(this.env.speaking()) return false;
     if(this.armT < 1.8) return false;
     this.state = "active";
+    this.hideRegression(E); this.setupGraceLeft = 0;
     this.readinessActive = false;
     /* The setup bar used to be torn down here. With arming firing early — on a pose
        held for 1.2s that the user was only passing through — "Show me how" and the
@@ -2078,6 +2144,7 @@ class SessionCore {
 
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
     E.push(coachingFacts(r, this.mv));
+    this.updateRegression(r, frame, dt, E);
     if(!r || !r.ok){
       this.ev.interrupt(); this.armT = 0; this.pendingFix = null;
       readinessFx(this, "trackingLost", now, E);
@@ -2125,10 +2192,6 @@ class SessionCore {
                        : !r.inPosition ? "getin" : !r.inPose ? (shapeCue || "setupShape") : null;
         if(notReady){
           readinessFx(this, notReady, now, E);
-          if(r.regress && r.inPosition && !this.regressOffered){
-            this.regressOffered = true;
-            E.push({t:"regressShow", text:`Starting shape not ready. Try the ${M[this.mv.regression].name.toLowerCase()} instead?`});
-          }
         } else {
           if(this.readinessActive){ E.push({t:"clearBanner"}); this.readinessActive = false; }
           if(r.inPose && !this.env.speaking()) E.push({t:"banner", text:"Hold it there…", style:"good"});
@@ -2166,13 +2229,6 @@ class SessionCore {
       this.scoreSum += r.score; this.scoreN++;
       E.push({t:"scoreFill", pct:r.score});
       E.push({t:"scoreLab", s:TIERS[this.tierId].showScore ? `FORM ${r.score}` : "FORM"});
-    }
-
-    if(r.regress && !this.regressOffered){
-      this.regressOffered = true;
-      const easier = M[this.mv.regression];
-      E.push({t:"regressShow", text:`This one's tough right now. Want to try the ${easier.name.toLowerCase()} instead? Same shape, less weight.`});
-      E.push({t:"say", key:"regress", pri:3, style:"teach"});
     }
 
     if(r.cue){
@@ -2257,6 +2313,7 @@ class SessionCore {
 
   retierRaw(tierId){
     const E = [];
+    this.hideRegression(E);
     this.tierId = tierId;
     if(this.ev) this.ev.tier = tierId;
     const st = this.steps[this.i];
@@ -2274,6 +2331,7 @@ class SessionCore {
     this.target = scaledCore(this.steps[this.i].t, false, this.tierId);
     this.notReadyAt = null;
     this.readinessActive = false;
+    this.regressOffered = false; this.regressVisible = false; this.regressT = 0; this.setupGraceLeft = 5;
     E.push({t:"regressHide"});
     this.state = "setup"; this.armT = 0;
     E.push({t:"bigLabel", s:"GET SET"});
@@ -2898,29 +2956,97 @@ const esc = t => String(t).replace(/[&<>"']/g, c =>
 class DiagnosticBuffer {
   static maxBytes = 4 * 1024 * 1024;
   static maxEntries = 4000;
+  static recentBytes = 1024 * 1024;
+  static maxFlags = 8;
+  static windowMs = 10000;
+  static sampleMs = 200;
   constructor(){ this.clear(); }
-  clear(){ this.active = false; this.items = []; this.bytes = 0; this.dropped = 0; this.meta = null; this.lastAt = 0; }
-  start(meta){ this.clear(); this.meta = structuredClone(meta); this.active = true; }
-  add(kind, at, data){
-    if(!this.active) return;
-    if(!Number.isFinite(at) || at < this.lastAt) throw new Error("Diagnostic clock moved backwards");
+  clear(){
+    this.active = false; this.items = []; this.bytes = 0; this.dropped = 0; this.meta = null; this.lastAt = 0;
+    this.flags = []; this.summaryAt = -Infinity; this.summaryKey = ""; this.stopReason = "";
+  }
+  start(meta){
+    const text = JSON.stringify(meta, (_key,value) => {
+      if(typeof value === "number" && !Number.isFinite(value)) throw new Error("Invalid diagnostic metadata number");
+      return value;
+    });
+    if(new TextEncoder().encode(text).length > 8192) throw new Error("Diagnostic metadata is too large");
+    DiagnosticBuffer.parse(JSON.stringify({schema:"formcoach-diagnostic/1", meta, dropped:0, entries:[]}));
+    this.clear(); this.meta = structuredClone(meta); this.active = true;
+  }
+  record(kind, at, data, pinned = false){
     const entry = { kind, at, data }, text = JSON.stringify(entry, (_key,value) => {
       if(typeof value === "number" && !Number.isFinite(value)) throw new Error("Invalid diagnostic number");
       return value;
     });
-    const size = new TextEncoder().encode(text).length;
+    const size = new TextEncoder().encode(text).length + 1; // include the export separator
     if(size > 65536) throw new Error("Diagnostic entry is too large");
-    while(this.items.length && (this.bytes + size > DiagnosticBuffer.maxBytes - 16384 || this.items.length >= DiagnosticBuffer.maxEntries)){
-      this.bytes -= this.items.shift().size; this.dropped++;
-    }
-    this.items.push({ text, size }); this.bytes += size; this.lastAt = at;
+    return {text, size, kind, at, pinned};
   }
-  snapshot(){ return { schema:"formcoach-diagnostic/1", meta:structuredClone(this.meta), dropped:this.dropped,
-    replay:"saved observations only; not model inference or engine re-evaluation", entries:this.items.map(x => JSON.parse(x.text)) }; }
+  pause(reason = "paused"){
+    this.active = false;
+    for(const flag of this.flags) if(!flag.endedBy){ flag.endedBy = reason; flag.closedAt = this.lastAt; }
+  }
+  add(kind, at, data){
+    if(!this.active) return false;
+    if(!Number.isFinite(at) || at < this.lastAt) throw new Error("Diagnostic clock moved backwards");
+    if(!["frame","effect","speech","flag","control"].includes(kind) || !data || typeof data !== "object")
+      throw new Error("Invalid diagnostic entry");
+    const entry = this.record(kind, at, data);
+    let candidates = this.items.slice(), flags = this.flags.map(f => ({...f}));
+    for(const flag of flags) if(!flag.endedBy && at > flag.until){ flag.endedBy = "window elapsed"; flag.closedAt = flag.until; }
+    if(kind === "flag"){
+      if(flags.length >= DiagnosticBuffer.maxFlags) throw new Error("Eight flagged moments are already saved. Export and clear before flagging more.");
+      const flag = {at, from:Math.max(0, at - DiagnosticBuffer.windowMs), until:at + DiagnosticBuffer.windowMs,
+        firstFrameAt:null, lastFrameAt:null, sampleAt:-Infinity, endedBy:null, closedAt:null};
+      candidates = candidates.map(item => {
+        if(item.kind !== "frame" || item.at < flag.from || item.at - flag.sampleAt < DiagnosticBuffer.sampleMs) return item;
+        flag.sampleAt = item.at; flag.firstFrameAt ??= item.at; flag.lastFrameAt = item.at;
+        return {...item, pinned:true};
+      });
+      flags.push(flag);
+    }
+    let summary = null, summaryKey = this.summaryKey;
+    if(kind === "frame"){
+      for(const flag of flags) if(!flag.endedBy && at <= flag.until && at - flag.sampleAt >= DiagnosticBuffer.sampleMs){
+        entry.pinned = true; flag.sampleAt = at; flag.firstFrameAt ??= at; flag.lastFrameAt = at;
+      }
+      const d = JSON.parse(entry.text).data;
+      const state = {phase:d.phase, movement:d.movement, tier:d.tier, target:d.target, state:d.after?.state || d.stateBefore,
+        reps:d.reps, blocked:d.blocked, tracking:d.frame !== null};
+      summaryKey = JSON.stringify(state);
+      if(at - this.summaryAt >= 1000 || summaryKey !== this.summaryKey)
+        summary = this.record("summary", at, {...state, held:d.held, score:d.score ?? null,
+          repEvent:d.repEvent, sampling:"periodic or changed state; no joint positions"});
+    }
+    candidates.push(entry); if(summary) candidates.push(summary);
+    let bytes = candidates.reduce((n,x) => n + x.size, 0), count = candidates.length;
+    let recent = candidates.reduce((n,x) => n + (x.kind === "frame" && !x.pinned ? x.size : 0), 0), dropped = 0;
+    const kept = candidates.filter(item => {
+      if(item.kind === "frame" && !item.pinned && (recent > DiagnosticBuffer.recentBytes || bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries)){
+        bytes -= item.size; recent -= item.size; count--; dropped++; return false;
+      }
+      return true;
+    });
+    if(bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries){
+      this.stopReason = "Protected diagnostic space is full. Capture paused; saved moments are safe. Export and clear to record more.";
+      this.pause("capacity reached"); throw new Error(this.stopReason);
+    }
+    // Commit only after the protected records fit. An unsuccessful flag must not
+    // replace an earlier one or destroy its pre-roll while trying to make room.
+    this.items = kept; this.flags = flags; this.bytes = bytes; this.dropped += dropped; this.lastAt = at;
+    if(summary){ this.summaryAt = at; this.summaryKey = summaryKey; }
+    return true;
+  }
+  snapshot(){ return { schema:"formcoach-diagnostic/2", meta:structuredClone(this.meta), dropped:this.dropped,
+    replay:"saved observations only; not model inference or engine re-evaluation",
+    retention:{summaryMs:1000, flagSampleMs:DiagnosticBuffer.sampleMs, windowMs:DiagnosticBuffer.windowMs,
+      stopReason:this.stopReason, flags:this.flags.map(({sampleAt,...f}) => ({...f}))},
+    entries:this.items.map(x => JSON.parse(x.text)) }; }
   static parse(text){
     if(new TextEncoder().encode(text).length > this.maxBytes) throw new Error("Diagnostic file exceeds the 4 MiB limit");
     const data = JSON.parse(text);
-    if(data.schema !== "formcoach-diagnostic/1" || !data.meta || typeof data.meta !== "object" ||
+    if(!["formcoach-diagnostic/1","formcoach-diagnostic/2"].includes(data.schema) || !data.meta || typeof data.meta !== "object" ||
        typeof data.meta.version !== "string" || data.meta.version.length > 100 || !/^[a-f0-9]{64}$/.test(data.meta.scriptSha256) ||
        !Number.isSafeInteger(data.dropped) || data.dropped < 0 || !Array.isArray(data.entries) || data.entries.length > this.maxEntries)
       throw new Error("Invalid diagnostic header");
@@ -2931,9 +3057,28 @@ class DiagnosticBuffer {
       if(x && typeof x === "object") for(const v of Object.values(x)) finiteTree(v, depth + 1);
     };
     finiteTree(data);
+    if(data.schema === "formcoach-diagnostic/2"){
+      const r = data.retention;
+      if(!r || r.summaryMs !== 1000 || r.flagSampleMs !== this.sampleMs || r.windowMs !== this.windowMs ||
+         typeof r.stopReason !== "string" || r.stopReason.length > 1024 || !Array.isArray(r.flags) || r.flags.length > this.maxFlags)
+        throw new Error("Invalid diagnostic retention metadata");
+      let lastFlag = 0;
+      for(const f of r.flags){
+        if(![f.at,f.from,f.until].every(Number.isFinite) || f.at < lastFlag || f.from !== Math.max(0,f.at-this.windowMs) || f.until !== f.at+this.windowMs ||
+           ![null,"paused","capacity reached","window elapsed","recording error"].includes(f.endedBy) ||
+           (f.endedBy === null) !== (f.closedAt === null) ||
+           (f.firstFrameAt === null) !== (f.lastFrameAt === null) ||
+           (f.endedBy === "window elapsed" && f.closedAt !== f.until) ||
+           (f.closedAt !== null && (!Number.isFinite(f.closedAt) || f.closedAt < f.at || f.closedAt > f.until)) ||
+           (f.firstFrameAt !== null && (!Number.isFinite(f.firstFrameAt) || f.firstFrameAt < f.from || f.firstFrameAt > f.until)) ||
+           (f.lastFrameAt !== null && (!Number.isFinite(f.lastFrameAt) || f.lastFrameAt < (f.firstFrameAt ?? f.from) || f.lastFrameAt > (f.closedAt ?? f.until))))
+          throw new Error("Invalid diagnostic flag window");
+        lastFlag = f.at;
+      }
+    }
     let last = 0;
     for(const e of data.entries){
-      if(!["frame","effect","speech","flag","control"].includes(e.kind) || !Number.isFinite(e.at) || e.at < last ||
+      if(!["frame","effect","speech","flag","control",...(data.schema === "formcoach-diagnostic/2" ? ["summary"] : [])].includes(e.kind) || !Number.isFinite(e.at) || e.at < last ||
          !e.data || typeof e.data !== "object") throw new Error("Invalid diagnostic timeline");
       last = e.at;
       if(e.kind === "frame"){
@@ -2948,6 +3093,13 @@ class DiagnosticBuffer {
         }
       }
     }
+    if(data.schema === "formcoach-diagnostic/2"){
+      const flags = data.entries.filter(e => e.kind === "flag");
+      const frames = new Set(data.entries.filter(e => e.kind === "frame").map(e => e.at));
+      if(flags.length !== data.retention.flags.length || data.retention.flags.some((f,i) => f.at !== flags[i].at ||
+        f.firstFrameAt !== null && (!frames.has(f.firstFrameAt) || !frames.has(f.lastFrameAt))))
+        throw new Error("Diagnostic flag metadata does not match retained evidence");
+    }
     return data;
   }
 }
@@ -2955,15 +3107,22 @@ class DiagnosticBuffer {
 const diagnostics = new DiagnosticBuffer();
 const POSE_SOURCE = { runtime:"@mediapipe/tasks-vision@0.10.14", delegate:"GPU",
   model:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
-let diagnosticOrigin = 0, diagnosticEpoch = 0, diagnosticReview = null, diagnosticTimer = 0;
+let diagnosticOrigin = 0, diagnosticEpoch = 0, diagnosticReview = null, diagnosticTimer = 0, diagnosticUiAt = -Infinity;
 function diagnosticEvent(kind, data){
-  if(!diagnostics.active) return;
-  try{ diagnostics.add(kind, performance.now() - diagnosticOrigin, data); $("diagExport").disabled = false; }
+  if(!diagnostics.active) return false;
+  try{
+    const at = performance.now() - diagnosticOrigin;
+    const added = diagnostics.add(kind, at, data); $("diagExport").disabled = false;
+    if(at - diagnosticUiAt >= 1000 || kind === "flag"){ diagnosticUiAt = at; diagnosticCoverage(); }
+    return added;
+  }
   catch(error){
-    diagnostics.active = false;
+    diagnostics.stopReason ||= error.message;
+    diagnostics.pause("recording error");
     console.error("Diagnostic recording stopped", error);
     $("diagStatus").textContent = "Diagnostic recording stopped: " + error.message;
     diagnosticControls();
+    return false;
   }
 }
 function diagnosticFrame(stamp, frame, dt, now, effects){
@@ -2975,7 +3134,8 @@ function diagnosticFrame(stamp, frame, dt, now, effects){
       const p = frame[side][j]; return [j, {x:p.x, y:p.y, z:p.z, c:p.c}];
     }))])) } : null;
   diagnosticEvent("frame", { frame:pose, dt, engineTime:now, cameraTime:video.currentTime,
-    phase:stamp.phase, movement:stamp.movement, stateBefore:stamp.state, after:stamp.after,
+    phase:stamp.phase, movement:stamp.movement, tier:stamp.tier, target:stamp.target,
+    stateBefore:stamp.state, after:stamp.after,
     reps:r?.reps ?? stamp.ev?.rep?.display() ?? 0, held:stamp.ev?.hold ?? 0, score:r?.score ?? null,
     blocked:r?.blocking || (frame === null ? ["tracking"] : []), suppressed:r?.suppressed || [],
     readings:(r?.readings || []).map(x => ({id:x.t.id, value:x.v, score:x.s, cue:x.cue})),
@@ -2988,22 +3148,53 @@ function diagnosticSpeech(event, item, reason){
     clips:item?.clips || [], mode:item?.mode || "unresolved", topic:item?.topic || null});
 }
 function diagnosticControls(){
-  $("diagStart").disabled = !$("diagConsent").checked || diagnostics.active;
+  $("diagStart").disabled = !$("diagConsent").checked || diagnostics.active || !!diagnostics.stopReason;
   $("diagStart").textContent = diagnostics.meta && !diagnostics.active ? "Resume recording" : "Start recording";
   $("diagStop").disabled = !diagnostics.active;
-  $("diagFlag").disabled = !diagnostics.active;
+  $("diagFlag").disabled = !diagnostics.active || diagnostics.flags.length >= DiagnosticBuffer.maxFlags;
+  $("diagQuickFlag").hidden = !diagnostics.active;
+  $("diagQuickFlag").disabled = $("diagFlag").disabled;
+  $("diagToggle").textContent = diagnostics.active ? "Recording locally" : diagnostics.meta ? "Diagnostics · paused" : "Private diagnostics";
+  $("diagNotice").hidden = !diagnostics.stopReason;
+  $("diagNotice").textContent = diagnostics.stopReason ? "Diagnostic capture paused; saved details are safe. Open Diagnostics to export and clear." : "";
   $("diagExport").disabled = !diagnostics.items.length;
+  diagnosticCoverage();
+}
+function diagnosticCoverage(){
+  if(!diagnostics.meta) return;
+  const recent = diagnostics.items.filter(x => x.kind === "frame" && !x.pinned);
+  const range = recent.length ? `${(recent[0].at/1000).toFixed(1)}–${(recent.at(-1).at/1000).toFixed(1)}s` : "none";
+  $("diagCoverage").textContent = `Session timeline through ${(diagnostics.lastAt/1000).toFixed(1)}s; recent full-rate detail: ${range}. ` +
+    `${diagnostics.flags.length}/${DiagnosticBuffer.maxFlags} flagged moments protected (available ±10s, up to 5 frames/s). ` +
+    `${diagnostics.dropped} unprotected frames discarded. ${(diagnostics.bytes/1048576).toFixed(2)} / 4 MiB retained. ` +
+    "Missing detail is not a complete replay. Protected space filling pauses capture; export and clear to start afresh.";
+}
+function diagnosticClose(){
+  $("diagPanel").open = false; diagnosticStopReplay(); $("diagToggle").focus();
+}
+function diagnosticFlag(){
+  if(diagnosticEvent("flag", {note:"User flagged this moment"})){
+    $("diagStatus").textContent = `Moment ${diagnostics.flags.length} saved. Available preceding detail is protected; the next 10 seconds will be sampled while recording continues.`;
+    $("diagQuickFlag").textContent = `Flag moment (${diagnostics.flags.length})`;
+    diagnosticControls();
+  }
 }
 function diagnosticPause(){
-  diagnosticEvent("control", {action:"pause recording"}); diagnostics.active = false; diagnosticControls();
-  $("diagStatus").textContent = `Paused. ${diagnostics.items.length} entries retained; ${diagnostics.dropped} older entries discarded. Reload or Clear erases them.`;
+  diagnosticEvent("control", {action:"pause recording"}); diagnostics.pause(); diagnosticControls();
+  $("diagStatus").textContent = "Paused. Retained details and flagged moments are safe until Clear or reload. Unfinished flag windows end here.";
 }
 function diagnosticStopReplay(){ clearInterval(diagnosticTimer); diagnosticTimer = 0; $("diagPlay").textContent = "Play"; }
-function diagnosticDraw(){
+function diagnosticDraw(playbackAt = null){
   const entries = diagnosticReview?.entries || [], i = Number($("diagSeek").value), e = entries[i];
   if(!e) return;
+  const at = playbackAt ?? e.at;
   let observation = null;
-  for(let n = i; n >= 0; n--) if(entries[n].kind === "frame"){ observation = entries[n]; break; }
+  // Never carry an old skeleton across an omitted interval or a different set.
+  for(let n = i; n >= 0 && at - entries[n].at <= 250; n--) if(entries[n].kind === "frame"){
+    if((e.data.phase == null || e.data.phase === entries[n].data.phase) &&
+       (e.data.movement == null || e.data.movement === entries[n].data.movement)) observation = entries[n];
+    break;
+  }
   const canvas = $("diagCanvas"), ctx = canvas.getContext("2d"), f = observation?.data.frame;
   canvas.height = f ? Math.round(640 / f.aspect) : 360;
   ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = "#D9D7D1"; ctx.fillStyle = "#D9D7D1"; ctx.lineWidth = 2;
@@ -3015,12 +3206,14 @@ function diagnosticDraw(){
     }
   }
   $("diagReadout").textContent = `${(e.at / 1000).toFixed(2)}s · ${e.kind}\n${JSON.stringify(e.data, null, 2)}\n` +
-    `Saved observations, unmirrored. ${diagnosticReview.dropped} older entries omitted.\nBuild: ${diagnosticReview.meta.version}; script SHA-256: ${diagnosticReview.meta.scriptSha256}`;
+    `Saved observations, unmirrored. ${diagnosticReview.dropped} entries omitted. ${observation ? "Nearby saved frame, not interpolation." : "No nearby saved joint frame."}\n` +
+    `Retention: ${JSON.stringify(diagnosticReview.retention || "Legacy rolling recording; flags were not protected.")}\nBuild: ${diagnosticReview.meta.version}; script SHA-256: ${diagnosticReview.meta.scriptSha256}`;
   const d = e.data;
-  $("diagSummary").textContent = `${(e.at / 1000).toFixed(2)}s · ` + (e.kind === "frame"
+  $("diagSummary").textContent = `${(at / 1000).toFixed(2)}s · saved event ${(e.at / 1000).toFixed(2)}s · ` + (e.kind === "frame" || e.kind === "summary"
     ? `${M[d.movement]?.name || d.movement} · ${d.reps} reps · form ${d.score ?? "not scored"}. ${d.blocked?.length ? "Blocked by: " + d.blocked.join(", ") : "No recorded blockers."}`
     : e.kind === "speech" ? `${d.event}: ${d.text || d.path || ""}${d.reason ? " — " + d.reason : ""}`
-    : e.kind === "flag" ? "You flagged this moment." : d.action || d.event || d.type || e.kind);
+    : e.kind === "flag" ? "You flagged this moment." : d.action || d.event || d.type || e.kind) +
+    (observation ? "" : " No nearby joint snapshot retained.");
 }
 function diagnosticOpen(data){
   if(running) throw new Error("Stop the camera before reviewing diagnostic details.");
@@ -3033,24 +3226,28 @@ function diagnosticClear(){
   $("diagConsent").checked = false; $("diagViewer").hidden = true; $("diagReadout").textContent = "";
   $("diagSummary").textContent = "";
   const c = $("diagCanvas"); c.getContext("2d").clearRect(0, 0, c.width, c.height);
-  $("diagImport").value = ""; $("diagStatus").textContent = "Off. Nothing recorded."; diagnosticControls();
+  $("diagImport").value = ""; $("diagStatus").textContent = "Off. Nothing recorded.";
+  $("diagCoverage").textContent = "No retained timeline or flagged moments. Recording stays on this device, up to 4 MiB / 4,000 entries. Export only if you choose to share.";
+  $("diagQuickFlag").textContent = "Flag moment"; diagnosticUiAt = -Infinity; diagnosticControls();
 }
 async function diagnosticStart(){
-  if(!$("diagConsent").checked) return;
+  if(!$("diagConsent").checked || diagnostics.active || diagnostics.stopReason) return;
   if(diagnostics.meta){
     diagnostics.active = true; diagnosticEvent("control", {action:"recording resumed"}); diagnosticControls();
-    $("diagStatus").textContent = "Recording resumed locally; earlier retained details are preserved."; return;
+    $("diagStatus").textContent = "Recording resumed locally; earlier retained details are preserved."; diagnosticClose(); return;
   }
   const epoch = ++diagnosticEpoch; $("diagStart").disabled = true;
   try{
     const script = document.querySelector('script[type="module"]').textContent;
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
     if(epoch !== diagnosticEpoch || !$("diagConsent").checked) return;
-    diagnosticOrigin = performance.now();
+    diagnosticOrigin = performance.now(); diagnosticUiAt = -Infinity;
     diagnostics.start({version:VERSION, scriptSha256:Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2,"0")).join(""),
+      initialChoices:{tier, persona},
       poseSource:{...POSE_SOURCE}, modelBytesHash:"not measured", timestampUnit:"milliseconds since diagnostic start", capture:"joint coordinates and intended speech text; no pixels or audio"});
     diagnosticEvent("control", {action:"recording started", duringSession:running}); diagnosticControls();
-    $("diagStatus").textContent = "Recording locally, up to 4 MiB / 4,000 entries. Older entries roll off. Pause or clear at any time.";
+    $("diagStatus").textContent = "Recording locally. Use Flag moment during exercise to protect available detail around a problem. Pause or clear at any time.";
+    diagnosticClose();
   }catch(error){
     console.error("Cannot start diagnostics", error); $("diagStatus").textContent = "Cannot start diagnostics: " + error.message; diagnosticControls();
   }
@@ -3058,6 +3255,7 @@ async function diagnosticStart(){
 function diagnosticTick(host, frame, dt, now){
   const c = host.core;
   const stamp = {phase:c.i ?? "calibration", movement:c.mvId || (c instanceof CalibrationCore ? "plank" : "rest"),
+    tier:c.tierId ?? "calibration", target:c.target ?? 30,
     state:c.state || (c.armed ? "active" : "setup"), ev:c.ev};
   const effects = c.tick(frame, dt, now);
   stamp.after = {phase:c.i ?? "calibration", state:c.state || (c.armed ? "active" : "setup"), done:c.done};
@@ -3527,8 +3725,8 @@ const shellEnv = {
 
 function applyFx(host, E){
   for(const e of E){
-    if(["say","num","reset","clearBanner","finish","calibFinish"].includes(e.t) || e.t === "log" && (e.force || e.row.event === "armed"))
-      diagnosticEvent("effect", {type:e.t, key:e.key, number:e.n, event:e.row?.event, movement:e.row?.movement, state:e.row?.state});
+    if(["say","num","reset","clearBanner","finish","calibFinish","regressShow","regressHide"].includes(e.t) || e.t === "log" && (e.force || e.row.event === "armed"))
+      diagnosticEvent("effect", {type:e.t, key:e.key, text:e.text, number:e.n, event:e.row?.event, movement:e.row?.movement, state:e.row?.state});
     switch(e.t){
       case "reset": coach.reset(); break;
       case "say": coach.say(e.key, {vars:e.vars || {}, pri:e.pri, cool:e.cool ?? 0, style:e.style || "", topic:e.topic || null}); break;
@@ -4357,7 +4555,11 @@ const pop = () => { bigEl.classList.add("pop"); setTimeout(()=>bigEl.classList.r
 $("diagConsent").onchange = () => { if(!$("diagConsent").checked) diagnosticClear(); else diagnosticControls(); };
 $("diagStart").onclick = diagnosticStart;
 $("diagStop").onclick = diagnosticPause;
-$("diagFlag").onclick = () => { diagnosticEvent("flag", {note:"User flagged this moment"}); $("diagStatus").textContent = "Moment flagged. Recording continues locally."; };
+$("diagFlag").onclick = diagnosticFlag;
+$("diagQuickFlag").onclick = diagnosticFlag;
+$("diagClose").onclick = diagnosticClose;
+$("diagPanel").ontoggle = () => { if(!$("diagPanel").open) diagnosticStopReplay(); };
+$("diagPanel").addEventListener("keydown", e => { if(e.key === "Escape"){ e.preventDefault(); diagnosticClose(); } });
 $("diagClear").onclick = diagnosticClear;
 $("diagExport").onclick = () => {
   if(!diagnostics.items.length) return;
@@ -4394,7 +4596,7 @@ $("diagPlay").onclick = () => {
     if(running || !$("diagPanel").open){ diagnosticStopReplay(); return; }
     let i = Number($("diagSeek").value), at = first + performance.now() - start;
     while(i < entries.length - 1 && entries[i + 1].at <= at) i++;
-    $("diagSeek").value = i; diagnosticDraw();
+    $("diagSeek").value = i; diagnosticDraw(at);
     if(i === entries.length - 1) diagnosticStopReplay();
   }, 33);
 };
