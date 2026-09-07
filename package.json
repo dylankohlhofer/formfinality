@@ -9,6 +9,7 @@
     "test:infra": "node --test testing/lab.test.mjs testing/audio.test.mjs",
     "test:audio": "node testing/run.mjs --build form-coach-v4.11.html --mode audio",
     "test:audio:mutations": "node --test testing/audio-capture.test.mjs",
+    "test:worker": "node --test testing/worker-queue.test.mjs && node testing/worker-benchmark.mjs",
     "test:video": "node testing/video-smoke.mjs form-coach-v4.11.html",
     "test:setup-video": "node testing/setup-video.mjs"
   },
