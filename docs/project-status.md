@@ -63,6 +63,15 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Latest user recording — engineering gate reopened.** The post-verification review
+confirms real-world stalls, intrusive controls and failed speech, with three new
+failing automated cases retained in `testing/reported-session.test.mjs`. Two positive/
+negative controls pass. The default loop now includes this suite and must report the
+failures; the older green baseline below is not the current release verdict.
+See `sessions/current-recording-review-2026-09-07.md`. A diagnostic rolloff gap removed
+the early exercise landmarks; the side-plank numeral 6 is present, while the target
+shortening/ring jump is confirmed. No fixes for this new review are claimed yet.
+
 **7 September 2026 — local-first stack improvements.** Session speech and the preview
 now require an explicitly local English voice; unavailable speech is explained visually
 without blocking the workout or using a remote default. Opt-in, memory-only diagnostics
@@ -205,11 +214,11 @@ and several movements had unregistered reps. Whether v4.11 resolves that is the 
 
 ## Critical path
 
-**Updated engineering gate:** the reproduced historical counting, framing and stale-audio
-defects have regression-protected fixes. Use the latest full-run evidence above, not the
-earlier failing baselines. Remaining release checks include local voice availability on
-target phones, missing recorded phrases and beginner test 02. Diagnostic exports can
-explain future failures, but synthetic coverage and replay do not satisfy human checks.
+**Updated engineering gate:** historical fixes remain, but the latest user review adds
+three failing automated cases and further speech/timing issues. Resolve the newly linked
+findings before treating engineering as clear. Priorities are usable mobile diagnostics,
+separate movement/form evidence, stable hold behaviour and a consistent bundled voice.
+Physical-phone checks and beginner test 02 remain necessary; replay does not replace them.
 
 ```
 NOW ──▶ render 210 voice clips (~£1–2.50, 10 min)

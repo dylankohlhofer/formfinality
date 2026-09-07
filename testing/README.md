@@ -68,6 +68,15 @@ JSON is validated and displayed as text. Exports include the running module's
 SHA-256 and configured pose-model identity, not independently verified model bytes.
 See [the local-stack handover](../docs/sessions/local-stack-2026-09-07.md).
 
+**New user review, after that green baseline:** `reported-session.test.mjs` retains
+five checks in the default loop. Three currently **fail**: the easier-movement prompt
+survives recovery, a neck-only clipping event cancels otherwise observed crunch cycles,
+and the mobile diagnostic control is covered. Two controls pass (toe-only clipping
+does not veto leg raises; entirely off-screen cycles cannot earn reps). These are
+open application failures, not whitelisted expected outcomes. Run just these with
+`node --test testing/reported-session.test.mjs`; details and recording limitations
+are in `docs/sessions/current-recording-review-2026-09-07.md`.
+
 Focused interface cases (same cases as the default suite):
 
 ```sh

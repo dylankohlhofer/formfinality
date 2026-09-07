@@ -124,6 +124,11 @@ not re-inference or a new form judgement. Preserve import validation and consent
 `testing/worker-*` is an isolated prototype, not the live camera path. Its queue
 invariants run in the default suite; `npm run test:worker` runs the local CPU
 benchmark. Benchmark evidence from blank frames is not exercise/device validation.
+The subsequent user recording exposed further failures: `testing/reported-session.test.mjs`
+is now in the default loop and is intentionally red until the app is fixed (three
+failing assertions/cases, two passing controls). Do not whitelist or invert them.
+See `docs/sessions/current-recording-review-2026-09-07.md` for exact evidence and
+the distinction between observed movement, missing form measurements and hidden motion.
 Historical screen recordings have now been reviewed, but are not
 clean camera inputs or recovered-landmark replay coverage; see the dated review
 in `docs/sessions/` and `testing/findings/active-rep-position-loss.md`.

@@ -2,6 +2,8 @@ import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 export const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const hasScreenshot = (result, check) => result.mode !== 'engine' && check.step != null && !check.path;
+export const suiteLog = result => ['legacy', 'regression'].includes(result.mode) &&
+  /^[a-z][a-z0-9.-]*$/.test(result.id) ? `${result.id}.log` : null;
 export function findings(results) {
   return results.flatMap(r => {
     if (r.status === 'blocked') return [{ kind: 'coverage gap', case: r.id, detail: r.reason }];
@@ -19,6 +21,7 @@ export async function report(dir, run) {
   const cards = run.results.map(r => `<section><h2>${escape(r.id)} — ${escape(r.status)}</h2>
     <p>${escape(r.description || r.reason || '')}</p>
     ${r.error ? `<pre>${escape(r.error)}</pre>` : ''}
+    ${suiteLog(r) ? `<p><a href="${escape(suiteLog(r))}">Individual checks and failure details</a></p>` : ''}
     ${r.audio ? `<p><a href="${escape(r.evidence)}/audio-review.html">Listen and review the speech timeline</a></p><audio controls preload="none" src="${escape(r.evidence)}/audio.webm"></audio>
       <p>${escape(r.concerns?.length || 0)} voice review candidates. ${escape((r.audioGaps || []).join(' '))}</p>` : ''}
     ${r.evidence ? `<p><a href="${escape(r.evidence)}/result.json">Full results &amp; effects</a> · <a href="${escape(r.evidence)}/scenario.json">Test case</a></p>` : ''}

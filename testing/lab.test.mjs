@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError } from './lib.mjs';
-import { findings, escape, hasScreenshot } from './report.mjs';
+import { findings, escape, hasScreenshot, suiteLog } from './report.mjs';
 import { serve } from './browser.mjs';
 import { fileURLToPath } from 'node:url';
 import { loadEngine } from './lib.mjs';
@@ -43,6 +43,13 @@ test('effect snapshot exposes the actual counter, not a fabricated zero', () => 
 test('coverage gaps are not bugs or passes', () => assert.equal(findings([{ status: 'blocked', id: 'video', reason: 'no clip' }])[0].kind, 'coverage gap'));
 test('assertion failure is candidate, not confirmed product bug', () => assert.match(findings([{ checks: [{ pass: false, label: 'x' }] }])[0].kind, /candidate/));
 test('report escapes hostile HTML', () => assert.equal(escape('<script>"&'), '&lt;script&gt;&quot;&amp;'));
+test('suite reports link their real logs without accepting paths or executable URLs', () => {
+  assert.equal(suiteLog({mode:'regression',id:'reported-session'}),'reported-session.log');
+  assert.equal(suiteLog({mode:'legacy',id:'verify.mjs'}),'verify.mjs.log');
+  for(const id of ['../private','javascript:alert(1)','https://example.test','<script>'])
+    assert.equal(suiteLog({mode:'regression',id}),null);
+  assert.equal(suiteLog({mode:'engine',id:'crunch'}),null);
+});
 test('report links UI screenshots, not uncaptured library core checkpoints', () => {
   assert.equal(hasScreenshot({ mode: 'browser' }, { step: 7 }), true);
   assert.equal(hasScreenshot({ mode: 'browser' }, { step: 6, path: 'done' }), false);
