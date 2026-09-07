@@ -1,5 +1,5 @@
 // Prototype only. One transferred frame in flight, one replaceable latest frame.
-// Capture timestamps are monotonic on the caller's clock; they are not arrival times.
+// Capture timestamps are monotonic on the same clock as now(); they are not arrival times.
 export class PoseWorkerQueue {
   constructor(worker, {now=()=>performance.now(), maxAgeMs=200, onResult=()=>{}, onError=e=>{throw e;}}={}) {
     this.worker=worker;this.now=now;this.maxAgeMs=maxAgeMs;this.onResult=onResult;this.onError=onError;
@@ -11,6 +11,7 @@ export class PoseWorkerQueue {
   submit(bitmap,capturedAt){
     if(this.closed){bitmap.close();return false;}
     if(!Number.isFinite(capturedAt)||capturedAt<=this.lastTimestamp){bitmap.close();throw new Error('Nonmonotonic frame timestamp');}
+    if(capturedAt>this.now()){bitmap.close();throw new Error('Future frame timestamp');}
     this.lastTimestamp=capturedAt;this.stats.submitted++;
     const item={bitmap,capturedAt,id:++this.sequence,generation:this.generation};
     if(this.inFlight){if(this.pending){this.pending.bitmap.close();this.stats.replaced++;}this.pending=item;}
@@ -31,10 +32,10 @@ export class PoseWorkerQueue {
     let accepted=null;
     if(item.generation!==this.generation)this.stats.oldGeneration++;
     else if(this.now()-item.capturedAt>this.maxAgeMs)this.stats.stale++;
-    else {this.stats.accepted++;accepted={...message,capturedAt:item.capturedAt,ageMs:this.now()-item.capturedAt};}
+    else accepted={...message,capturedAt:item.capturedAt,ageMs:this.now()-item.capturedAt};
     const next=this.pending;this.pending=null;
     if(next&&!this.closed)this.send(next);
-    if(accepted&&!this.closed)this.onResult(accepted);
+    if(accepted&&!this.closed){this.stats.accepted++;this.onResult(accepted);}
   }
   reset(){
     this.generation++;
