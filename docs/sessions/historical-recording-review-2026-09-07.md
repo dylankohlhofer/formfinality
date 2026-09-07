@@ -3,6 +3,10 @@
 Reviewed 6–7 September 2026 against `form-coach-v4.11.html` at `6e203f4`.
 Application SHA-256: `1cb3b7e685a52e89edcb6c7f780150cafd5b5e80b69355fa7d91b16d366826dc`.
 
+**Subsequent changes:** the user then authorised fixes. See
+[the implementation follow-up](historical-fixes-2026-09-07.md); the findings below
+remain the historical review of the hash above, not the current fix status.
+
 ## Scope and confidence
 
 **This is a sampled historical review, not a complete frame-by-frame or listening

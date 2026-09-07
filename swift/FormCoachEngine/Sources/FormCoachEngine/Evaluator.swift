@@ -15,6 +15,7 @@ public struct FormResult {
     public var blocking: [String] = []
     public var score: Int? = nil
     public var rep: RepEvent? = nil
+    public var repPaused = false
     /// Set at the up-crossing, one whole half-cycle BEFORE `rep`. `reps` does not move
     /// with it. The shell turns this into the repPeak effect; `rep` is what counts.
     public var atPeak: RepEvent? = nil
@@ -175,13 +176,18 @@ public final class Evaluator {
         return sum / Double(need.count)
     }
 
+    public func interrupt() {
+        guard let rep else { return }
+        rep.interrupt(); ema = [:]; sev = [:]
+    }
+
     public func evaluate(_ frame: PoseFrame, dt: Double, now: Double) -> FormResult {
         var out = FormResult()
         out.reps = rep?.display() ?? 0
 
         out.framing = framing(frame, need: need)
         // Judged on the joints this movement needs, not a fixed list.
-        if confFor(frame) < 0.5 { out.ok = false; return out }
+        if confFor(frame) < 0.5 { interrupt(); out.ok = false; return out }
 
         // GUIDED — position checked, no claims about quality.
         if mv.kind == "guided" {
@@ -214,7 +220,7 @@ public final class Evaluator {
                 s: scoreTarget(t, v, tierTol: tier.tol),
                 cue: cueFor(t, v, tierTol: tier.tol)))
         }
-        if out.readings.isEmpty { out.ok = false; return out }
+        if out.readings.isEmpty { interrupt(); out.ok = false; return out }
 
         // POSITION gates decide arming; QUALITY gates decide only the hold clock.
         let posGates = out.readings.filter { $0.target.pos ?? false }
@@ -222,6 +228,11 @@ public final class Evaluator {
         let qGates = out.readings.filter { $0.target.gate ?? false }
         out.inPose = out.inPosition && (qGates.isEmpty ? true : qGates.allSatisfy { $0.s > 0 })
         out.blocking = (posGates + qGates).filter { $0.s <= 0 }.map { $0.target.id }
+        // Previously this guard was accidentally present only in the guided branch.
+        if out.framing.verdict == "clipped" {
+            out.inPosition = false; out.inPose = false
+            if !out.blocking.contains("framing") { out.blocking.append("framing") }
+        }
 
         // VIEW AWARENESS — say less off-axis, never wrong things.
         out.sideness = frame.sideness
@@ -238,11 +249,33 @@ public final class Evaluator {
             }
         }
 
-        // Weighted form score — w:0 targets excluded; quality gates as fallback pool.
+        if rep != nil, let spec = mv.reps {
+            let rawBlocked = mv.targets.filter { $0.pos ?? false }.filter { t in
+                guard let v = read(t, frame) else { return false }
+                return scoreTarget(t, v, tierTol: tier.tol) <= 0
+            }.map { $0.id }
+            let driver = out.readings.first { $0.target.id == spec.driver }
+            let metric = mv.targets.first { $0.id == spec.driver }!.m
+            let joints = [metric.v, metric.a, metric.b, metric.c, metric.of, metric.from, metric.to].compactMap { $0 }
+            let driverVisible = joints.allSatisfy { (frame.side(frame.cam)[$0]?.c ?? 0) >= 0.5 }
+            if !out.inPosition || !rawBlocked.isEmpty || driver == nil || !driverVisible {
+                for key in rawBlocked + ((driver == nil || !driverVisible) ? ["tracking"] : []) {
+                    if !out.blocking.contains(key) { out.blocking.append(key) }
+                }
+                out.inPosition = false; out.inPose = false; out.repPaused = true
+                out.suppressed = out.readings.compactMap { $0.cue.map { "unobserved⊘" + $0 } }
+                interrupt()
+                return out
+            }
+        }
+
+        // Drivers measure cycle range/tempo, not static posture. Empty means nil.
         func wOf(_ r: Reading) -> Double { r.target.w ?? 1 }
-        var pool = out.readings.filter { !($0.target.gate ?? false) && wOf($0) > 0 }
-        if pool.isEmpty { pool = out.readings.filter { ($0.target.gate ?? false) && !($0.target.pos ?? false) } }
-        if pool.isEmpty { pool = out.readings }
+        let quality = out.readings.filter { rep == nil || (!($0.target.pos ?? false) && $0.target.id != mv.reps?.driver) }
+        var pool = quality.filter { !($0.target.gate ?? false) && wOf($0) > 0 }
+        if pool.isEmpty { pool = quality.filter { ($0.target.gate ?? false) && !($0.target.pos ?? false) } }
+        if pool.isEmpty && rep == nil { pool = out.readings }
+        if !pool.isEmpty {
         let tw = pool.reduce(0.0) { $0 + max(wOf($1), 0.001) }
         let raw = pool.reduce(0.0) { $0 + $1.s * max(wOf($1), 0.001) } / tw
         score += emaAlpha(0.1, dt) * (raw - score)
@@ -256,6 +289,7 @@ public final class Evaluator {
                 lastTraceBucket = bucket
                 scoreTrace.append(TracePoint(t: ((now - a) * 10).rounded() / 10, s: Int(score.rounded())))
             }
+        }
         }
 
         if mv.kind == "hold" {
@@ -291,7 +325,7 @@ public final class Evaluator {
 
         // THE ONE CUE — worst offender, budget-limited, cooldown-limited.
         // NB: JS Array.sort is stable; Swift's is not guaranteed — sort by (s, index).
-        var offenders = out.readings.enumerated()
+        var offenders = quality.enumerated()
             .filter { $0.element.cue != nil }
             .sorted { ($0.element.s, $0.offset) < ($1.element.s, $1.offset) }
             .map { $0.element }
@@ -316,7 +350,7 @@ public final class Evaluator {
         }
         // Only the pool the SCORE is built from, so the two channels agree; a limb
         // glowing red while the form bar reads 77 is a trust problem.
-        let judged = out.readings.filter { r in
+        let judged = quality.filter { r in
             !(r.target.pos ?? false) && !unreliable.contains(r.target.id) &&
             ((!(r.target.gate ?? false) && (r.target.w ?? 1) > 0) ||
              ((r.target.gate ?? false) && r.s <= 0))

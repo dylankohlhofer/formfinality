@@ -130,6 +130,62 @@ final class ConformanceTests: XCTestCase {
     }
 
     // ── sections ──
+    func testActiveRepInterruptionAndRecovery() {
+        for loss in ["position", "framing", "view", "confidence", "driver", "missing"] {
+            let ev = Evaluator(Self.content.movements["push-up"]!, tier: Self.content.tiers["building"]!)
+            ev.arm(now: 0)
+            var now = 0.0
+            let top = frame(pose: "pushTop", over: nil), bottom = frame(pose: "pushBottom", over: nil)
+            func feed(_ f: PoseFrame, _ n: Int) {
+                for _ in 0..<n { now += REF_DT; _ = ev.evaluate(f, dt: REF_DT, now: now) }
+            }
+            feed(top, 60); feed(bottom, 60); feed(top, 60)
+            XCTAssertEqual(ev.rep?.display(), 1, "positive control: \(loss)")
+            feed(bottom, 60)
+            XCTAssertEqual(ev.rep?.state, "up")
+            var bad = bottom
+            if loss == "position" { bad = frame(pose: "standing", over: nil) }
+            if loss == "view" { bad.sideness = 0 }
+            for side in ["left", "right"] {
+                var points = bad.side(side)
+                for (name, p) in points {
+                    if loss == "framing" { points[name] = Joint(x: p.x - 2, y: p.y, c: p.c) }
+                    if loss == "confidence" || (loss == "driver" && name == "wrist") {
+                        points[name] = Joint(x: p.x, y: p.y, c: 0)
+                    }
+                }
+                if side == "left" { bad.left = points } else { bad.right = points }
+            }
+            if loss == "missing" { ev.interrupt() } else { feed(bad, 1) }
+            feed(bottom, 60); feed(top, 60)
+            XCTAssertEqual(ev.rep?.display(), 1, "interrupted return: \(loss)")
+            feed(bottom, 60); feed(top, 60)
+            XCTAssertEqual(ev.rep?.display(), 2, "fresh complete cycle: \(loss)")
+        }
+    }
+
+    func testBridgeHasNoStaticDriverGrade() {
+        let ev = Evaluator(Self.content.movements["glute-bridge"]!, tier: Self.content.tiers["building"]!)
+        ev.arm(now: 0)
+        var now = 0.0
+        for name in ["bridgeDown", "bridgeUp", "bridgeDown"] {
+            for _ in 0..<90 {
+                now += REF_DT
+                let r = ev.evaluate(frame(pose: name, over: nil), dt: REF_DT, now: now)
+                XCTAssertNil(r.score); XCTAssertTrue(r.tint.segs.isEmpty)
+            }
+        }
+        XCTAssertEqual(ev.rep?.display(), 1); XCTAssertNil(ev.avg())
+    }
+
+    func testGuidedClippingCannotEarnHoldTime() {
+        let ev = Evaluator(Self.content.movements["cat-cow"]!, tier: Self.content.tiers["learning"]!)
+        var f = frame(pose: "allFours", over: nil)
+        f.left = f.left.mapValues { Joint(x: $0.x - 2, y: $0.y, c: $0.c) }; f.right = f.left
+        let r = ev.evaluate(f, dt: 1, now: 1)
+        XCTAssertFalse(r.inPosition); XCTAssertTrue(r.blocking.contains("framing")); XCTAssertEqual(ev.hold, 0)
+    }
+
     /// The filter conversion itself — identity at 30fps, and no update on a zero dt.
     func testFilterConversion() {
         // meta.tolerances.filter, not exact: the rows store dt rounded to 6dp but

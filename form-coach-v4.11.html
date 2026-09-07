@@ -794,6 +794,11 @@ function expandPlanSteps(steps, tierKey){
    4 · DIALOGUE — cascade: persona[tier][key] → tier[key] → base[key]
    ═══════════════════════════════════════════════════════════════ */
 const BASE = {
+  frameTop:["Part of your body is outside the top of the picture. Adjust the camera so the movement fits."],
+  frameBottom:["Part of your body is outside the bottom of the picture. Adjust the camera so the movement fits."],
+  trackingLost:["I can't track the movement clearly. Check the camera picture; counting is paused."],
+  repPosition:["Counting is paused. Return to the starting position, then begin a new rep."],
+  setupShape:["The starting shape is not ready yet. Check the demonstration, or try the easier option if offered."],
   go:["Go.","Whenever you're ready."], rest:["Rest. {t} seconds."],
   getset:["{x} coming up."], half:["Halfway."], twomore:["Two more."], tenleft:["Ten seconds."],
   done:["Done."], vis:["I can't see you — step back so I can see all of you, side-on."],
@@ -1125,6 +1130,11 @@ function buildFrame(lms, aspect = 1){
 /* The always-on visual half of the not-ready state (B3): speech marks the
    transition, this stays up the whole time it applies. */
 const NOT_READY_TEXT = {
+  frameTop:"Movement cut off at the top — adjust the camera",
+  frameBottom:"Movement cut off at the bottom — adjust the camera",
+  trackingLost:"Tracking unclear — counting paused",
+  repPosition:"Counting paused — return to the starting position",
+  setupShape:"Starting shape not ready — check Show me how",
   getin:"Get into position", seeBack:"Step back — I can't see all of you",
   seeUp:"I've lost your feet", seeDown:"I can't see your head",
   seeLeft:"Slide left — you're out of frame", seeRight:"Slide right — you're out of frame",
@@ -1133,8 +1143,19 @@ const NOT_READY_TEXT = {
 };
 function framingCue(f){
   return f.verdict === "clipped"
-    ? ({ back:"seeBack", up:"seeUp", down:"seeDown", left:"seeLeft", right:"seeRight" }[f.dir] || "seeBack")
+    ? ({ back:"seeBack", up:"frameBottom", down:"frameTop", left:"seeLeft", right:"seeRight" }[f.dir] || "seeBack")
     : "getin";
+}
+/* One readiness channel, including missing frames. Changing the error must not
+   reset the budget and produce a carousel of spoken instructions. */
+function readinessFx(core, key, now, E){
+  core.readinessActive = true;
+  const text = NOT_READY_TEXT[key] || BASE[key]?.[0] || NOT_READY_TEXT.setupShape;
+  E.push({t:"banner", text:(core.state === "active" && core.ev.rep ? "Counting paused. " : "") + text, style:"teach"});
+  if(!core.env.speaking() && now - (core.notReadyAt ?? -1e9) >= 30){
+    E.push({t:"say", key, pri:2, style:"teach"});
+    core.notReadyAt = now;
+  }
 }
 /* Which joints does this movement actually measure? Derived from the metric specs
    themselves — the same content-as-data trick as the tint, so no new authoring.
@@ -1381,6 +1402,13 @@ class Evaluator {
     return k ? sum / k : (frame.conf ?? 1);
   }
 
+  interrupt(){
+    if(!this.rep) return;
+    this.rep.interrupt();
+    // Never blend an unseen/off-position driver into the recovery frame.
+    this.ema = {}; this.sev = {};
+  }
+
   evaluate(frame, dt, now){
     const out = { readings:[], cue:null, inPose:false, inPosition:false, blocking:[],
                   score:null, rep:null, reps:this.rep ? this.rep.display() : 0,
@@ -1388,7 +1416,7 @@ class Evaluator {
 
     out.framing = framing(frame, this.need);
     /* Judged on the joints this movement needs, not a fixed list — see buildFrame. */
-    if(this.confFor(frame) < 0.5){ out.ok = false; return out; }
+    if(this.confFor(frame) < 0.5){ this.interrupt(); out.ok = false; return out; }
 
     /* GUIDED — we check you're in the right POSITION (gates), but make no claims
        about the QUALITY of a pose we cannot honestly measure. */
@@ -1403,6 +1431,9 @@ class Evaluator {
       out.inPose = gates.length ? gates.every(r => r.s > 0) : true;
       out.inPosition = out.inPose;
       out.blocking = gates.filter(r => r.s <= 0).map(r => r.t.id);
+      if(out.framing.verdict === "clipped"){
+        out.inPosition = false; out.inPose = false; out.blocking.push("framing");
+      }
       if(out.inPose) this.hold += dt;
       out.guided = true;
       return out;
@@ -1414,14 +1445,13 @@ class Evaluator {
       const v = this.smooth(t.id, raw, t.m.sm || 0.35, dt);
       out.readings.push({ t, v, s: scoreTarget(t, v, this.tier), cue: cueFor(t, v, this.tier) });
     }
-    if(!out.readings.length){ out.ok = false; return out; }
+    if(!out.readings.length){ this.interrupt(); out.ok = false; return out; }
 
     /* POSITION gates ("are you on the floor, on your side, knees bent?") decide whether
        the set can START. QUALITY gates ("is the shape actually good?") decide only
        whether the hold clock runs.
-       Gating the START on quality was a design error: a sagging side plank failed the
-       bodyLine gate, never armed, and the coach stayed silent — withholding coaching
-       from precisely the person who needed it. */
+       Session setup times both continuously, explaining quality blockers before
+       arming. Rep observation validity must not require perfect form. */
     const posGates = out.readings.filter(r => r.t.pos);
     out.inPosition = posGates.length ? posGates.every(r => r.s > 0) : true;
     const qGates   = out.readings.filter(r => r.t.gate);
@@ -1456,15 +1486,38 @@ class Evaluator {
       }
     }
 
+    if(this.rep){
+      // Raw position guards close even a one-frame gap; smoothed gates alone
+      // can carry the previous good pose through the beginning of an interruption.
+      const rawBlocked = this.mv.targets.filter(t => t.pos).filter(t => {
+        const v = this.read(t, frame); return v != null && scoreTarget(t, v, this.tier) <= 0;
+      }).map(t => t.id);
+      const driver = out.readings.find(r => r.t.id === this.mv.reps.driver);
+      const driverSpec = this.mv.targets.find(t => t.id === this.mv.reps.driver);
+      const driverJoints = neededJoints({targets:[driverSpec]});
+      const driverVisible = [...driverJoints].every(j => (frame[frame.cam]?.[j]?.c ?? 0) >= .5);
+      if(!out.inPosition || rawBlocked.length || !driver || !driverVisible){
+        out.blocking = [...new Set([...out.blocking, ...rawBlocked, ...(!driver || !driverVisible ? ["tracking"] : [])])];
+        out.inPosition = false; out.inPose = false; out.repPaused = true;
+        out.suppressed = out.readings.filter(r => r.cue).map(r => "unobserved⊘" + r.cue);
+        this.interrupt();
+        return out; // no score, tint, praise or partial rep from invalid observations
+      }
+    }
+
     // weighted form score
     /* w:0 targets (rep drivers, position gates) must not enter the pool — a movement
        whose only graded target is w:0 divided by ~zero and scored garbage. If nothing
        weighted remains, grade the QUALITY gates: they ARE the shape. (Found by the
        demo self-check: hollow-tuck scored 1 while being held perfectly.) */
     const wOf = r => r.t.w ?? 1;
-    let pool = out.readings.filter(r => !r.t.gate && wOf(r) > 0);
-    if(!pool.length) pool = out.readings.filter(r => r.t.gate && !r.t.pos);
-    if(!pool.length) pool = out.readings;
+    // Range/tempo are cycle judgements. A changing rep driver is NOT a static
+    // posture fault. No remaining quality measurement means null, never 0 or 100.
+    const quality = out.readings.filter(r => !this.rep || (!r.t.pos && r.t.id !== this.mv.reps.driver));
+    let pool = quality.filter(r => !r.t.gate && wOf(r) > 0);
+    if(!pool.length) pool = quality.filter(r => r.t.gate && !r.t.pos);
+    if(!pool.length && !this.rep) pool = out.readings;
+    if(pool.length){
     const tw = pool.reduce((a,r) => a + Math.max(wOf(r), 0.001), 0);
     const raw = pool.reduce((a,r) => a + r.s * Math.max(wOf(r), 0.001), 0) / tw;
     this.score += emaAlpha(0.1, dt)*(raw - this.score);
@@ -1480,6 +1533,7 @@ class Evaluator {
         this.lastTraceBucket = bucket;
         this.scoreTrace.push({ t: +(now - this.armedAt).toFixed(1), s: Math.round(this.score) });
       }
+    }
     }
 
     if(this.mv.kind === "hold"){
@@ -1510,7 +1564,7 @@ class Evaluator {
     }
 
     /* THE ONE CUE — worst offender, budget-limited, cooldown-limited. */
-    let offenders = out.readings.filter(r => r.cue).sort((a,b) => a.s - b.s);
+    let offenders = quality.filter(r => r.cue).sort((a,b) => a.s - b.s);
     let viewDropped = [];
     if(out.viewLimited){
       const depth = r => r.t.m.k === "angle" && r.t.ideal < 168;   // depth judgements drift off-axis
@@ -1534,7 +1588,7 @@ class Evaluator {
        glowing red while the FORM bar reads 77 is a trust problem, not a feature.
        Quality gates join in only when they're actually blocking (score 0) — then
        something visible IS happening (the clock has stopped) and colour explains it. */
-    const judged = out.readings.filter(r =>
+    const judged = quality.filter(r =>
       !r.t.pos && !unreliable.has(r.t.id) &&
       ((!r.t.gate && (r.t.w ?? 1) > 0) || (r.t.gate && r.s <= 0)));
     let worst = null;
@@ -1696,6 +1750,10 @@ class Rep {
     }
     return null;
   }
+  interrupt(){
+    // Preserve completed work and the observed baseline, discard only this cycle.
+    this.state = "down"; this.primed = false; this.pMax = 0; this.peak = 0; this.last = null;
+  }
   display(){ return this.reps * (this.s.mult || 1); }
 }
 
@@ -1791,6 +1849,8 @@ function sessionInsights(out){
    ═══════════════════════════════════════════════════════════════ */
 /* Standing movements frame well in portrait; floor work wants landscape. Advice only. */
 const PORTRAIT_OK = new Set(["squat","sit-to-stand","wall-sit","wall-push-up"]);
+const hasFormScore = mv => mv.kind !== "guided" && (!mv.reps || mv.targets.some(t =>
+  !t.pos && t.id !== mv.reps.driver && (t.gate || (t.w ?? 1) > 0)));
 
 function resolveMovementCore(id, tierId){
   const mv = M[id];
@@ -1861,6 +1921,8 @@ class SessionCore {
     this.marks = new Set(); this.degraded = false; this.pendingFix = null;
     this.lastSaid = {};   /* a new movement is a new context: "get into position"
                              shouldn't be muted because the last one just said it */
+    this.notReadyAt = null;
+    this.readinessActive = false;
     this.regressOffered = false; E.push({t:"regressHide"});
 
     if(this.i >= this.steps.length){ this.finish(E); return; }
@@ -1885,7 +1947,7 @@ class SessionCore {
     this.state = "setup"; this.armT = 0;
     E.push({t:"bigLabel", s:"GET SET"});
     E.push(this.mv.kind === "reps" ? {t:"bigReps", n:0, tgt:this.target} : {t:"bigTime", secs:0});
-    E.push({t:"scoreCol", on:this.mv.kind !== "guided"});
+    E.push({t:"scoreCol", on:hasFormScore(this.mv)});
     E.push({t:"scoreLab", s:"FORM"});
     const camLine = this.mv.camera === "facing"
       ? "turn to FACE the camera" : "camera side-on, whole body in frame";
@@ -1920,6 +1982,7 @@ class SessionCore {
     if(this.env.speaking()) return false;
     if(this.armT < 1.8) return false;
     this.state = "active";
+    this.readinessActive = false;
     /* The setup bar used to be torn down here. With arming firing early — on a pose
        held for 1.2s that the user was only passing through — "Show me how" and the
        ghost disappeared before they had begun, and there was no way to get them back
@@ -1970,11 +2033,19 @@ class SessionCore {
       return E;
     }
 
-    if(!frame){ E.push({t:"say", key:"vis", pri:2, cool:7000}); return E; }
-    const r = this.ev.evaluate(frame, dt, now);
-    if(!r.ok){ E.push({t:"say", key:"vis", pri:2, cool:7000}); E.push({t:"telText", s:"tracking lost"}); return E; }
+    const r = frame ? this.ev.evaluate(frame, dt, now) : null;
+    if(!r || !r.ok){
+      this.ev.interrupt(); this.armT = 0; this.pendingFix = null;
+      readinessFx(this, "trackingLost", now, E);
+      E.push({t:"scoreCol", on:false}, {t:"telText", s:"tracking lost — counting paused"});
+      E.push({t:"log", row:{phase:"set", movement:this.mvId, state:this.state,
+        event:"tracking_lost", reps:this.ev.rep?.display() ?? "", form_score:"",
+        in_position:false, in_pose:false, blocked_by:"tracking", targets:{}}});
+      return E;
+    }
 
     E.push({t:"telem", r, state:this.state});
+    E.push({t:"scoreCol", on:r.score != null});
 
     const snap = ev2 => ({ phase:"set", movement:this.mvId, state:this.state,
       event: ev2 || "", cue: ev2 === "cue" ? r.cue : "",
@@ -2002,25 +2073,33 @@ class SessionCore {
            TRANSITION into not-ready, then at most every 30s while it persists.
            A persistent state deserves a persistent VISUAL, not repeated speech —
            the banner below carries it continuously either way. */
+        const shapeCue = r.readings.filter(x => x.cue && !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168))
+          .sort((a,b) => a.s - b.s)[0]?.cue;
         const notReady = r.viewCue ? r.viewCue
                        : (r.framing && !r.framing.ok) ? framingCue(r.framing)
                        : (r.framing && r.framing.verdict === "far") ? "tooFar"
-                       : !r.inPosition ? "getin" : null;
+                       : !r.inPosition ? "getin" : !r.inPose ? (shapeCue || "setupShape") : null;
         if(notReady){
-          const changed = notReady !== this.lastNotReady;
-          const due = (now - (this.notReadyAt ?? -99)) >= 30;
-          if(!this.env.speaking() && (changed || due)){
-            E.push({t:"say", key:notReady, pri:2, cool:30000, style:"teach"});
-            this.notReadyAt = now;
+          readinessFx(this, notReady, now, E);
+          if(r.regress && r.inPosition && !this.regressOffered){
+            this.regressOffered = true;
+            E.push({t:"regressShow", text:`Starting shape not ready. Try the ${M[this.mv.regression].name.toLowerCase()} instead?`});
           }
-          this.lastNotReady = notReady;
-          E.push({t:"banner", text:NOT_READY_TEXT[notReady] || "Get into position.", style:"teach"});
-        } else { this.lastNotReady = null; }
-        if(false){}
-        else if(r.inPosition && !this.env.speaking()) E.push({t:"banner", text:"Hold it there…", style:"good"});
+        } else {
+          if(this.readinessActive){ E.push({t:"clearBanner"}); this.readinessActive = false; }
+          if(r.inPose && !this.env.speaking()) E.push({t:"banner", text:"Hold it there…", style:"good"});
+        }
       }
       return E;
     }
+
+    if(r.repPaused){
+      this.pendingFix = null;
+      readinessFx(this, r.viewCue || (!r.framing.ok ? framingCue(r.framing) : r.blocking.includes("tracking") ? "trackingLost" : "repPosition"), now, E);
+      E.push({t:"scoreCol", on:false});
+      return E;
+    }
+    if(this.readinessActive){ E.push({t:"clearBanner"}); this.readinessActive = false; }
 
     if(r.viewLimited && !this.marks.has("viewtip")){
       this.marks.add("viewtip");
@@ -2067,10 +2146,10 @@ class SessionCore {
       this.pendingFix.low = Math.min(this.pendingFix.low, r.score ?? 100);
       if(now - this.pendingFix.at >= 6) this.pendingFix = null;
       else if(this.pendingFix.low <= 78 && r.score > 80){
-        E.push({t:"say", key:"fixed", pri:2, cool:8000, style:"good"});
+        if(this.mv.kind === "hold") E.push({t:"say", key:"fixed", pri:2, cool:8000, style:"good"});
         this.pendingFix = null;
       }
-    } else if(r.score > 85){
+    } else if(this.mv.kind === "hold" && r.inPose && r.score > 85){
       E.push({t:"say", key:"goodhold", pri:0, cool:this.tierId === "learning" ? 11000 : 15000, style:"good"});
     }
 
@@ -2138,7 +2217,7 @@ class SessionCore {
     if(this.ev) this.ev.tier = tierId;
     const st = this.steps[this.i];
     if(st?.ex && this.mv) this.target = scaledCore(st.t, false, tierId);
-    E.push({t:"scoreCol", on:!!this.mv && this.mv.kind !== "guided"});
+    E.push({t:"scoreCol", on:!!this.mv && hasFormScore(this.mv)});
     return E;
   }
 
@@ -2149,6 +2228,8 @@ class SessionCore {
     this.mvId = id; this.mv = M[id];
     this.ev = new Evaluator(this.mv, this.tierId);
     this.target = scaledCore(this.steps[this.i].t, false, this.tierId);
+    this.notReadyAt = null;
+    this.readinessActive = false;
     E.push({t:"regressHide"});
     this.state = "setup"; this.armT = 0;
     E.push({t:"bigLabel", s:"GET SET"});
@@ -2250,8 +2331,10 @@ class SessionCore {
        actually been skipped; with no skips both lines below are the originals. */
     const skipped = this.out.filter(o => o.skipped);
     const names = skipped.map(o => o.name);
-    const nothingWrong = !lead && !skipped.length;
+    const nothingWrong = !lead && !skipped.length && avg != null;
     const headline = lead ? lead.text
+      : !skipped.length && avg == null
+        ? "Your completed movement is recorded. No form score was measured; range and tempo checks are not a full form assessment."
       : nothingWrong
         ? (this.tierId === "learning"
             ? "Nothing to fix — you held the shapes well. That's real progress, and it's rarer than you'd think."
@@ -2330,9 +2413,15 @@ class CalibrationCore {
 
   tickRaw(frame, dt, now){
     const E = [];
-    if(!frame){ E.push({t:"say", key:"vis", pri:2, cool:7000}); return E; }
-    const r = this.ev.evaluate(frame, dt, now);
-    if(!r.ok) return E;
+    if(this.done) return E;
+    const r = frame ? this.ev.evaluate(frame, dt, now) : null;
+    if(!r || !r.ok){
+      this.armT = 0;
+      readinessFx(this, "trackingLost", now, E);
+      E.push({t:"scoreCol", on:false}, {t:"telText", s:"tracking lost — counting paused"});
+      return E;
+    }
+    if(this.readinessActive){ E.push({t:"clearBanner"}); this.readinessActive = false; }
     E.push({t:"telem", r, state:this.armed ? "active" : "setup"});
     E.push({t:"log", row:{ phase:"calibration", movement:"plank", state:this.armed ? "active" : "setup",
       event:"", cue:"", reps:"", form_score: r.score ?? "",
@@ -2341,6 +2430,7 @@ class CalibrationCore {
       blocked_by: (r.blocking || []).join("|"),
       targets: Object.fromEntries((r.readings || []).map(x =>
         [x.t.id, +x.v.toFixed(Math.abs(x.v) < 1 ? 4 : 1)])) }});
+    E.push({t:"scoreCol", on:r.score != null});
     if(r.score != null) E.push({t:"scoreFill", pct:r.score});
 
     if(!this.armed){
@@ -2354,10 +2444,8 @@ class CalibrationCore {
           cue:"", reps:"", form_score:"", in_position:true, in_pose:"", blocked_by:"", targets:{} }});
         E.push({t:"bigLabel", s:"HOLD"});
         E.push({t:"say", key:"go", pri:3});
-      } else if(r.viewCue && !this.env.speaking()){
-        E.push({t:"say", key:r.viewCue, pri:2, cool:8000, style:"teach"});
-      } else if(!r.inPosition && !this.env.speaking()){
-        E.push({t:"say", key:this.framingKey(frame), pri:2, cool:6000, style:"teach"});
+      } else if(!r.inPosition){
+        readinessFx(this, r.viewCue || this.framingKey(frame), now, E);
       }
       return E;
     }
@@ -3153,6 +3241,7 @@ function applyFx(host, E){
       case "num": coach.raw(String(e.n), e.pri, 900); break;
       case "repPeak": pop(); break;
       case "banner": banner(e.text, e.style); break;
+      case "clearBanner": clearBanner(); break;
       case "bigLabel":
         if(e.s !== "HOLD" && e.s !== "REPS") lastTint = null;
         ringMode = e.s; ringPeak = 0;
@@ -3181,7 +3270,7 @@ function applyFx(host, E){
            surfaced. The body is the newer signal — retract the words. */
         if(bannerIsPraise && lastTint && lastTint.segs.some(g => g.sev >= 2)) clearBanner();
         renderTelemetry(e.r, host.core.ev, e.state); break; }
-      case "telText": telEl.textContent = e.s; break;
+      case "telText": lastTint = null; telEl.textContent = e.s; break;
       case "telRest":
         telEl.innerHTML = clockTag() + `<span class="meta">resting · next: ${e.next}</span>`;
         break;
@@ -3240,7 +3329,7 @@ function renderFinish(p){
       </div>`;
     return `
       <div class="prow">
-        <div class="pname">${o.name}${o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}</div>
+        <div class="pname">${o.name}${o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}${o.score == null ? ' <span class="tag">form not scored</span>' : ''}</div>
         <div class="pval">${o.kind === "reps" ? `${o.achieved}/${o.target}`
                                               : `${Math.round(o.achieved)}s`}${
           o.score != null && TIERS[p.tierId].showScore ? ` · ${o.score}` : ""}</div>
@@ -3304,7 +3393,7 @@ function renderTelemetry(r, ev, state){
     ? `<span class="sup">↓ swallowed: ${r.suppressed.join(", ")} (budget ${TIERS[tier].cueBudget})</span>` : "";
   const st = state === "setup"
     ? `<span class="t" style="color:var(--bone-2)">state <b style="color:var(--bone-2)">${
-        r.inPosition ? "IN POSITION — arming"
+        r.inPosition && r.inPose ? "IN POSITION — arming"
                      : "WAITING · blocked by: " + (r.blocking.join(", ") || "?")}</b></span>` : "";
   const vw = r.sideness != null
     ? `<span class="t ${(r.blocking||[]).includes("view") ? "bad" : (r.viewLimited ? "sup" : "meta")}">view <b>${Math.round(r.sideness)}°</b>${r.viewLimited ? " · reduced coaching" : ""}</span>`
@@ -3511,22 +3600,25 @@ async function initModel(){
     runningMode:"VIDEO", numPoses:1 });
 }
 
-let camFacing = "user", wakeLock = null;
+let camFacing = "user", wakeLock = null, cameraStage = "permission";
 /* Flip and Skip only mean anything with a live feed, and they appear and vanish
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){ flipBtn.hidden = !on; skipExBtn.hidden = !on; }
 async function openCamera(){
+  cameraStage = "permission";
   msgInner.innerHTML = "<h2>Requesting camera…</h2>";
   msgEl.hidden = false;
   const stream = await navigator.mediaDevices.getUserMedia({
     video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
   video.srcObject = stream;
+  cameraStage = "playback";
   await video.play();
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
   try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){}   // phones sleep mid-plank otherwise
   if(!landmarker){
+    cameraStage = "model";
     msgInner.innerHTML = "<h2>Loading pose model…</h2><p>First run takes a few seconds.</p>";
     landmarker = await initModel();
   }
@@ -3590,7 +3682,7 @@ addEventListener("keydown", e => {
 async function beginCalibration(){
   tierSegEl.hidden = true;
   pending = "calibrate";
-  try{ await openCamera(); }catch(e){ camError(); return; }
+  try{ await openCamera(); }catch(e){ camError(e); return; }
   calib = new Calibration(); sess = null;
   TelLog.start(); $("csvBtn").hidden = true;
   bigLabel.textContent = "HOLD";
@@ -3613,19 +3705,34 @@ async function beginSession(plan){
   tierSegEl.hidden = true;   /* changing difficulty mid-set isn't a real choice — it
                                 returns at the debrief, where it is */
   pending = "session";
-  try{ await openCamera(); }catch(e){ camError(); return; }
+  try{ await openCamera(); }catch(e){ camError(e); return; }
   calib = null;
   TelLog.start(); $("csvBtn").hidden = true;
   sess = new Session(plan);
   sess.start();
 }
-function camError(){
+function camError(error){
   running = false;
+  stopCam(); sess = null; calib = null; calibMv = null; recMode = null;
+  showCamChrome(false); setupBar.classList.remove("on"); demoBox.classList.remove("on"); demoOn = false;
+  startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+  document.body.classList.remove("live");
+  const reasons = {
+    NotAllowedError:"Camera permission was not granted. Allow camera access in your browser and device privacy settings, then try again.",
+    SecurityError:"Camera access is blocked by browser or device security settings. Check camera permissions, then try again.",
+    NotFoundError:"No camera was found. Connect or enable a camera, then try again.",
+    NotReadableError:"The camera could not be opened. Close other apps using it, check the device, and try again.",
+    OverconstrainedError:"This camera cannot provide the requested video settings. Try another camera or browser.",
+    AbortError:"Camera startup was interrupted. Try again when the camera is available."
+  };
+  const reason = !window.isSecureContext
+    ? "Camera access needs a secure page. Open this app using HTTPS or a local server on localhost."
+    : cameraStage === "model"
+      ? "The camera opened, but the pose model could not start. Check your connection for the first model download, then try again. A different browser may help if graphics support is unavailable."
+      : reasons[error?.name] || "Video startup failed. Check that your camera works and is permitted in this browser, then try again.";
   msgEl.hidden = false;
   msgInner.innerHTML = `<h2>Camera unavailable</h2>
-    <p>Browsers only allow camera access on <code>localhost</code> or https.<br><br>
-    Save this file, then run:<br><code>python3 -m http.server 8000</code><br><br>
-    and open <code>http://localhost:8000/form-coach-v4.html</code></p>
+    <p>${reason}</p>
     <button class="ctl" id="backBtn">Back</button>`;
   $("backBtn").onclick = () => showHome();
 }
@@ -3776,7 +3883,7 @@ function recTick(frame, dt){
 }
 
 async function beginRefRecording(id){
-  try{ await openCamera(); }catch(e){ camError(); return; }
+  try{ await openCamera(); }catch(e){ camError(e); return; }
   calib = null; sess = null;
   recMode = { id, phase:"getready", t:0, lastAt:-1, frames:[] };
   bigLabel.textContent = "DEMO";

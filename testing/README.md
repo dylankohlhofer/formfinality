@@ -2,7 +2,8 @@
 
 One scenario describes timed observations, interruptions and independently stated
 expectations. Engine replay, browser testing and recorded-video inference use that
-same scenario. The application and its original recorded vectors are unchanged.
+same scenario. Production fixes and deliberate vector refreshes are documented
+separately; see the dated findings and `docs/project-status.md`.
 
 ## Start
 
@@ -29,8 +30,8 @@ Use `--require-video` to make that coverage gap exit 2.
 v4.11 calibration exception. See [FC-LAB-001](findings/calibration-has-demo.md).
 Unexpected exceptions must fail; do not turn them into expected failures.
 
-**Open findings:** [guided off-screen start](findings/guided-offscreen-start.md)
-remains a failing invariant at all three Cat–Cow tiers. A separate
+**Retained findings:** [guided off-screen start](findings/guided-offscreen-start.md)
+is now fixed at all three Cat–Cow tiers. A separate
 [calibration demo rendering defect](findings/calibration-demo-label.md) was also
 discovered by the expanded shell sweep. Consult those records for fix status.
 
@@ -39,10 +40,20 @@ see [the timestamped review](../docs/sessions/historical-recording-review-2026-0
 They are not clean camera inputs or recovered landmarks. Two new default scenarios
 protect [active-state rep position/framing loss](findings/active-rep-position-loss.md)
 (FC-LAB-006): after one valid push-up, upright elbow bends or off-screen cycles
-currently produce four reps instead of one. These remain failing invariants in
-engine and browser modes. Scenario snapshots now expose the actual rep counter.
+previously produced four reps instead of one. The fixed engine/browser paths now
+preserve one rep; both original assertions remain. Scenario snapshots expose the actual rep counter.
 Personal images/audio/OCR remain local in ignored test results; no human footage
 was added to CI. Existing synthetic exercise coverage is unchanged.
+
+**Historical fixes (7 September):** `coach-regressions.test.mjs` adds 18 independent
+checks for interrupted cycles/recovery, quality-blocked setup, readiness repetition,
+framing wording and unscored bridge motion. The default runner/watch/CI invokes it
+against the explicitly selected build and saves `coach-regressions.log` in the
+report. Seven more shell cases protect camera error reasons, failed-model cleanup,
+prompt withdrawal on recovery and the unscored bridge debrief; real-time audio adds a reminder budget assertion.
+The browser/Swift scoring change deliberately refreshes only nine score checkpoint
+fields (plus provenance); tolerances and other recorded expectations are unchanged.
+See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
@@ -218,7 +229,7 @@ Regression record: [old movement audio after Skip, now fixed](findings/voice-aft
 The shell sweep also protects cancelled-clip callbacks, keyboard/button Skip,
 rest/debrief transitions and calibration verdict speech. The original capture
 case requires next-exercise teaching to play after cancellation.
-Open review: [visibility reminder repetition](findings/voice-repetition.md). A passing signal
+Frequency policy fixed; listening review remains: [visibility reminders](findings/voice-repetition.md). A passing signal
 check is not approval of the coaching experience.
 
 Important limits:
@@ -233,8 +244,8 @@ Important limits:
 - Media-element capture is not microphone/system-audio capture, speaker audibility
   or physical-device validation. These scenarios use synthetic landmarks; they
   do not yet combine audio with the accelerated MediaPipe video replay mode.
-- There are no cloud transcriptions, model calls, uploads or changed production
-  code. Reports and recordings stay in ignored `test-results/` locally; CI uploads
+- The runner makes no cloud transcription/model calls, uploads or production edits.
+  Reports and recordings stay in ignored `test-results/` locally; CI uploads
   synthetic-test evidence only. No microphone/camera permission is requested.
 
 Implementation references: [media-element routing](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaElementSource),
@@ -256,4 +267,5 @@ and [MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecord
   stream/permission error, and real voice queues with simulated audio completion.
   All-exercise demos/ghosts are checked for successful drawing, not recognisability.
   Dedicated audio cases add actual recorded-clip playback/signal coverage separately.
-- No human exercise recording has been supplied. Beginner test 02 is not replaced.
+- Historical human screen recordings have been reviewed locally, but no clean-camera
+  exercise replay is claimed. Beginner test 02 is not replaced.

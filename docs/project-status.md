@@ -63,14 +63,37 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**7 September 2026 — historical fixes implemented.** The browser now rejects
+active-state false reps and interrupted returns, explains quality-blocked setup,
+withdraws recovered tracking warnings, gives specific camera-error advice and
+shares one 30-second readiness-reminder budget. Rep drivers measure range/tempo,
+not static FORM: glute bridge retains its reps with a null form score. Stationary
+hold praise no longer fires during rep movements. Guided clipping is fixed too.
+The matching evaluator/counter changes are mirrored in Swift; Session/Calibration
+are not yet in that port. Exactly nine score checkpoint fields were deliberately
+refreshed, with unchanged tolerances and other expectations. See
+`sessions/historical-fixes-2026-09-07.md` for the policy, regressions and remaining
+real-person/audio coverage limits. The review baseline below predates these fixes.
+
+**Final post-fix verification:** `npm test` exits 0: **59/59 infrastructure tests,
+18/18 coaching regressions, 48/48 engine cases (1,207 checks), 96/96 browser cases
+(694 checks), 27/27 shell cases (140 checks), and 13/13 audio cases (237 checks)**.
+All four original harnesses pass, as do **18/18 Swift tests**. All 21 exercises /
+44 supported tier pairs are represented; no failure was suppressed. Five video
+entries remain coverage gaps, and two audio cases each report an uncaptured
+native-TTS fallback. No speech review candidates occurred in this run, which is
+not listening or beginner sign-off. Evidence:
+`test-results/2026-09-07T13-39-12-715Z-23358/` (local/ignored); the saved build hash
+matches the reviewed vector metadata and the linked implementation follow-up.
+
 **7 September 2026 — historical recordings reviewed.** A sampled review of 17
 screen recordings (246 frames, selected local-only machine transcription) confirms
 several old fixes and identifies remaining counting, setup explanation, scoring
 and camera-message concerns. See `sessions/historical-recording-review-2026-09-07.md`.
 Two new default engine/browser scenarios reproduce FC-LAB-006: after one valid
 push-up, upright elbow bends or off-screen cycles increase the count to four.
-These remain open failing invariants, not expected failures. No production,
-vector or Swift changes were made. Human screen recordings are now available for
+At that review baseline these were open failing invariants, not expected failures.
+No production, vector or Swift changes were made during the review. Human screen recordings are now available for
 review, but no clean-camera/landmark replay or second beginner trial is claimed.
 
 Full verification after adding those cases: **58/58 infrastructure self-tests**;
@@ -100,10 +123,10 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 215 KiB, no dependencies but the pose model CDN |
-| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 15/15 |
+| **Build** | `form-coach-v4.11.html` — single file, 221 KiB, no dependencies but the pose model CDN |
+| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 18/18 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
-| **Voice** | 1,351 clips planned · **210 pending render** (~£1–2.50) |
+| **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys now also need recorded clips; these use TTS fallback, not the old recordings. No new render/cost estimate is claimed. |
 | **Swift kit** | 12 sources, conformance vectors current |
 | **Beginner tests** | **1 of 2 complete** — see `test-01-max.md` |
 
@@ -120,7 +143,7 @@ source of truth, shared with the Swift tests so the two cannot drift.
 **The 23 divergences are closed, and all 23 were *harness* faults** — the build never diverged
 and the vectors were never wrong (the reasoning is kept in `README-verify.md`, including a note
 that two of the diagnoses were wrong in their specifics while right about the cause).
-`verify.mjs` now exits 0 and `swift test` passes 15/15 against the same JSON. The `frameRate`
+`verify.mjs` now exits 0 and `swift test` passes 18/18 against the same JSON. The `frameRate`
 section (4 vectors) is still skipped: it isn't replayable without the lost generator.
 
 **What was genuinely lost:** the behavioural scenario suites — cooldown neutrality, plan

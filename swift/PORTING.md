@@ -27,15 +27,18 @@ Green = the Swift engine is behaviourally identical to the browser on:
 | `repDispatch` | 2 | which slot each rep event lands in — the atPeak double-count trap |
 | `framing` | 7 | in-frame / too-far / clipped verdicts and which way to nudge |
 | `neededJoints` | 21 | the framing scope derived from each movement's targets |
-| `evaluatorScenarios` | 14 (21 checkpoints) | standing rejection, bridge priming, view gating, cue budgets |
+| `evaluatorScenarios` | 17 (25 checkpoints) | standing rejection, bridge priming, view gating, cue budgets |
 
-That is all 15 tests. A failure names the scenario, frame and field that diverged.
+There are now 18 tests: the original 15 plus active-state interruption/recovery,
+bridge-null scoring and guided clipping. A failure names the scenario, frame and
+field that diverged. The 7 September HTML-first fixes deliberately refreshed nine
+score checkpoint fields; see `docs/sessions/historical-fixes-2026-09-07.md`.
 
 ## Honest status
 
 The vectors and content JSON are machine-generated and machine-verified. The Swift
 sources are a careful 1:1 transcription of the JS, and they **compile and pass**:
-`swift test` is green at 15/15 against the repo-root fixtures. (This section used to warn
+`swift test` is green at 18/18 against the repo-root fixtures. (This section used to warn
 of compile errors on first run, written before anyone had a compiler in the loop — that
 has been true for a while now and the warning was left standing longer than it was true.)
 

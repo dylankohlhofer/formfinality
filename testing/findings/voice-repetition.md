@@ -1,6 +1,18 @@
 # FC-LAB-005 — repetitive visibility instruction
 
-Status: **open usability review candidate**, not a proven incorrect correction.
+Status: **reminder policy fixed, 7 September 2026; listening sign-off still open**.
+
+Missing/low-confidence frames, framing, wrong view and setup-quality explanations
+now share one 30-second speech budget per movement in Session and Calibration.
+Changing the error does not reset the budget; a persistent visual explanation
+remains. Rep exercises no longer receive stationary `goodhold`/`fixed` praise.
+The old seven-second repetition described below is the pre-fix evidence.
+
+`testing/coach-regressions.test.mjs` checks 65 seconds of missing/alternating input.
+The wall-clock `tracking-loss` case also requires an explanation and at most one
+reminder request in its 24-second interval. Frequency is an explicit product
+policy, not proof of comprehension. New `trackingLost` wording has a new clip key;
+it currently falls back to TTS, whose waveform the audio harness does not capture.
 
 ```sh
 npm run test:audio -- --scenario tracking-loss
@@ -20,7 +32,7 @@ one phase, even if wording varies; it does **not** fail merely because the coach
 repeats a legitimate reminder. New runs also repeat review candidates and retain
 whether the same candidate rules recur.
 
-Review question: should sustained visibility loss behave like the existing
+Original review question (now implemented): should sustained visibility loss behave like the existing
 not-ready budget—an initial instruction, a persistent visual explanation and
 less-frequent reminders? Confirm the desired user experience before changing the
 cooldown. Avoid replacing speech with silence when a beginner needs an explanation.

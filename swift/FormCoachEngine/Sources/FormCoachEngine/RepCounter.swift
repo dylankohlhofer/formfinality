@@ -45,6 +45,11 @@ public final class RepCounter {
 
     public init(_ spec: RepSpec) { self.s = spec }
 
+    /// Preserve completed work and the observed baseline; discard only this cycle.
+    public func interrupt() {
+        state = "down"; primed = false; pMax = 0; peak = 0; last = nil
+    }
+
     public func update(_ v: Double, now: Double, dt: Double = REF_DT, minScale: Double = 1) -> RepEvent? {
         if s.baseline == true {
             if base == nil { base = v }

@@ -91,7 +91,7 @@ Read `testing/README.md`: the browser suite protects the calibration `hasDemo` f
 are a coverage gap, never a successful video test.
 The default run also includes all 21 exercises / 44 supported tier pairs, 88 exercise
 browser cases, all plan selections and dedicated shell checks. The guided off-screen
-start (FC-LAB-003) is an open failing invariant, not an expected failure to suppress.
+start (FC-LAB-003) is fixed; keep its framing invariant at every tier.
 Voice changes also require `npm run test:audio` and `npm run test:audio:mutations`.
 These are included in `npm test`: actual recorded-clip capture, wall-clock coaching
 cases, and deliberate silence/overlap. Audio evidence text is intended wording,
@@ -101,10 +101,16 @@ approved by a passing check. Read the voice section of `testing/README.md`.
 FC-LAB-004 is fixed in the browser playback layer. Keep its stale-audio checks:
 Skip must cancel old current/pending speech before new teaching, and stopping a
 clip must invalidate delayed callbacks as well as pausing the media element.
-FC-LAB-006 is an open active-state rep position/framing failure. Two default
-scenarios inspired by historical recordings require one valid push-up to stay at one after upright
-elbow bends or off-screen cycles; v4.11 currently reports four. Do not whitelist
-these failures. Historical screen recordings have now been reviewed, but are not
+FC-LAB-006 is fixed: two default scenarios require one valid push-up to stay at one
+after upright elbow bends or off-screen cycles. Never weaken these invariants.
+`testing/coach-regressions.test.mjs` also protects interruption/recovery, setup
+explanations and the shared 30-second readiness/reminder budget (FC-LAB-005).
+It runs against the selected build in the default test/watch/CI loop.
+Rep drivers measure cycle range/tempo, not static FORM; exclude them from frame
+score/tint. No remaining quality measurement means null (bridge), not zero or 100.
+Five new readiness/framing keys use TTS fallback until recorded clips are rendered;
+do not reuse old head/feet clips for the new edge-based wording.
+Historical screen recordings have now been reviewed, but are not
 clean camera inputs or recovered-landmark replay coverage; see the dated review
 in `docs/sessions/` and `testing/findings/active-rep-position-loss.md`.
 
@@ -161,14 +167,15 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 ## Current state
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
-checks from the surviving vectors and exits 0. `swift test` passes 15/15 against the same
+checks from the surviving vectors and exits 0. `swift test` passes 18/18 against the same
 JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise
 coverage board, camera-handler tests with fake streams and simulated voice-queue tests.
 Reports save screenshots, traces, actual/expected results and explicit coverage gaps.
-It discovered calibration defects and an open guided off-screen arming defect.
+It discovered calibration defects, guided off-screen arming and active-state false
+reps; their regression checks are retained after the fixes.
 Dedicated real-time voice cases now capture and measure actual recorded-clip output.
 Historical human screen recordings have been sampled and reviewed locally; clean-camera
 exercise replay, native-TTS waveforms and automated physical-device coverage remain absent.

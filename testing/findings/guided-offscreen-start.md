@@ -1,7 +1,9 @@
 # FC-LAB-003: guided Cat–Cow starts with its torso outside the frame
 
-Status: reproduced engine defect, open for review. No product change or exception
-has been introduced by the test sweep.
+Status: **fixed, 7 September 2026**, with the original three failing invariants
+retained. The guided branch now applies its computed clipping veto before adding
+hold time. Cat–Cow remains guided/unscored. No movement or expectation was removed.
+The historical reproduction below describes the pre-fix build.
 
 All three supported tiers fail the independent invariant “off-screen required body
 parts cannot arm a set”. Start a single Cat–Cow plan, translate a valid all-fours
@@ -18,7 +20,11 @@ Evidence: `testing/exercise-sweep.mjs` framing assertion, independently rerun pe
 exercise/tier; each report preserves the actual and expected states. The inputs are
 synthetic and do not establish how frequently MediaPipe produces this condition.
 
-A future fix touches the engine: implement in HTML first, run all original harnesses,
+The fix followed HTML first, then the shared vectors and Swift parity checks.
+Swift already vetoed clipping in its guided branch; its judged branch was missing
+that veto and is now aligned too. A new Swift test protects guided clipping.
+
+Historical diagnosis: a future fix touches the engine; implement in HTML first, run all original harnesses,
 and deliberately review any vector differences. The Swift evaluator does exist.
 Static inspection found its clipping veto **inside the guided branch**, whereas
 the browser's veto is **after that branch returns**, in the judged path. That is a
