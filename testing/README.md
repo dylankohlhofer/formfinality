@@ -34,6 +34,16 @@ remains a failing invariant at all three Cat–Cow tiers. A separate
 [calibration demo rendering defect](findings/calibration-demo-label.md) was also
 discovered by the expanded shell sweep. Consult those records for fix status.
 
+**Historical review (7 September):** 17 supplied screen recordings were sampled;
+see [the timestamped review](../docs/sessions/historical-recording-review-2026-09-07.md).
+They are not clean camera inputs or recovered landmarks. Two new default scenarios
+protect [active-state rep position/framing loss](findings/active-rep-position-loss.md)
+(FC-LAB-006): after one valid push-up, upright elbow bends or off-screen cycles
+currently produce four reps instead of one. These remain failing invariants in
+engine and browser modes. Scenario snapshots now expose the actual rep counter.
+Personal images/audio/OCR remain local in ignored test results; no human footage
+was added to CI. Existing synthetic exercise coverage is unchanged.
+
 ## The loop
 
 ```sh

@@ -36,6 +36,7 @@ window.__testLab = {
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;
     return { index: core?.i ?? null, movement: core?.mvId ?? null, done: core?.done ?? false,
       held: core?.ev?.hold ?? 0, scoreN: core?.scoreN ?? 0, out: core?.out ?? [],
+      reps: core?.ev?.rep?.display() ?? 0,
       calibration: last('calibFinish'), finish: last('finish') };
   },
   feed(frame, dt) {

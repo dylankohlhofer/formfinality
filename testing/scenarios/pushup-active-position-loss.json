@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "pushup-active-position-loss",
+  "description": "FC-LAB-006: after a valid push-up, upright elbow bends must not count as additional push-ups. Inspired by historical repositioning footage; inputs are synthetic, not recovered camera landmarks.",
+  "oracle": "One complete, four-second push-up counts once. After leaving the required horizontal exercise position, three upright elbow-bend cycles must leave the count at one. Counting arm motion in another posture as push-ups is a false measurement. Do not treat a failed assertion as an expected failure.",
+  "tier": "building",
+  "plan": "lab-active-position-loss",
+  "planSpec": {
+    "id": "lab-active-position-loss",
+    "name": "Active position loss",
+    "tiers": ["building"],
+    "disc": "TEST",
+    "steps": [{ "ex": "push-up", "t": 100 }]
+  },
+  "steps": [
+    { "do": "start", "core": "session" },
+    { "do": "frames", "pose": "exercise:push-up:rest", "seconds": 3 },
+    { "do": "check", "label": "The requested push-up movement is active", "path": "movement", "equals": "push-up" },
+    { "do": "frames", "pose": "exercise:push-up:cycle", "seconds": 4 },
+    { "do": "check", "label": "Positive control: a complete push-up counts once", "path": "reps", "equals": 1 },
+    { "do": "frames", "pose": "exercise:push-up:upright-cycle", "seconds": 12 },
+    { "do": "check", "label": "Upright elbow bends cannot add push-ups after arming", "path": "reps", "equals": 1 },
+    { "do": "check", "label": "Position loss does not falsely finish the set", "path": "done", "equals": false },
+    { "do": "finishBySkipping" },
+    { "do": "check", "label": "User can still leave the interrupted set", "path": "done", "equals": true }
+  ]
+}

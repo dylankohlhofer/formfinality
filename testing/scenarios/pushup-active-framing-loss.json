@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "pushup-active-framing-loss",
+  "description": "FC-LAB-006: after a valid push-up, cycles whose required joints are outside the image cannot add reps. Tests the active-state boundary, not the already-covered off-screen start.",
+  "oracle": "A complete, four-second push-up counts once. Translating every required joint two image widths off-screen makes the next three cycles unobservable, even with high reported confidence. The count must remain one. Positive control prevents muting the entire counter from passing.",
+  "tier": "building",
+  "plan": "lab-active-framing-loss",
+  "planSpec": {
+    "id": "lab-active-framing-loss",
+    "name": "Active framing loss",
+    "tiers": ["building"],
+    "disc": "TEST",
+    "steps": [{ "ex": "push-up", "t": 100 }]
+  },
+  "steps": [
+    { "do": "start", "core": "session" },
+    { "do": "frames", "pose": "exercise:push-up:rest", "seconds": 3 },
+    { "do": "check", "label": "The requested push-up movement is active", "path": "movement", "equals": "push-up" },
+    { "do": "frames", "pose": "exercise:push-up:cycle", "seconds": 4 },
+    { "do": "check", "label": "Positive control: a complete push-up counts once", "path": "reps", "equals": 1 },
+    { "do": "frames", "pose": "exercise:push-up:clipped-cycle", "seconds": 12 },
+    { "do": "check", "label": "Off-screen cycles cannot add push-ups after arming", "path": "reps", "equals": 1 },
+    { "do": "check", "label": "Framing loss does not falsely finish the set", "path": "done", "equals": false },
+    { "do": "finishBySkipping" },
+    { "do": "check", "label": "User can still leave the interrupted set", "path": "done", "equals": true }
+  ]
+}

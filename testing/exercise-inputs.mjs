@@ -53,6 +53,20 @@ export function exerciseInputs(poses) {
     resolve(key, t = 0) {
       const [, id, mode] = key.split(':');
       if (!definitions[id]) throw new Error(`Unknown exercise input ${key}`);
+      // Historical screen recordings suggested counting during repositioning.
+      // These are independent synthetic inputs, NOT landmarks recovered from video.
+      if (mode === 'clipped-cycle') return frame(id, cycle(t), { clipped: true });
+      if (mode === 'upright-cycle') {
+        if (id !== 'push-up') throw new Error('Upright elbow-bend fixture is authored for push-up only');
+        const p = cycle(t), f = frame(id, p);
+        for (const side of [f.left, f.right]) Object.assign(side, {
+          shoulder: { x: .3, y: .3, c: .95 }, hip: { x: .3, y: .65, c: .95 },
+          knee: { x: .6, y: .68, c: .95 }, ankle: { x: .75, y: .68, c: .95 },
+          elbow: { x: .3 + .2 * p, y: .5 - .18 * p, c: .95 },
+          wrist: { x: .3, y: .75 - .25 * p, c: .95 }
+        });
+        return f;
+      }
       return frame(id, mode === 'cycle' ? cycle(t) : 0, { confidence: mode === 'lost' ? 0 : .95 });
     }
   };

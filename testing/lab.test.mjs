@@ -25,6 +25,10 @@ test('no assertion cannot pass silently', () => assert.throws(() => validate({ .
 test('engine boundary must exist', () => assert.throws(() => engineSource('<script type="module">wrong</script>')));
 test('duplicate modules fail', () => assert.throws(() => engineSource('<script type="module"></script><script type="module"></script>')));
 test('effect snapshot retains last verdict', () => assert.equal(snapshot(null, [{ t: 'calibFinish', payload: { tierId: 'learning' } }]).calibration.tierId, 'learning'));
+test('effect snapshot exposes the actual counter, not a fabricated zero', () => {
+  assert.equal(snapshot({ ev: { rep: { display: () => 4 } } }, []).reps, 4);
+  assert.equal(snapshot(null, []).reps, 0);
+});
 test('coverage gaps are not bugs or passes', () => assert.equal(findings([{ status: 'blocked', id: 'video', reason: 'no clip' }])[0].kind, 'coverage gap'));
 test('assertion failure is candidate, not confirmed product bug', () => assert.match(findings([{ checks: [{ pass: false, label: 'x' }] }])[0].kind, /candidate/));
 test('report escapes hostile HTML', () => assert.equal(escape('<script>"&'), '&lt;script&gt;&quot;&amp;'));
@@ -79,6 +83,36 @@ test('test instrumentation never rewrites the shipped file', async () => {
 });
 const engine = await loadEngine(await readFile(new URL('../form-coach-v4.11.html', import.meta.url), 'utf8'));
 const exercise = exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json', import.meta.url))).poses);
+test('historical active-state scenarios retain positive and negative counter assertions', async () => {
+  for (const id of ['pushup-active-position-loss', 'pushup-active-framing-loss']) {
+    const s = validate(JSON.parse(await readFile(new URL(`./scenarios/${id}.json`, import.meta.url))));
+    const checks = s.steps.filter(x => x.do === 'check' && x.path === 'reps');
+    assert.equal(checks.length, 2);
+    assert.deepEqual(checks.map(x => x.equals), [1, 1]);
+    assert.equal(s.steps.filter(x => x.do === 'frames').reduce((n,x) => n+x.seconds, 0), 19);
+  }
+});
+test('clipped cycles translate the real fixture without changing its motion', () => {
+  for (const t of [0, 1, 2, 3]) {
+    const a = exercise.resolve('exercise:push-up:cycle', t), b = exercise.resolve('exercise:push-up:clipped-cycle', t);
+    for (const side of ['left', 'right']) for (const j of Object.keys(a[side])) {
+      assert.equal(b[side][j].x, a[side][j].x - 2);
+      assert.equal(b[side][j].y, a[side][j].y);
+      assert.equal(b[side][j].c, a[side][j].c);
+      assert.ok(b[side][j].x < 0);
+    }
+  }
+});
+test('upright cycles keep the torso vertical while only the arm action changes', () => {
+  const rest = exercise.resolve('exercise:push-up:upright-cycle', 0), peak = exercise.resolve('exercise:push-up:upright-cycle', 2);
+  for (const side of ['left', 'right']) {
+    assert.equal(rest[side].hip.x, rest[side].shoulder.x);
+    assert.ok(rest[side].hip.y > rest[side].shoulder.y);
+    for (const j of ['hip', 'shoulder', 'knee', 'ankle']) assert.deepEqual(rest[side][j], peak[side][j]);
+    assert.notDeepEqual(rest[side].elbow, peak[side].elbow);
+  }
+  assert.throws(() => exercise.resolve('exercise:plank:upright-cycle'), /push-up only/);
+});
 test('every movement and supported tier has a committed scenario definition', () => {
   const scenarios = exerciseScenarios(engine);
   assert.equal(scenarios.length, 44);

@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 4 September 2026 — operational figures refreshed against v4.11. The
+**Last updated:** 7 September 2026 — historical review and test results against v4.11. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -62,6 +62,26 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 ---
 
 ## Executive summary
+
+**7 September 2026 — historical recordings reviewed.** A sampled review of 17
+screen recordings (246 frames, selected local-only machine transcription) confirms
+several old fixes and identifies remaining counting, setup explanation, scoring
+and camera-message concerns. See `sessions/historical-recording-review-2026-09-07.md`.
+Two new default engine/browser scenarios reproduce FC-LAB-006: after one valid
+push-up, upright elbow bends or off-screen cycles increase the count to four.
+These remain open failing invariants, not expected failures. No production,
+vector or Swift changes were made. Human screen recordings are now available for
+review, but no clean-camera/landmark replay or second beginner trial is claimed.
+
+Full verification after adding those cases: **58/58 infrastructure self-tests**;
+all four original harnesses green (4,127 vector checks, 8 mutations, 250 drawing
+checks, 26 skip checks); **43/48 engine cases (1,207 checks), 92/96 browser cases
+(694 checks), 20/20 shell cases (115 checks), 13/13 audio cases (240 checks)**.
+The nine failing cases are six executions of the two new push-up scenarios and
+the three existing Cat–Cow failures; all reproduce. No existing case changed
+pass/fail status. Five video entries remain coverage gaps, and one visibility-
+speech repetition concern was flagged for review. The full run exits 1; nothing
+was whitelisted. Evidence: `test-results/2026-09-07T08-19-42-453Z-12402/` (local/ignored).
 
 **The core thesis is validated.** A first-contact user who had never seen the app said the
 real-time form corrections and the red/amber body tint were what he liked about it. That was

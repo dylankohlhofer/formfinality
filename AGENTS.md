@@ -101,6 +101,12 @@ approved by a passing check. Read the voice section of `testing/README.md`.
 FC-LAB-004 is fixed in the browser playback layer. Keep its stale-audio checks:
 Skip must cancel old current/pending speech before new teaching, and stopping a
 clip must invalidate delayed callbacks as well as pausing the media element.
+FC-LAB-006 is an open active-state rep position/framing failure. Two default
+scenarios inspired by historical recordings require one valid push-up to stay at one after upright
+elbow bends or off-screen cycles; v4.11 currently reports four. Do not whitelist
+these failures. Historical screen recordings have now been reviewed, but are not
+clean camera inputs or recovered-landmark replay coverage; see the dated review
+in `docs/sessions/` and `testing/findings/active-rep-position-loss.md`.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 
@@ -164,7 +170,8 @@ coverage board, camera-handler tests with fake streams and simulated voice-queue
 Reports save screenshots, traces, actual/expected results and explicit coverage gaps.
 It discovered calibration defects and an open guided off-screen arming defect.
 Dedicated real-time voice cases now capture and measure actual recorded-clip output.
-Real-person recordings, native-TTS waveforms and physical-device coverage remain absent.
+Historical human screen recordings have been sampled and reviewed locally; clean-camera
+exercise replay, native-TTS waveforms and automated physical-device coverage remain absent.
 A manual smoke pass is still needed, and
 between them `refGates` and `verify-draw` prove a demo passes its gates and is drawn in the
 proportions it was authored in, but not that it *reads* as the movement.
