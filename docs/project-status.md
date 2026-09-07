@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 7 September 2026 — local-first stack improvements and verification against v4.11. The
+**Last updated:** 7 September 2026 — current recording review and parallel local-first audit against v4.11. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -72,6 +72,24 @@ See `sessions/current-recording-review-2026-09-07.md`. A diagnostic rolloff gap 
 the early exercise landmarks; the side-plank numeral 6 is present, while the target
 shortening/ring jump is confirmed. No fixes for this new review are claimed yet.
 
+**Parallel audit fixes:** turning automatic Voice off now stops current/pending
+speech, active camera-angle instructions withdraw on recovery, and recorded playback
+failures get a visible explanation. Explicit **Hear it** previews share the same
+playback ownership and remain available while automatic Voice is off. Seven new
+browser cases protect these paths. The isolated worker also rejects future timestamps
+without damaging its queue, and counts only results actually delivered to its consumer;
+four new unit tests protect that hardening. These are not claimed fixes for the
+recording's native speech timeouts or partial-visibility failures.
+
+**Latest integration verification:** `npm test` exits **1 solely for the new
+`reported-session` suite** (two controls pass, three cases fail). All other checks
+pass: 60 infrastructure tests, 18 historical coaching regressions, six diagnostic
+tests, 13 worker-queue tests; **48/48 engine cases (1,207 checks), 96/96 browser
+cases (694 checks), 57/57 shell cases (349 checks), 13/13 audio cases (238 checks)**.
+All four original harnesses pass unchanged. Swift source is unchanged from its
+earlier 18/18 run. Evidence: `test-results/2026-09-07T21-56-42-550Z-40759/`;
+artifact hashes and coverage limits are in `sessions/local-stack-2026-09-07.md`.
+
 **7 September 2026 — local-first stack improvements.** Session speech and the preview
 now require an explicitly local English voice; unavailable speech is explained visually
 without blocking the workout or using a remote default. Opt-in, memory-only diagnostics
@@ -87,7 +105,7 @@ the headless GPU run was much slower and discarded stale frames. Neither proves
 real-exercise accuracy or phone performance. Physical-phone testing is required before
 adoption. No vector expectations or Swift source changed in this follow-up.
 
-**Local-first verification:** `npm test` exits 0: 59 infrastructure tests, 18 coaching
+**Earlier local-first baseline verification:** `npm test` exited 0: 59 infrastructure tests, 18 coaching
 regressions, six diagnostics tests, nine worker-queue tests; **48/48 engine cases
 (1,207 checks), 96/96 browser cases (694 checks), 50/50 shell cases (293 checks),
 13/13 audio cases (238 checks)**. The original four harnesses and Swift 18/18 also
@@ -156,7 +174,7 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 247,525 bytes (242 KiB); existing external runtime, model and font assets remain; not yet an offline package |
+| **Build** | `form-coach-v4.11.html` — single file, 248,737 bytes (243 KiB); existing external runtime, model and font assets remain; not yet an offline package |
 | **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 18/18 |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |

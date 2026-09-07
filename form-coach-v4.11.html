@@ -1197,7 +1197,8 @@ function coachingFacts(r, mv){
   const keys = observed ? r.readings.filter(x => x.cue && !x.t.pos &&
     (!mv.reps || x.t.id !== mv.reps.driver) &&
     !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168)).map(x => x.cue) : [];
-  return {t:"coachContext", keys, positive:observed && r.inPose && r.score > 80, readiness:null};
+  return {t:"coachContext", keys, positive:observed && r.inPose && r.score > 80, readiness:null,
+    view:r?.ok && (r.viewLimited || r.viewCue) ? (mv.view === "front" ? "turnfront" : "turnside") : null};
 }
 /* Which joints does this movement actually measure? Derived from the metric specs
    themselves — the same content-as-data trick as the tint, so no new authoring.
@@ -2146,7 +2147,7 @@ class SessionCore {
 
     if(r.viewLimited && !this.marks.has("viewtip")){
       this.marks.add("viewtip");
-      E.push({t:"say", key:this.mv.view === "front" ? "turnfront" : "turnside", pri:1, style:"teach"});
+      E.push({t:"say", key:this.mv.view === "front" ? "turnfront" : "turnside", pri:1, style:"teach", topic:"view"});
     }
 
     if(this.mv.kind === "guided"){
@@ -3196,6 +3197,7 @@ class Coach {
   relevant(item){
     if(item.topic === "form") return this.context.keys.includes(item.key);
     if(item.topic === "readiness") return this.context.readiness === item.key;
+    if(item.topic === "view") return this.context.view === item.key;
     if(item.topic === "positive") return this.context.positive;
     return true; // rep events, teaching and controls retain their own TTL/phase rules
   }
@@ -3247,6 +3249,11 @@ class Coach {
       if(this.cur !== item) return;
       clearTimeout(this.watchdog);
       diagnosticSpeech(result.failed ? "failed" : "completed", item, result.reason);
+      if(item.mode === "recorded"){
+        const failure = "Recorded speech could not finish. Follow the on-screen instruction; no remote voice is used.";
+        if(result.failed) setSpeechStatus(failure);
+        else if($("speechStatus").textContent === failure) setSpeechStatus();
+      }
       if(item.topic && !result.failed) this.completed.set(item.topic + ":" + item.key, performance.now());
       this.cur = null;
       this.drain();
@@ -3324,6 +3331,14 @@ class Coach {
   }
 }
 const coach = new Coach();
+voiceChk.onchange = () => {
+  if(voiceChk.checked) return;
+  if(coach.pending) diagnosticSpeech("dropped", coach.pending, "voice disabled");
+  coach.pending = null;
+  // Preserve coaching facts and repeat budgets when toggling automatic speech.
+  // Clear ownership before cancelling media so abandoned callbacks cannot drain.
+  coach.cancelCurrent("voice disabled");
+};
 
 /* The browser never picks a good voice by itself. Rank what's installed, let the
    person override, remember nothing — it's one dropdown. */
@@ -3792,14 +3807,20 @@ function showWelcome(){
   $("voiceSel").onchange = e => { chosenVoiceName = e.target.value; coach.voice = null; };
   $("voicePrev").onclick = () => {
     try{
-      speechSynthesis.cancel(); AudioBank.stop();
+      // Hear it is an explicit preview, even with automatic Voice unchecked.
+      // Both playback modes use Coach ownership, cancellation and failure status.
+      coach.reset();
       /* Preview the RECORDED voice for the selected persona when the bank exists —
          the dropdown TTS voice only matters as the fallback. */
       /* was hardcoded to building — on Learning or Strong it previewed a clip from
          a tier the user isn't in. Try their tier first, then any tier that exists. */
       for(const t of [tier, "building", "learning", "strong"]){
         const clip = `voice/${persona}/${t}/fixed_0.mp3`;
-        if(AudioBank.has(clip)){ AudioBank.play([clip]); return; }
+        if(AudioBank.has(clip)){
+          const lines = PERSONAS[persona].over[t]?.fixed || TIER_LINES[t]?.fixed || BASE.fixed;
+          const text = lines[0].replace(/\{n\}/g, ""); banner(text);
+          coach.push({key:"preview", text, clips:[clip], pri:3, at:performance.now(), ttl:1500}); return;
+        }
       }
       /* Speak the persona's ACTUAL line — Steady, Warm and Energy differ in words
          even when the platform gives us one voice — with a light per-persona
@@ -3811,7 +3832,6 @@ function showWelcome(){
                 || (TIER_LINES[tier] || {}).fixed || BASE.fixed;
       const line = bank[0];
       // Preview obeys the same privacy/queue rules as session speech.
-      coach.reset();
       const text = line.replace(/\{n\}/g, ""); banner(text);
       coach.push({key:"preview", text, clips:null, pri:3, at:performance.now(), ttl:1500});
     }catch(e){}

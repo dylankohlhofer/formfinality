@@ -125,9 +125,9 @@ New unrendered phrases require a verified local TTS voice or remain visual-only.
 The audio harness captures recorded MP3 output, not native-TTS waveforms or speakers.
 Existing real-person/device coverage gaps and beginner test 02 remain release gates.
 
-## Verification
+## Initial verification (before the new recording review)
 
-`npm test` exits 0 against the final artifact: 59 infrastructure tests, 18 historical
+`npm test` exited 0 against that baseline artifact: 59 infrastructure tests, 18 historical
 coaching regressions, six diagnostic-buffer tests, nine worker-queue tests; 48 engine
 cases / 1,207 checks, 96 browser cases / 694 checks, 50 shell cases / 293 checks,
 13 audio cases / 238 checks. Original harnesses: 4,127 conformance checks, eight
@@ -147,3 +147,43 @@ native-TTS fallback. No speech review candidates occurred in this synthetic run.
 This is not a claim that physical-device speech or real-exercise behaviour is sound.
 The user supplied a new recording and diagnostic export after this verification;
 their reported failures require a separate review, not dismissal because tests passed.
+
+## Parallel audit follow-up
+
+At the user's request, two agents independently reviewed the preceding implementation
+while the main agent reviewed the new recording. The worker audit found future
+timestamps could poison the monotonic clock and acceptance statistics could count a
+result never delivered after a pending-transfer error. Both are fixed, with four new
+tests (13 worker-queue tests total). Same-clock freshness, disposal, reset and reentrant
+consumer invariants remain. The benchmark measurements above predate this hardening;
+they are not newly measured numbers or justification to enable the worker.
+
+The speech audit found three additional issues, now fixed: unchecking Voice left
+current/pending speech alive; active-set view hints did not withdraw on recovery;
+recorded failures released their queue without a visible explanation. Seven new
+production-path browser cases cover recorded/native cancellation, explicit preview
+while automatic Voice is off, current/pending view hints for both camera orientations,
+and recorded failure/recovery. The focused coaching suite passes 10 cases / 70 checks.
+Explicit **Hear it** remains an intentional preview while automatic Voice is off.
+
+These are lifecycle fixes, not a claimed cure for the real recording's native speech
+timeouts, file-origin asset loading, visibility refusals or diagnostic mobile layout.
+See [the current recording review](current-recording-review-2026-09-07.md). That review's
+three new failing cases remain in the default loop. The earlier whole-file/module
+hashes above identify the reviewed baseline, not the updated artifact.
+
+Final integration verification of the parallel fixes: `npm test` exits **1 solely
+for `reported-session`** (two passing controls, three open failing cases). All other
+checks pass: 60 infrastructure tests, 18 historical coaching regressions, six
+diagnostic-buffer tests, 13 worker-queue tests; 48 engine cases / 1,207 checks,
+96 browser cases / 694 checks, 57 shell cases / 349 checks, and 13 audio cases /
+238 checks. Original harnesses remain 4,127 conformance, eight mutations, 250 drawing
+and 26 skip checks, all passing. Swift is unchanged from the earlier 18/18 run.
+Five video gaps and two uncaptured native-TTS fallbacks remain; there were no
+synthetic speech review candidates. This is not a green release verdict.
+
+Evidence: `test-results/2026-09-07T21-56-42-550Z-40759/` (local/ignored).
+Whole HTML SHA-256: `cb740ec6f3f11dd681dee70ab474c92be142f3d00a5242f805cabdd128ba8048`.
+Running module SHA-256: `4db74b2b698f279c49dbc67508d626d9bb35d106e391b81a2975a2020ff606c0`.
+The artifact is 248,737 bytes. Static audits and `git diff --check` remain clean.
+No vector expectations, movement content or Swift source changed in this follow-up.

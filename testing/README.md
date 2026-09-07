@@ -58,8 +58,8 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 ## The loop
 
 **Local-first stack improvements (7 September):** the default suite now also runs
-six diagnostic-buffer tests and nine worker-queue tests, plus 17 speech-privacy,
-three diagnostic UI and three coaching-context shell cases. The original 18
+six diagnostic-buffer tests and thirteen worker-queue tests, plus 17 speech-privacy,
+three diagnostic UI and ten coaching-context/lifecycle shell cases. The original 18
 coaching regressions remain. `coach-regressions.log`, `diagnostics.log` and
 `worker-queue.log` retain their results against the saved run build where applicable.
 The production recorder lives under **Private diagnostics** below the camera.
