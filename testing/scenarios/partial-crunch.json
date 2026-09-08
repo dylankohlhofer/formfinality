@@ -1,0 +1,272 @@
+{
+  "schema": 1,
+  "id": "partial-crunch",
+  "movement": "crunch",
+  "capture": "ui",
+  "description": "Partial-visibility pack: crunch, observable movement, misleading motion, observation loss and recovery.",
+  "oracle": "Six complete observed four-second cycles count. Rest, unrelated movement, two ankle-hidden cycles, a peak interrupted by missing evidence and wholly off-screen motion add none. Missing ankle checks protect against false credit; they do not validate a fallback. Inputs are synthetic, not recovered camera detections.",
+  "tier": "building",
+  "plan": "lab-partial-crunch",
+  "planSpec": {
+    "id": "lab-partial-crunch",
+    "name": "Partial-view crunch",
+    "tiers": [
+      "building"
+    ],
+    "disc": "TEST",
+    "steps": [
+      {
+        "ex": "crunch",
+        "t": 100
+      }
+    ]
+  },
+  "steps": [
+    {
+      "do": "start",
+      "core": "session"
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:feet-rest",
+      "seconds": 2
+    },
+    {
+      "do": "check",
+      "label": "Missing required setup evidence cannot arm",
+      "path": "state",
+      "equals": "setup"
+    },
+    {
+      "do": "check",
+      "label": "No setup repetitions",
+      "path": "reps",
+      "equals": 0
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rest",
+      "seconds": 3
+    },
+    {
+      "do": "check",
+      "label": "Visible setup arms",
+      "path": "state",
+      "equals": "active"
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "One visible cycle counts",
+      "path": "reps",
+      "equals": 1
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rest",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Stationary rest adds no repetitions",
+      "path": "reps",
+      "equals": 1
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:head-rest",
+      "seconds": 2
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:head-cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Cropped head preserves the observed cycle",
+      "path": "reps",
+      "equals": 2
+    },
+    {
+      "do": "check",
+      "label": "Unseen neck has no form score",
+      "path": "observation.score",
+      "equals": null
+    },
+    {
+      "do": "check",
+      "label": "Neck coverage is unavailable",
+      "path": "observation.evidence.form.status",
+      "equals": "unavailable"
+    },
+    {
+      "do": "ui",
+      "label": "No neck form bar",
+      "selector": "#scoreCol",
+      "visible": false
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:far-side-cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "A complete camera side still counts",
+      "path": "reps",
+      "equals": 3
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:hands-cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Unused hands do not veto movement",
+      "path": "reps",
+      "equals": 4
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:misleading",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Misleading non-exercise motion adds nothing",
+      "path": "reps",
+      "equals": 4
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:feet-cycle",
+      "seconds": 8
+    },
+    {
+      "do": "check",
+      "label": "Unobservable ankle-dependent cycles add nothing (unresolved recognition limit)",
+      "path": "reps",
+      "equals": 4
+    },
+    {
+      "do": "check",
+      "label": "Missing movement evidence is explicit",
+      "path": "observation.evidence.movement.status",
+      "equals": "unavailable"
+    },
+    {
+      "do": "check",
+      "label": "Missing movement is not scored as bad form",
+      "path": "observation.score",
+      "equals": null
+    },
+    {
+      "do": "ui",
+      "label": "Form bar is hidden while required evidence is missing",
+      "selector": "#scoreCol",
+      "visible": false
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rest",
+      "seconds": 2
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rise",
+      "seconds": 1.5
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:feet-peak",
+      "seconds": 0.5
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:peak",
+      "seconds": 0.5
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rest",
+      "seconds": 2
+    },
+    {
+      "do": "check",
+      "label": "A hidden peak cannot be spliced into a completed rep",
+      "path": "reps",
+      "equals": 4
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "A fresh observed recovery cycle counts once",
+      "path": "reps",
+      "equals": 5
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:offscreen-cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Fully off-screen movement adds nothing",
+      "path": "reps",
+      "equals": 5
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:rest",
+      "seconds": 2
+    },
+    {
+      "do": "frames",
+      "pose": "partial:crunch:cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Second recovery neither loses nor doubles the fresh rep",
+      "path": "reps",
+      "equals": 6
+    },
+    {
+      "do": "ui",
+      "label": "Visible counter agrees after recovery",
+      "selector": "#big",
+      "text": "6/100"
+    },
+    {
+      "do": "finishBySkipping"
+    },
+    {
+      "do": "check",
+      "label": "The user can finish the session",
+      "path": "done",
+      "equals": true
+    },
+    {
+      "do": "check",
+      "label": "Skip stays null, never zero",
+      "path": "out.0.score",
+      "equals": null
+    },
+    {
+      "do": "check",
+      "label": "Skip remains explicit",
+      "path": "out.0.skipped",
+      "equals": true
+    }
+  ]
+}

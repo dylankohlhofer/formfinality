@@ -57,6 +57,20 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Four-exercise partial-visibility pack:** run `npm run test:partial` to select
+Squat, Crunch, Leg Raise and Plank in this same runner (engine, desktop/narrow
+browser, saved screenshots/traces, automatic failure reproduction and explicit
+video gaps). No new app, model, dashboard or recording format is introduced.
+`npm run test:partial -- --mode engine` is the quick counting-only pass.
+The four scenarios are also discovered by default test/watch/CI, and 30 companion
+tests run as `partial-visibility` in the default regression loop, including all
+nine supported exercise-tier pairs and deliberate false-credit mutations.
+Read [the pack guide](partial-visibility.md) for the cases, existing recording
+provenance and narrowly specified new-evidence needs. Missing-ankle counting/hold
+recognition remains explicitly incomplete in both JSON/HTML and `REVIEW.md`, even
+when the no-false-credit checks pass. The existing audio suite remains separate:
+these accelerated browser scenarios do not capture or judge speech.
+
 **Local-first stack improvements (7 September):** the default suite also runs
 17 diagnostic-buffer tests, 120 setup-prompt tests and thirteen worker-queue tests,
 plus 17 speech-privacy, seven diagnostic UI and ten coaching-context/lifecycle shell cases. The original 18

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { exerciseInputs } from './exercise-inputs.mjs';
+import { partialVisibilityInputs } from './partial-visibility-inputs.mjs';
 
 export const hash = data => createHash('sha256').update(data).digest('hex');
 export function compactEffects(effects) {
@@ -46,6 +47,8 @@ export function validate(s) {
   const kinds = ['start', 'frames', 'check', 'skip', 'finishBySkipping', 'ui', 'focusGuard', 'demo', 'csv'];
   if (s.planSpec && (s.planSpec.id !== s.plan || !s.planSpec.steps?.length || !s.planSpec.steps.every(x => typeof x.ex === 'string' && Number.isFinite(x.t))))
     throw new Error('Invalid test-only plan');
+  if (s.coverageGaps !== undefined && (!Array.isArray(s.coverageGaps) ||
+      !s.coverageGaps.every(x => typeof x === 'string' && x.trim()))) throw new Error('Invalid scenario coverage gaps');
   if (s.steps[0].do !== 'start') throw new Error('Scenario must start a core');
   if (!s.steps.some(step => step.do === 'check')) throw new Error('Scenario must contain an independent engine assertion');
   for (const step of s.steps) {
@@ -76,6 +79,7 @@ export function assertion(step, snapshot) {
 export function snapshot(core, effects) {
   const last = t => effects.findLast(e => e.t === t)?.payload ?? null;
   return { index: core?.i ?? null, movement: core?.mvId ?? null, done: core?.done ?? false,
+    state: core?.state ?? null, observation: effects.findLast(e => e.t === 'telem')?.r ?? null,
     held: core?.ev?.hold ?? 0, scoreN: core?.scoreN ?? 0, out: core?.out ?? [],
     reps: core?.ev?.rep?.display() ?? 0,
     calibration: last('calibFinish'), finish: last('finish') };
@@ -83,8 +87,10 @@ export function snapshot(core, effects) {
 export async function fixtures(root) {
   const vectors = JSON.parse(await readFile(new URL('../conformance-vectors.json', root), 'utf8'));
   const exercise = exerciseInputs(vectors.poses);
+  const partial = partialVisibilityInputs(exercise, vectors.poses);
   return (pose, t = 0) => {
     if (pose === null) return null;
+    if (pose.startsWith('partial:')) return partial(pose, t);
     if (pose.startsWith('exercise:')) return exercise.resolve(pose, t);
     const joints = vectors.poses[pose];
     if (!joints) throw new Error(`Missing pose fixture: ${pose}`);

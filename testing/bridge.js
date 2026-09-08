@@ -39,6 +39,7 @@ window.__testLab = {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;
     return { index: core?.i ?? null, movement: core?.mvId ?? null, done: core?.done ?? false,
+      state: core?.state ?? null, observation: testEffects.findLast(e => e.t === 'telem')?.r ?? null,
       held: core?.ev?.hold ?? 0, scoreN: core?.scoreN ?? 0, out: core?.out ?? [],
       reps: core?.ev?.rep?.display() ?? 0,
       calibration: last('calibFinish'), finish: last('finish') };

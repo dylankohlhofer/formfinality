@@ -8,18 +8,21 @@ import { runBrowser } from './browser.mjs';
 import { report } from './report.mjs';
 import { librarySweep } from './library.mjs';
 import { audioSweep } from './audio-sweep.mjs';
+import { selectPack } from './packs.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2), options = {};
 for (let i = 0; i < args.length; i++) {
   const key = args[i];
-  if (!['--build', '--mode', '--scenario', '--scenario-file', '--landmarks', '--recording', '--require-video', '--library-only'].includes(key)) throw new Error(`Unknown argument ${key}`);
+  if (!['--build', '--mode', '--scenario', '--scenario-file', '--pack', '--landmarks', '--recording', '--require-video', '--library-only'].includes(key)) throw new Error(`Unknown argument ${key}`);
   if (key === '--require-video') options.requireVideo = true;
   else if (key === '--library-only') options.libraryOnly = true;
   else { if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(`Missing value for ${key}`); options[key.slice(2)] = args[++i]; }
 }
-if (!options.build) throw new Error('Usage: node testing/run.mjs --build <build.html> [--mode all|engine|browser|video|audio] [--scenario id] [--recording private-file.mp4] [--require-video]');
+if (!options.build) throw new Error('Usage: node testing/run.mjs --build <build.html> [--mode all|engine|browser|video|audio] [--scenario id | --pack id] [--recording private-file.mp4] [--require-video]');
 options.mode ??= 'all';
+if (options.pack && (!/^[a-z0-9-]+$/.test(options.pack) || options.scenario || options['scenario-file'] ||
+    options.libraryOnly || options.mode === 'audio')) throw new Error('A named pack cannot be combined with scenario, scenario-file, library-only or audio selection');
 if (!['all', 'engine', 'browser', 'video', 'audio'].includes(options.mode)) throw new Error('Unknown mode');
 if (options.mode === 'audio' && (options.recording || options.landmarks || options['scenario-file'] || options.libraryOnly))
   throw new Error('Audio uses committed wall-clock cases: optionally select --scenario <audio-case-id>. Video/landmark inputs are not supported in this mode yet.');
@@ -50,7 +53,7 @@ run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity']) {
+  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });
@@ -70,12 +73,19 @@ if (options.mode === 'all') {
 const frameFor = await fixtures(new URL('./', import.meta.url));
 const engine = await loadEngine(html);
 const files = (await readdir(resolve(root, 'testing/scenarios'))).filter(f => f.endsWith('.json')).sort();
-const scenarios = [];
+let scenarios = [];
 for (const file of options['scenario-file'] ? [resolve(options['scenario-file'])] : files.map(f => resolve(root, 'testing/scenarios', f))) {
   const s = validate(JSON.parse(await readFile(file, 'utf8')));
   if (!options.scenario || s.id === options.scenario) scenarios.push(s);
 }
 if (!scenarios.length && options.mode !== 'audio') throw new Error('No matching scenario');
+if (options.pack) {
+  const pack = JSON.parse(await readFile(resolve(root, 'testing/packs', options.pack + '.json'), 'utf8'));
+  scenarios = selectPack(pack, scenarios, options.pack);
+  run.pack = pack; run.packHash = hash(JSON.stringify(pack));
+  run.limitations.push(...pack.limitations);
+  await writeFile(resolve(dir, 'pack.json'), JSON.stringify(pack, null, 2));
+}
 const modes = options.mode === 'all' ? ['engine', 'browser', 'video'] : [options.mode];
 for (const scenario of options.libraryOnly || options.mode === 'audio' ? [] : scenarios) for (const mode of modes) {
   if (mode === 'video' && !options.recording) {
@@ -122,7 +132,8 @@ for (const scenario of options.libraryOnly || options.mode === 'audio' ? [] : sc
         } catch (error) { result.reproduced = false; result.reproductionError = error.message; }
       }
     } catch (error) { result = { status: 'error', error: error.stack }; }
-    Object.assign(result, { id, mode, evidence, description: scenario.description, scenarioHash: hash(JSON.stringify(scenario)) });
+    Object.assign(result, { id, mode, evidence, description: scenario.description, scenarioHash: hash(JSON.stringify(scenario)),
+      coverageGaps: scenario.coverageGaps || [] });
     if (mode === 'video') {
       try { result.recordingHash = hash(await readFile(resolve(options.recording))); }
       catch (error) { result.recordingError = error.message; }
@@ -134,7 +145,7 @@ for (const scenario of options.libraryOnly || options.mode === 'audio' ? [] : sc
     run.status = 'running'; await report(dir, run);
   }
 }
-if (!options.scenario && !options['scenario-file'] && !['video', 'audio'].includes(options.mode)) {
+if (!options.pack && !options.scenario && !options['scenario-file'] && !['video', 'audio'].includes(options.mode)) {
   run.coverage = await librarySweep({ root, html, engine, frameFor, dir, mode: options.mode,
     onResult: async result => {
       run.results.push(result); run.status = 'running';
@@ -143,14 +154,16 @@ if (!options.scenario && !options['scenario-file'] && !['video', 'audio'].includ
   await writeFile(resolve(dir, 'coverage.json'), JSON.stringify(run.coverage, null, 2));
   run.results.push({ id: 'exercise-library/video', mode: 'video', status: 'blocked', reason: 'All 21 exercises still need consented human recordings with independently reviewed expectations.' });
 }
-if (options.mode === 'audio' || options.mode === 'all' && !options.scenario && !options['scenario-file'] && !options.libraryOnly) {
+if (options.mode === 'audio' || options.mode === 'all' && !options.pack && !options.scenario && !options['scenario-file'] && !options.libraryOnly) {
   await audioSweep({ root, html, dir, only: options.mode === 'audio' ? options.scenario : undefined,
     onResult: async result => { run.results.push(result); } });
 }
 const failed = run.results.some(r => ['failed', 'error'].includes(r.status));
 const blocked = run.results.some(r => r.status === 'blocked');
 const audioGap = run.results.some(r => r.audioGaps?.length);
-run.status = failed ? 'failed' : blocked || audioGap ? 'passed checks; ' + [blocked && 'video', audioGap && 'audio'].filter(Boolean).join(' and ') + ' coverage incomplete' : 'passed checks';
+const recognitionGap = run.results.some(r => r.coverageGaps?.length);
+run.status = failed ? 'failed' : blocked || audioGap || recognitionGap ? 'passed checks; ' +
+  [blocked && 'video', audioGap && 'audio', recognitionGap && 'recognition'].filter(Boolean).join(' and ') + ' coverage incomplete' : 'passed checks';
 await report(dir, run);
 await writeFile(resolve(root, 'test-results/LATEST.txt'), relative(root, dir) + '\n');
 console.log(`Review: ${resolve(dir, 'index.html')}`);

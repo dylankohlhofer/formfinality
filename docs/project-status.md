@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 8 September 2026 — partial-view movement evidence and Swift parity against v4.11. The
+**Last updated:** 8 September 2026 — four-exercise partial-visibility pack on the existing test infrastructure. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -63,6 +63,32 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Four-exercise test pack, existing infrastructure:** `npm run test:partial` selects
+Squat, Crunch, Leg Raise and Plank through the same engine/browser/video runner,
+reports, screenshots/traces and failure reproduction. Four new timelines are also
+in default test/watch/CI. Thirty companion tests cover all nine supported tier
+pairs, fixture transformations, exact hold freezes, false-credit mutations and
+explicit unresolved-recognition reporting. No production HTML, model, thresholds,
+vectors, speech or Swift behaviour changed. See `testing/partial-visibility.md`.
+
+The focused run passes **4 engine cases / 77 checks** and **8 desktop/narrow browser
+cases / 180 checks**. Requiring missing video correctly exits 2. Leg Raise/Plank
+ankle-loss safety checks remain labelled recognition gaps, not a claimed fix.
+Screenshot review additionally flagged a narrow-screen warning/control overlap;
+it is a manual review candidate, not a passing layout test or a fixed app defect.
+See `testing/findings/partial-view-mobile-warning.md` for the retained evidence.
+
+**Latest verification:** `npm test` exits **0** at
+`test-results/2026-09-08T08-11-50-039Z-80412/`: 64 infrastructure tests, all eight
+regression suites (including the 30 new pack tests), the original four harnesses,
+**53 engine cases / 1,291 checks, 106 browser cases / 894 checks, 61 shell cases /
+628 checks and 13 audio cases / 238 checks**. Ten missing-video entries, two native-
+TTS waveform gaps and six case-level recognition warnings (two unresolved problems
+repeated across engine/desktop/narrow modes) remain. Zero speech review candidates
+does not certify coaching quality; the separate manually reviewed layout candidate
+above remains open. Swift is unchanged and was not rerun for this infrastructure-only
+change. See `sessions/partial-visibility-pack-2026-09-08.md` for artifact identity.
+
 **Latest user recording — software fixes are not release validation.** All five
 retained cases in `testing/reported-session.test.mjs` now pass. Optional cropped
 neck evidence no longer vetoes otherwise visible Crunch cycles or invents a neck
@@ -85,7 +111,7 @@ phone performance measured. The protocol and signing prerequisite are in
 `sessions/native-spike-readiness-2026-09-08.md`. Full interface porting and
 modularisation remain separate; there is no framework/model replacement in this fix.
 
-**Latest verification:** `npm test` exits **0** at
+**Previous movement-evidence verification:** `npm test` exits **0** at
 `test-results/2026-09-07T23-49-22-795Z-63278/`: 64 infrastructure tests; 18 coaching,
 120 prompt, 17 diagnostic, 13 worker, five reported-session, 229 movement-evidence
 tests and 17 shared cases; all four original harnesses; **49 engine cases / 1,214

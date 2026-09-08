@@ -10,6 +10,7 @@ export function findings(results) {
     if (r.error) return [{ kind: 'execution error — needs triage', case: r.id, detail: r.error }];
     return [...(r.concerns || []).map(c => ({ kind: 'voice review candidate — human judgement needed', case: r.id, detail: c.detail, ms: c.ms })),
       ...(r.audioGaps || []).map(detail => ({ kind: 'coverage gap', case: r.id, detail })),
+      ...(r.coverageGaps || []).map(detail => ({ kind: 'coverage gap', case: r.id, detail })),
       ...(r.checks || []).filter(c => !c.pass).map(c => ({ kind: 'assertion failure — bug candidate',
       case: r.id, detail: c.label, step: c.step, actual: c.actual, expected: c.expected,
       reproduced: r.reproduced ?? false }))];
@@ -20,6 +21,7 @@ export async function report(dir, run) {
   await writeFile(resolve(dir, 'report.json'), JSON.stringify(run, null, 2));
   const cards = run.results.map(r => `<section><h2>${escape(r.id)} — ${escape(r.status)}</h2>
     <p>${escape(r.description || r.reason || '')}</p>
+    ${(r.coverageGaps || []).map(detail => `<p><strong>Coverage gap:</strong> ${escape(detail)}</p>`).join('')}
     ${r.error ? `<pre>${escape(r.error)}</pre>` : ''}
     ${suiteLog(r) ? `<p><a href="${escape(suiteLog(r))}">Individual checks and failure details</a></p>` : ''}
     ${r.audio ? `<p><a href="${escape(r.evidence)}/audio-review.html">Listen and review the speech timeline</a></p><audio controls preload="none" src="${escape(r.evidence)}/audio.webm"></audio>

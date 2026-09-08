@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "partial-visibility",
+  "description": "Four-exercise partial-view review pack, using the existing scenario/engine/browser/video loop.",
+  "scenarios": ["partial-squat", "partial-crunch", "partial-leg-raise", "partial-plank"],
+  "limitations": [
+    "Synthetic observation changes test counting and presentation rules, not how MediaPipe detects a genuinely cropped body. No camera footage or new acoustic capture is supplied by this pack.",
+    "Leg Raise ankle loss: pause/no-false-rep checks are a safety baseline, NOT a solution to the missed-rep usability problem. A thigh-based driver still requires independently reviewed positive and negative camera evidence.",
+    "Plank ankle loss: withheld time and null form are a safety baseline, NOT successful partial-view hold recognition. No unseen lower-body alignment is inferred.",
+    "The September recording/diagnostic review is reused as symptom provenance, not relabelled as clean-camera replay: its retained exercise landmarks are Side Plank only. See docs/sessions/current-recording-review-2026-09-07.md.",
+    "Browser runs use Building tier at desktop/narrow widths. The companion regression suite replays the same scenarios across all nine supported exercise-tier pairs. Neither establishes beginner comprehension or physical-phone performance."
+  ]
+}

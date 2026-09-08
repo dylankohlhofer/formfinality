@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "id": "partial-plank",
+  "movement": "plank",
+  "coverageGaps": ["FC-LAB-009 remains open for required ankle/body-line loss: paused time and null form are a safety baseline, not validated partial-view Plank recognition. Real camera and beginner validation remain absent."],
+  "capture": "ui",
+  "description": "Partial-visibility pack: Plank timing, optional head/hand loss, required ankle loss and recovery.",
+  "oracle": "Setup requires 1.8 continuous observed seconds and arm resets held time. Subsequent observable seconds count; hidden required geometry, standing and wholly off-screen intervals do not. Time intervals allow at most three 30fps frames of boundary tolerance, not invented unseen hold time. Ankle-loss refusal is a safety baseline, not a solved partial-view hold.",
+  "tier": "building",
+  "plan": "lab-partial-plank",
+  "planSpec": {
+    "id": "lab-partial-plank",
+    "name": "Partial-view Plank",
+    "tiers": [
+      "building"
+    ],
+    "disc": "TEST",
+    "steps": [
+      {
+        "ex": "plank",
+        "t": 100
+      }
+    ]
+  },
+  "steps": [
+    {
+      "do": "start",
+      "core": "session"
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:feet-rest",
+      "seconds": 3
+    },
+    {
+      "do": "check",
+      "label": "Hidden ankles cannot arm Plank",
+      "path": "state",
+      "equals": "setup"
+    },
+    {
+      "do": "check",
+      "label": "Unobserved setup earns no hold time",
+      "path": "held",
+      "equals": 0
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:rest",
+      "seconds": 3
+    },
+    {
+      "do": "check",
+      "label": "Visible Plank arms",
+      "path": "state",
+      "equals": "active"
+    },
+    {
+      "do": "check",
+      "label": "Observed time starts after setup",
+      "path": "held",
+      "between": [
+        1.1,
+        1.3
+      ]
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:head-rest",
+      "seconds": 3
+    },
+    {
+      "do": "check",
+      "label": "Optional head loss preserves hold time",
+      "path": "held",
+      "between": [
+        4.1,
+        4.3
+      ]
+    },
+    {
+      "do": "check",
+      "label": "Form coverage reports the missing neck",
+      "path": "observation.evidence.form.status",
+      "equals": "partial"
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:hands-cycle",
+      "seconds": 3
+    },
+    {
+      "do": "check",
+      "label": "Unused hands preserve hold time",
+      "path": "held",
+      "between": [
+        7.1,
+        7.3
+      ]
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:feet-rest",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Missing ankles add no time (unresolved recognition limit)",
+      "path": "held",
+      "between": [
+        7.1,
+        7.3
+      ]
+    },
+    {
+      "do": "check",
+      "label": "Missing required hold evidence is explicit",
+      "path": "observation.evidence.movement.status",
+      "equals": "unavailable"
+    },
+    {
+      "do": "check",
+      "label": "No reassuring form score during unobserved hold",
+      "path": "observation.score",
+      "equals": null
+    },
+    {
+      "do": "ui",
+      "label": "No form bar during required observation loss",
+      "selector": "#scoreCol",
+      "visible": false
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:misleading",
+      "seconds": 2
+    },
+    {
+      "do": "check",
+      "label": "Standing is not credited as Plank",
+      "path": "held",
+      "between": [
+        7.1,
+        7.3
+      ]
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:rest",
+      "seconds": 2
+    },
+    {
+      "do": "check",
+      "label": "Visible recovery resumes counting",
+      "path": "held",
+      "between": [
+        9.1,
+        9.3
+      ]
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:offscreen-cycle",
+      "seconds": 4
+    },
+    {
+      "do": "check",
+      "label": "Wholly off-screen time adds nothing",
+      "path": "held",
+      "between": [
+        9.1,
+        9.3
+      ]
+    },
+    {
+      "do": "frames",
+      "pose": "partial:plank:far-side-cycle",
+      "seconds": 2
+    },
+    {
+      "do": "check",
+      "label": "A complete observed side supports recovered hold",
+      "path": "held",
+      "between": [
+        11.1,
+        11.3
+      ]
+    },
+    {
+      "do": "check",
+      "label": "One-side recovery is eligible",
+      "path": "observation.evidence.movement.eligible",
+      "equals": true
+    },
+    {
+      "do": "ui",
+      "label": "Recovered visible form can be displayed",
+      "selector": "#scoreCol",
+      "visible": true
+    },
+    {
+      "do": "finishBySkipping"
+    },
+    {
+      "do": "check",
+      "label": "Session finishes on request",
+      "path": "done",
+      "equals": true
+    },
+    {
+      "do": "check",
+      "label": "Skipped hold score remains null",
+      "path": "out.0.score",
+      "equals": null
+    },
+    {
+      "do": "check",
+      "label": "Skip remains explicit",
+      "path": "out.0.skipped",
+      "equals": true
+    }
+  ]
+}

@@ -6,6 +6,7 @@
     "test": "node --test testing/lab.test.mjs testing/audio.test.mjs testing/audio-capture.test.mjs && node testing/run.mjs --build form-coach-v4.11.html",
     "test:watch": "node testing/watch.mjs --build form-coach-v4.11.html",
     "test:lab": "node testing/run.mjs --build form-coach-v4.11.html",
+    "test:partial": "node testing/run.mjs --build form-coach-v4.11.html --pack partial-visibility",
     "test:infra": "node --test testing/lab.test.mjs testing/audio.test.mjs",
     "test:audio": "node testing/run.mjs --build form-coach-v4.11.html --mode audio",
     "test:audio:mutations": "node --test testing/audio-capture.test.mjs",

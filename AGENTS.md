@@ -148,6 +148,13 @@ unfinished rep, never completed reps. Reset `targetSources`, `driverSource` and
 `testing/movement-evidence.test.mjs` and `testing/evidence-parity.test.mjs` run in the
 default loop. Swift reads the same `testing/movement-evidence-vectors.json` cases.
 The new `crunch-partial-quality` scenario exercises actual browser effects too.
+The four `partial-*` scenarios and `testing/partial-visibility.test.mjs` reuse that
+same runner: `npm run test:partial` selects the pack without a parallel harness.
+Keep its positive cycles, stationary/misleading-motion negatives, hidden-peak
+interruption, no-false-credit and recovery checks. Pack tests cover nine supported
+tier pairs; browser timelines use Building tier. `coverageGaps` must survive in
+reports even when safety checks pass: refusing ankle-hidden work is not a solved
+Leg Raise/Plank recognition feature. See `testing/partial-visibility.md`.
 Only three historical checkpoint fields were deliberately refreshed (plus provenance)
 in `crunch-needs-the-ear`; its straight-legged input still cannot arm or earn reps.
 Leg-raise ankle loss and missing required Plank geometry remain unresolved recognition
