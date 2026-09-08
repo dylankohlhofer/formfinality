@@ -4,6 +4,13 @@ Merges the conversion plan and the go/no-go gate into one document. The old sepa
 versions lived only in the lost sandbox; `archive/superseded-docs/` has never existed in
 this repository, and this document is the surviving consolidation.
 
+**8 September 2026:** the user has authorised a narrow native camera/audio experiment
+before committing to the full port below. This is an integration-risk check, not a
+replacement for beginner test 02. See
+`sessions/native-spike-readiness-2026-09-08.md` for the paired-phone check, remaining
+signing prerequisite and measurement protocol. Current results in `project-status.md` take
+precedence over the historical schedule and estimates here.
+
 ---
 
 ## Part 1 — the gate: when porting is justified
@@ -38,11 +45,11 @@ Already true; confirm on the day.
 
 | | Status |
 |---|---|
-| `swift test` runs and names divergences | ✅ Xcode licensed, **15/15 passing** |
+| `swift test` runs and names divergences | ✅ **25/25 passing**; this package test is not a runnable iPhone app |
 | Content exported as data, zero hand-transcription | ✅ `content-v4.8.json` |
 | Vector specification is green | ✅ 1,896 rows · `verify.mjs` 4,127 checks, 0 divergences |
 | Browser-only invariants are executable | ✅ mutations 8/8 · drawing 250/250 · skip 26/26 |
-| No open engine bugs | ✅ eight reviews |
+| No open engine bugs | Not established: missing-ankle recognition and side-plank target policy remain open; native speech also needs a device fix |
 
 ### The sequence
 
