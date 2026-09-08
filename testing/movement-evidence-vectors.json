@@ -1,0 +1,30 @@
+{
+  "schema": "movement-evidence-parity/1",
+  "oracle": "Independently declared movement/form rules. Synthetic fixture anchors and four-second cycles, not human accuracy or generated expected outputs. Same inputs/expectations consumed by browser engine and Swift.",
+  "fixtures": {
+    "crunch": {"rest": "bridgeDown", "peak": {"shoulder": [0.35, 0.60], "ear": [0.29, 0.52]}},
+    "push-up": {"rest": "pushTop", "peakPose": "pushBottom"},
+    "leg-raise": {"rest": "supine", "peak": {"knee": [0.56, 0.53], "ankle": [0.58, 0.30], "heel": [0.60, 0.29], "toe": [0.66, 0.22]}},
+    "plank": {"rest": "plank"},
+    "side-plank": {"rest": "plank"}
+  },
+  "cases": [
+    {"id":"crunch-visible", "movement":"crunch", "fps":30, "cycle":true, "reps":3, "held":0, "eligible":true, "form":"complete"},
+    {"id":"crunch-no-ear", "movement":"crunch", "fps":30, "cycle":true, "loss":{"joints":["ear"],"mode":"missing"}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"crunch-cropped-ear-15fps", "movement":"crunch", "fps":15, "cycle":true, "loss":{"joints":["ear"],"mode":"outside"}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"crunch-low-ear-60fps", "movement":"crunch", "fps":60, "cycle":true, "loss":{"joints":["ear"],"mode":"low"}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"crunch-no-position-ankle", "movement":"crunch", "fps":30, "cycle":true, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"crunch-wholly-cropped", "movement":"crunch", "fps":30, "cycle":true, "loss":{"all":true,"mode":"outside"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"pushup-visible", "movement":"push-up", "fps":30, "cycle":true, "reps":3, "held":0, "eligible":true, "form":"complete"},
+    {"id":"pushup-no-driver", "movement":"push-up", "fps":30, "cycle":true, "loss":{"joints":["wrist"],"mode":"low"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"legraise-visible", "movement":"leg-raise", "fps":30, "cycle":true, "reps":3, "held":0, "eligible":true, "form":"complete"},
+    {"id":"legraise-cropped-optional-knee", "movement":"leg-raise", "fps":30, "cycle":true, "loss":{"joints":["knee"],"mode":"outside"}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"legraise-cropped-optional-feet", "movement":"leg-raise", "fps":30, "cycle":true, "loss":{"joints":["heel","toe"],"mode":"outside"}, "reps":3, "held":0, "eligible":true, "form":"complete"},
+    {"id":"legraise-no-ankle-no-invented-driver", "movement":"leg-raise", "fps":30, "cycle":true, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"plank-visible", "movement":"plank", "fps":30, "reps":0, "held":12, "eligible":true, "form":"complete"},
+    {"id":"plank-optional-form-loss-15fps", "movement":"plank", "fps":15, "loss":{"joints":["ear","elbow"],"mode":"outside"}, "reps":0, "held":12, "eligible":true, "form":"partial"},
+    {"id":"plank-optional-form-loss-60fps", "movement":"plank", "fps":60, "loss":{"joints":["ear","elbow"],"mode":"low"}, "reps":0, "held":12, "eligible":true, "form":"partial"},
+    {"id":"plank-no-required-ankle", "movement":"plank", "fps":30, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"sideplank-no-shape-gate", "movement":"side-plank", "fps":30, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true}
+  ]
+}

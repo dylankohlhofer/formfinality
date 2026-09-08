@@ -1,6 +1,7 @@
 # Form Coach — documentation
 
-**Start here.** Eighteen documents, each with one job. Where any two disagree,
+**Start here.** Nineteen tracked root documents (18 Markdown and the narrated HTML),
+plus this index. Session handovers live under `sessions/`. Where any two disagree,
 `project-status.md` wins — it's the only one whose numbers are recomputed rather than
 remembered.
 
@@ -29,6 +30,7 @@ thing standing between here and the Swift port.
 |---|---|
 | `architecture-guide.md` | **Start here if you're new.** The whole system explained from scratch — the four boxes, a tour of every file, what each group of functions is for, the principles underneath, and what the Swift port changes |
 | `system-reference.md` | How it works — pipeline, content model, mechanisms, limits |
+| `movement-evidence-contract.md` | Which visible evidence is required for movement, which form targets are optional, and what partial-view results do not prove |
 | `interface-principles.md` | The nine UI rules, and why each exists |
 | `concepts-deep-dive.md` | The computing and ML fundamentals, from zero |
 | `concepts-narrated.html` | The same, read aloud with sentence highlighting (~38 min) |
@@ -58,7 +60,7 @@ thing standing between here and the Swift port.
 
 | File | What it is |
 |---|---|
-| `form-coach-v4.11.html` | **The build.** Single file, no dependencies but the pose model CDN |
+| `form-coach-v4.11.html` | **The build.** Single HTML file; runtime/model and fonts still load externally, so it is not yet an offline package |
 | `swift-port-kit.zip` | Swift package: 12 sources, conformance vectors |
 | `conformance-vectors.json` | The executable specification — 1,896 recorded cases |
 

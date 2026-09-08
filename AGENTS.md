@@ -136,9 +136,22 @@ validated measure of ability. Keep it visual until the user accepts the alternat
 invariants run in the default suite; `npm run test:worker` runs the local CPU
 benchmark. Benchmark evidence from blank frames is not exercise/device validation.
 The subsequent user recording exposed further failures: `testing/reported-session.test.mjs`
-is now in the default loop. Prompt recovery and mobile recorder access are fixed;
-the partial-view Crunch case remains red (four cases pass, one fails). Do not
-whitelist or invert it, or confuse these two fixes with tolerant movement recognition.
+is in the default loop. Prompt recovery, mobile recorder access and the neck-only
+partial-view Crunch case are fixed; all five original expectations are retained.
+`docs/movement-evidence-contract.md` separates required position/driver/hold evidence
+from optional form. Missing optional form must not veto observed reps, create a
+score/cue/tint, or remain in smoothing after its source disappears. Required missing
+gates cannot silently disappear; only the declared `optionalObservation:true` foot
+hint currently permits missing position evidence. A side-source change breaks the
+unfinished rep, never completed reps. Reset `targetSources`, `driverSource` and
+`scorePool` in `arm()`; loss/recovery must not retain hidden form contributions.
+`testing/movement-evidence.test.mjs` and `testing/evidence-parity.test.mjs` run in the
+default loop. Swift reads the same `testing/movement-evidence-vectors.json` cases.
+The new `crunch-partial-quality` scenario exercises actual browser effects too.
+Only three historical checkpoint fields were deliberately refreshed (plus provenance)
+in `crunch-needs-the-ear`; its straight-legged input still cannot arm or earn reps.
+Leg-raise ankle loss and missing required Plank geometry remain unresolved recognition
+limits, not permission to invent motion or silently substitute another driver.
 See `docs/sessions/current-recording-review-2026-09-07.md` for exact evidence and
 the distinction between observed movement, missing form measurements and hidden motion.
 Historical screen recordings have now been reviewed, but are not
@@ -198,8 +211,8 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 ## Current state
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
-checks from the surviving vectors and exits 0. `swift test` passes 18/18 against the same
-JSON. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
+checks from the surviving vectors and exits 0. `swift test` passes 25/25, including the
+same root conformance JSON and 17 additional shared movement-evidence cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise
@@ -219,7 +232,7 @@ proportions it was authored in, but not that it *reads* as the movement.
 
 ## Documentation
 
-`docs/` is an Obsidian vault — 17 documents plus a README index, wikilinked. Read
+`docs/` is an Obsidian vault — 18 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
 `docs/README.md` for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
 Session notes from user testing go in `docs/sessions/`.

@@ -26,21 +26,44 @@ Green = the Swift engine is behaviourally identical to the browser on:
 | `repScenarios` | 3 | priming, baseline drift, the crunch guard |
 | `repDispatch` | 2 | which slot each rep event lands in — the atPeak double-count trap |
 | `framing` | 7 | in-frame / too-far / clipped verdicts and which way to nudge |
-| `neededJoints` | 21 | the framing scope derived from each movement's targets |
+| `neededJoints` | 21 | full judging-joint inventory; movement evidence now derives a separate counting minimum |
 | `evaluatorScenarios` | 17 (25 checkpoints) | standing rejection, bridge priming, view gating, cue budgets |
 
-There are now 18 tests: the original 15 plus active-state interruption/recovery,
-bridge-null scoring and guided clipping. A failure names the scenario, frame and
-field that diverged. The 7 September HTML-first fixes deliberately refreshed nine
-score checkpoint fields; see `docs/sessions/historical-fixes-2026-09-07.md`.
+There are now 25 tests: the original 18, one shared movement-evidence test and six
+focused evidence regressions. `testMovementEvidence` consumes the 17 independently
+declared cases in `testing/movement-evidence-vectors.json` from the repo root, using
+the same interpolation, frame rates, losses and expectations as
+`testing/evidence-parity.test.mjs`. The focused tests cover side changes, source-aware
+scores and tint, missing hold gates, complete observation loss, degenerate geometry
+and whole-body framing distance. Synthetic cases establish these software rules,
+not camera-model or real-person accuracy.
+
+The 7 September HTML-first fixes deliberately refreshed nine score checkpoint
+fields; see `docs/sessions/historical-fixes-2026-09-07.md`. The 8 September browser
+movement-evidence migration explicitly refreshed three fields in the existing
+`crunch-needs-the-ear` case and declared the optional Leg Raise foot hint. Swift
+reads those same root fixtures; this port generates no expected outputs.
 
 ## Honest status
 
-The vectors and content JSON are machine-generated and machine-verified. The Swift
-sources are a careful 1:1 transcription of the JS, and they **compile and pass**:
-`swift test` is green at 18/18 against the repo-root fixtures. (This section used to warn
-of compile errors on first run, written before anyone had a compiler in the loop — that
-has been true for a while now and the warning was left standing longer than it was true.)
+The Swift sources compile and `swift test` passes **25/25** on 8 September 2026,
+including all 17 shared evidence cases, the original 18 tests and six focused
+evidence regressions. The verified browser SHA-256 is
+`74bff3f55a1c9cce7e27a9a98f5b973f8894ffab50d3e5ce194bbb243be0b9e9`,
+matching `conformance-vectors.json`'s reviewed-evidence metadata.
+
+The browser now preserves `blocking:["framing"]` before the wholly unobserved
+early return when framing is clipped; Swift mirrors that reason without crediting
+motion or scores. `testGuidedClippingCannotEarnHoldTime` retains its original
+blocking/refusal-to-arm/zero-hold assertions and additionally checks unavailable
+movement evidence, a null score and the clipping verdict.
+
+`FormResult.evidence` mirrors `movement-evidence/1`, separating movement eligibility
+and missing targets from observed/missing form targets and contributing sides.
+Per-target observation rejects hidden or unreadable geometry before aggregation;
+interruptions and side changes discard stale smoothing and unfinished rep cycles.
+`observationPaused` distinguishes missing hold evidence from measured bad form.
+Session/Calibration and their presentation of this result remain outside the package.
 
 Two transcription notes encoded in the source: Swift's sort is not guaranteed
 stable where JS's is, so cue-offender ordering sorts by (score, index) explicitly;
@@ -55,8 +78,10 @@ and JS `??`/truthiness quirks around `w:0` are mirrored with explicit optionals.
    depends on three things Vision's 2D request does not provide: heel/toe landmarks
    (the `feetUp` gate that separates supine from prone), per-landmark z (the
    sideness estimate driving view-aware coaching), and the exact landmark indices
-   the thresholds were tuned against. MediaPipe on iOS keeps 1:1 semantics with the
-   browser — zero re-validation. Vision remains an option later, but it means
+   the thresholds were tuned against. MediaPipe on iOS matches the contract shape,
+   not numeric or model parity; validate the capture adapter separately, including
+   model bytes, runtime/delegate, frame timing, coordinates and orientation. Vision
+   remains an option later, but it means
    re-deriving two gates and re-validating; that's a project, not a swap.
 3. **Orientation on hardware.** `visionOrientation()` / image orientation is the
    known TODO(device): if wrong, the skeleton rotates and every threshold's sign

@@ -3,7 +3,7 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 7 September 2026 — recorder usability/retention and optional-help fixes against v4.11. The
+**Last updated:** 8 September 2026 — partial-view movement evidence and Swift parity against v4.11. The
 product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
 has happened yet.
 
@@ -63,12 +63,43 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
-**Latest user recording — engineering gate remains open.** The review confirmed
-real-world stalls, intrusive controls and failed speech. The first implementation
-phase now fixes prompt recovery and mobile recorder access: four of the five cases
-in `testing/reported-session.test.mjs` pass. The partially cropped Crunch case still
-fails and remains in the default loop. The older green baseline is not the current
-release verdict. See `sessions/current-recording-review-2026-09-07.md`.
+**Latest user recording — software fixes are not release validation.** All five
+retained cases in `testing/reported-session.test.mjs` now pass. Optional cropped
+neck evidence no longer vetoes otherwise visible Crunch cycles or invents a neck
+score. Required movement/position/hold evidence cannot silently disappear from
+the gates. Missing targets and side changes clear stale smoothing and unfinished
+cycles, while completed work remains. See `movement-evidence-contract.md` and
+`sessions/movement-evidence-fixes-2026-09-08.md`.
+
+The Leg Raise ankle driver and required Plank geometry are still necessary under
+the current declarations. No alternative thigh driver or hidden-joint reconstruction
+has been validated. Native speech startup and side-plank target shortening also
+remain open; synthetic green checks do not disprove the recording's issues.
+
+**Native experiment:** the final read-only check finds an iPhone 16 Plus **available
+(paired)**, first-launch setup passes, and the installed CoreDevice version matches
+Xcode's wrapper. The initial component lookup failure is not a current blocker.
+No usable signing identity is available; selecting the user's Apple account/team
+in Xcode remains necessary before deployment. No native app has been deployed or
+phone performance measured. The protocol and signing prerequisite are in
+`sessions/native-spike-readiness-2026-09-08.md`. Full interface porting and
+modularisation remain separate; there is no framework/model replacement in this fix.
+
+**Latest verification:** `npm test` exits **0** at
+`test-results/2026-09-07T23-49-22-795Z-63278/`: 64 infrastructure tests; 18 coaching,
+120 prompt, 17 diagnostic, 13 worker, five reported-session, 229 movement-evidence
+tests and 17 shared cases; all four original harnesses; **49 engine cases / 1,214
+checks, 98 browser cases / 714 checks, 61 shell cases / 628 checks and 13 audio
+cases / 239 checks**. Swift passes **25/25** separately. Six video entries and two
+native-TTS waveform gaps remain; zero speech review candidates is not listening
+approval. Artifact hashes and a subsequent focused test-only clock-assertion check
+are in `sessions/movement-evidence-fixes-2026-09-08.md`.
+
+The preceding complete run at `test-results/2026-09-07T23-26-06-025Z-57814/` exited
+1 for one audio-monitor cancellation assertion (12/13 cases, 236/237 checks), not
+a movement failure. Its automatic reproduction passed; neither capture was
+discarded. The separate repair and permanent negative controls are documented in
+`sessions/audio-pending-cancellation-2026-09-08.md`.
 
 **Recorder and optional-help fixes:** the recorder opens in a fixed, scrollable header
 drawer without resizing the stage; starting capture closes it and leaves a quick flag
@@ -80,13 +111,17 @@ remain readable. Everything stays opt-in and memory-only, with explicit export/e
 Optional help now requires five seconds of setup grace followed by six continuous
 seconds of observed difficulty, known view and visible passing position targets.
 Recovery immediately withdraws the choice; an unaccepted alternative is visual only.
-This is a usability policy, not an ability measurement. No evaluator thresholds,
-vector expectations or Swift code changed. See
+This is a usability policy, not an ability measurement. That earlier recorder/prompt
+phase changed no evaluator thresholds, vector expectations or Swift code. See
 `sessions/recorder-prompt-fixes-2026-09-07.md` for policies, tests and verification.
-The earlier lost landmarks cannot be recovered; partial-view counting, native speech
-startup and side-plank target shortening remain separate open work.
+The earlier lost landmarks cannot be recovered. The subsequent partial-view change
+deliberately refreshes only three fields in `crunch-needs-the-ear`, plus provenance;
+its failed bent-knee gate and zero credited work remain unchanged. Thresholds and
+other recorded expectations are unchanged. Swift mirrors the browser changes and
+passes 25/25, including the 17 additional shared evidence cases and six focused
+regressions.
 
-**Latest verification:** `npm test` exits **1 solely for partial-view Crunch** in the
+**Previous recorder/prompt verification:** `npm test` exited **1 solely for partial-view Crunch** in the
 five-case reported-session suite (four pass, one fails). All other suites pass:
 60 infrastructure, 18 historical coaching, 120 prompt, 17 diagnostic-buffer and 13
 worker-queue tests; **48 engine cases / 1,207 checks, 96 browser cases / 694 checks,
@@ -198,11 +233,11 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 262,138 bytes (256 KiB); existing external runtime, model and font assets remain; not yet an offline package |
-| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 18/18 |
+| **Build** | `form-coach-v4.11.html` — single file, 267,922 bytes (262 KiB); existing external runtime, model and font assets remain; not yet an offline package |
+| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 25/25 including 17 additional shared evidence cases |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |
-| **Swift kit** | 12 sources, conformance vectors current |
+| **Swift package** | 13 source/manifest files (10 library, two test files and Package.swift); root conformance and movement-evidence fixtures current |
 | **Beginner tests** | **1 of 2 complete** — see `test-01-max.md` |
 
 ### A note on the test count

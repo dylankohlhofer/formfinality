@@ -23,6 +23,7 @@ public struct PoseTarget: Codable {
     public let w: Double?
     public let gate: Bool?               // quality gate — hold clock
     public let pos: Bool?                // position gate — arming
+    public let optionalObservation: Bool? // use a visible hint, but do not require it
     public let above: String?
     public let below: String?
 }

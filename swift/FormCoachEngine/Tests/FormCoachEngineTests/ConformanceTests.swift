@@ -40,9 +40,8 @@ final class ConformanceTests: XCTestCase {
         let events: [RepEventRow]; let base: Double? }
     struct Over: Codable { let sideness: Double? }
     /// `over` sets FRAME-level fields; `conf` sets PER-JOINT confidence, which is the
-    /// only way to state "the camera cropped their head" as data. It is what makes
-    /// Evaluator.confFor assertable: the same map over the same joints has to pass a
-    /// squat and fail a crunch, because a crunch is the movement that reads the ear.
+    /// only way to state low visibility as data. Evaluator now checks observations
+    /// per target: optional neck loss cannot erase otherwise visible Crunch motion.
     struct TimelineStep: Codable { let pose: String?; let n: Int?; let over: Over?
         let action: String?; let conf: [String: Double]? }
     struct Checkpoint: Codable { let frame: Int; let ok: Bool; let inPosition: Bool
@@ -83,6 +82,34 @@ final class ConformanceTests: XCTestCase {
         let repScenarios: [RepRow]
         let repDispatch: [DispatchRow]
         let evaluatorScenarios: [Scenario]
+    }
+
+    struct MovementEvidenceSuite: Decodable {
+        let schema: String
+        let fixtures: [String: MovementEvidenceFixture]
+        let cases: [MovementEvidenceCase]
+    }
+    struct MovementEvidenceFixture: Decodable {
+        let rest: String
+        let peakPose: String?
+        let peak: [String: [Double]]?
+    }
+    struct MovementEvidenceCase: Decodable {
+        let id: String
+        let movement: String
+        let fps: Int
+        let cycle: Bool?
+        let loss: MovementEvidenceLoss?
+        let reps: Int
+        let held: Double
+        let eligible: Bool
+        let form: String?
+        let unscored: Bool?
+    }
+    struct MovementEvidenceLoss: Decodable {
+        let all: Bool?
+        let joints: [String]?
+        let mode: String
     }
 
     static var vec: Vectors!
@@ -130,6 +157,66 @@ final class ConformanceTests: XCTestCase {
     }
 
     // ── sections ──
+    /// Same fixture interpolation, 12-second timeline, losses and independent
+    /// expectations as testing/evidence-parity.test.mjs. Never copy the JSON.
+    func testMovementEvidence() throws {
+        let url = Self.repoRoot.appendingPathComponent("testing/movement-evidence-vectors.json")
+        let suite = try JSONDecoder().decode(MovementEvidenceSuite.self, from: Data(contentsOf: url))
+        XCTAssertEqual(suite.schema, "movement-evidence-parity/1")
+        XCTAssertFalse(suite.cases.isEmpty, "Missing cases cannot count as shared parity")
+        for row in suite.cases {
+            let fixture = try XCTUnwrap(suite.fixtures[row.movement], row.id)
+            let rest = try XCTUnwrap(Self.vec.poses[fixture.rest], row.id)
+            let peak: [String: [Double]]
+            if let name = fixture.peakPose {
+                peak = try XCTUnwrap(Self.vec.poses[name], row.id)
+            } else {
+                peak = rest.merging(fixture.peak ?? [:]) { _, replacement in replacement }
+            }
+            let movement = try XCTUnwrap(Self.content.movements[row.movement], row.id)
+            let ev = Evaluator(movement, tier: try XCTUnwrap(Self.content.tiers["building"]))
+            ev.arm(now: 0)
+            guard row.fps > 0 else { XCTFail("\(row.id): FPS must be positive"); return }
+            let fps = Double(row.fps)
+            var result = FormResult()
+            for i in 0..<(12 * row.fps) {
+                let phase = (Double(i) / fps).truncatingRemainder(dividingBy: 4)
+                let mix = row.cycle != true ? 0 : phase < 1.5 ? phase / 1.5 :
+                    phase < 2 ? 1 : phase < 3.5 ? 1 - (phase - 2) / 1.5 : 0
+                var side: SideJoints = [:]
+                for (name, a) in rest {
+                    let b = try XCTUnwrap(peak[name], "\(row.id): peak \(name)")
+                    side[name] = Joint(x: a[0] + (b[0] - a[0]) * mix,
+                                       y: a[1] + (b[1] - a[1]) * mix, c: 0.95)
+                }
+                if let loss = row.loss {
+                    let joints = loss.all == true ? Array(side.keys) : try XCTUnwrap(loss.joints, row.id)
+                    for name in joints {
+                        switch loss.mode {
+                        case "missing": side.removeValue(forKey: name)
+                        case "outside":
+                            let p = try XCTUnwrap(side[name], row.id)
+                            side[name] = Joint(x: 1.05, y: p.y, c: p.c)
+                        case "low":
+                            let p = try XCTUnwrap(side[name], row.id)
+                            side[name] = Joint(x: p.x, y: p.y, c: 0.1)
+                        default: XCTFail("\(row.id): unknown loss mode \(loss.mode)"); return
+                        }
+                    }
+                }
+                let frame = PoseFrame(left: side, right: side, cam: "left", conf: 0.95,
+                                      aspect: 1, sideness: row.movement == "side-plank" ? 0 : 90)
+                result = ev.evaluate(frame, dt: 1 / fps, now: Double(i + 1) / fps)
+                XCTAssertEqual(result.evidence.schema, "movement-evidence/1", "\(row.id) frame \(i)")
+                if row.unscored == true { XCTAssertNil(result.score, "\(row.id) frame \(i) must remain unscored") }
+            }
+            XCTAssertEqual(ev.rep?.display() ?? 0, row.reps, row.id)
+            XCTAssertLessThan(abs(ev.hold - row.held), 1e-8, "\(row.id): observed hold time")
+            XCTAssertEqual(result.evidence.movement.eligible, row.eligible, row.id)
+            if let status = row.form { XCTAssertEqual(result.evidence.form.status, status, row.id) }
+        }
+    }
+
     func testActiveRepInterruptionAndRecovery() {
         for loss in ["position", "framing", "view", "confidence", "driver", "missing"] {
             let ev = Evaluator(Self.content.movements["push-up"]!, tier: Self.content.tiers["building"]!)
@@ -183,7 +270,20 @@ final class ConformanceTests: XCTestCase {
         var f = frame(pose: "allFours", over: nil)
         f.left = f.left.mapValues { Joint(x: $0.x - 2, y: $0.y, c: $0.c) }; f.right = f.left
         let r = ev.evaluate(f, dt: 1, now: 1)
-        XCTAssertFalse(r.inPosition); XCTAssertTrue(r.blocking.contains("framing")); XCTAssertEqual(ev.hold, 0)
+        // Even wholly unobserved input retains the clipping explanation while
+        // refusing to arm, judge form or credit hold time.
+        XCTAssertFalse(r.ok)
+        XCTAssertFalse(r.inPosition)
+        XCTAssertFalse(r.inPose)
+        XCTAssertFalse(r.framing.ok)
+        XCTAssertEqual(r.framing.verdict, "clipped")
+        XCTAssertTrue(r.blocking.contains("framing"))
+        XCTAssertEqual(r.evidence.movement.status, "unavailable")
+        XCTAssertFalse(r.evidence.movement.eligible)
+        XCTAssertEqual(r.evidence.movement.missing,
+                       [MissingEvidence(target: "torsoLevel", reason: "clipped")])
+        XCTAssertNil(r.score)
+        XCTAssertEqual(ev.hold, 0)
     }
 
     /// The filter conversion itself — identity at 30fps, and no update on a zero dt.

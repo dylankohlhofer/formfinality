@@ -1,0 +1,68 @@
+# Movement evidence, version 1
+
+Implementation order: browser engine first, retained independent tests, then Swift
+parity. This contract does not add a new pose model, reconstruct hidden joints, or
+change movement range/tempo thresholds.
+
+## Separate questions
+
+- **Position:** are the declared position measurements observable and passing?
+- **Movement:** is the declared rep driver observable, in position and at a usable
+  view? For holds, the declared shape gates must also be observable and passing.
+- **Form:** which quality targets can actually be measured on this frame?
+
+An unavailable optional form target is not a movement veto. An unavailable required
+position/driver/hold-gate target is not a passing gate. A visible but failing form
+measurement is different from a missing one. No form measurements means `score:null`.
+Existing hold quality gates still stop the hold clock when visibly failing.
+
+The content declares the roles: `pos`, `gate`, `reps.driver`, and quality weights.
+`optionalObservation:true` on a position target is an explicit exception: use it
+when visible, including rejection when it fails, but do not demand its presence.
+Initially this names only Leg Raise's existing foot-direction hint; it does not
+silently make all position checks optional.
+
+## Observation boundary
+
+Camera observations use finite normalized x/y coordinates, visibility at least 0.5,
+and the existing 2% image-edge margin. Geometry helpers remain coordinate arithmetic:
+the isotropic authored demos are not camera observations and must not be clipped by
+this policy. Confidence is evidence of visibility, not a calibrated probability
+that an exercise was performed correctly.
+
+Camera-side metrics require their named side. Bilateral metrics aggregate complete,
+observed sides only; a hidden side contributes neither a good nor a bad value. The
+result records contributing sides. It makes no claim about an unseen opposite limb.
+
+Missing targets lose their smoothing/tint history. Changing the form-score pool
+must not carry a hidden target's old contribution into the new score. A rep driver
+source change or interrupted observation invalidates the unfinished cycle, not
+completed reps. Recovery must establish a fresh cycle; unseen time is not motion.
+
+## Reviewable result
+
+Evaluator results expose `evidence.schema = "movement-evidence/1"`, a movement
+observation status, `eligible` and missing targets, and form landmark coverage with
+observed/missing target IDs and reasons. `observed` means geometry is available,
+not that position or range passed; `eligible` also requires the applicable gates
+and view. Existing `viewLimited`/`viewCue` remain separate and must be considered:
+complete landmark coverage is not a claim of an ideal viewing angle. Suppressions
+identify unobservable targets. Coverage is not an invented numeric confidence or
+a new score. This phase does not revise the existing off-axis threshold policy.
+
+The shell explains interrupted counting through the existing readiness channel.
+Optional form loss must not produce a demand to stop otherwise observed movement.
+Diagnostics retain the evidence alongside the saved result; no automatic upload or
+additional camera recording is introduced.
+
+## Explicit limits
+
+Cropping a Crunch ear should preserve visible torso cycles and suppress neck scoring.
+Cropping the Leg Raise ankle removes its current driver: this contract alone cannot
+recover those reps. A thigh-based alternative requires independently reviewed
+positive **and negative** inputs, compatible range/tempo semantics and an explicit
+source-transition policy before adoption. Likewise a Plank without its required
+body-line evidence is not automatically a measured hold.
+
+Synthetic geometry tests establish these software rules, not real-person recognition
+accuracy. Consented camera input and a physical-phone session remain necessary.

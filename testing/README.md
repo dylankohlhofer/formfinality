@@ -69,13 +69,32 @@ JSON is validated and displayed as text. Exports include the running module's
 SHA-256 and configured pose-model identity, not independently verified model bytes.
 See [the local-stack handover](../docs/sessions/local-stack-2026-09-07.md).
 
-**New user review, after that green baseline:** `reported-session.test.mjs` retains
-five checks in the default loop. Four now pass: easier-movement prompt recovery,
-mobile recorder access, toe-only leg-raise clipping and the wholly off-screen negative
-control. The neck-only clipping case still **fails**, cancelling otherwise observed
-crunch cycles. This is an open application failure, not a whitelisted expected outcome. Run just these with
+**New user review and subsequent fixes:** `reported-session.test.mjs` retains
+five checks in the default loop. All five now pass: easier-movement prompt recovery,
+mobile recorder access, toe-only leg-raise clipping, the wholly off-screen negative
+control and neck-only clipping during otherwise observed Crunch cycles. No original
+expectation was inverted or whitelisted. Run just these with
 `node --test testing/reported-session.test.mjs`; details and recording limitations
 are in `docs/sessions/current-recording-review-2026-09-07.md`.
+
+**Movement evidence (8 September):** `movement-evidence.test.mjs` adds 229 independent
+engine checks, while `evidence-parity.test.mjs` and Swift consume the same 17 cases
+in `movement-evidence-vectors.json`. Both suites run against the saved build in the
+default loop and retain their named logs. `crunch-partial-quality` adds an engine
+and two browser timelines with screenshots, real counter/form effects, interruption
+and recovery. Missing optional quality is not a rep veto; missing required drivers
+and gates do not disappear. Source changes break unfinished reps, and unavailable
+form contributes no score, cue or tint. Invalid/degenerate geometry and stale score
+history have dedicated regressions. These are synthetic software contracts, not
+validation of a knee-only Leg Raise driver or a Plank with hidden required ankles.
+See `docs/movement-evidence-contract.md` and the dated implementation handover.
+
+The deliberate vector migration changed only `ok`, `blocking` and `suppressed` in
+`crunch-needs-the-ear`, plus provenance. That input still has straight legs, so
+its bent-knee position fails and its score/reps/hold remain unchanged. The migration
+script `refresh-movement-evidence.mjs --write` is manual-only, not an automatic
+oracle regeneration step in test/watch/CI. The content change names the existing
+optional Leg Raise foot-orientation hint explicitly; it changes no thresholds.
 
 **Recorder/prompt follow-up:** `docs/sessions/recorder-prompt-fixes-2026-09-07.md`
 documents the implementation and deliberate policy changes. The fixed, scrollable
@@ -288,6 +307,14 @@ Regression record: [old movement audio after Skip, now fixed](findings/voice-aft
 The shell sweep also protects cancelled-clip callbacks, keyboard/button Skip,
 rest/debrief transitions and calibration verdict speech. The original capture
 case requires next-exercise teaching to play after cancellation.
+The tap also distinguishes cancellation of a still-pending `play()` from failed
+playback: only an `AbortError` following an observed pause of the **same request**
+is recorded as `clip-cancelled`. The original rejection still reaches the app;
+the pause, error name/message and request ID remain in the review evidence.
+Four additional capture tests protect real cancellation/element reuse and ensure
+unrequested aborts, paused decode failures and stale cancellation history still
+fail. See `docs/sessions/audio-pending-cancellation-2026-09-08.md` for the original
+failed run and its passing reproduction; neither was discarded.
 Frequency policy fixed; listening review remains: [visibility reminders](findings/voice-repetition.md). A passing signal
 check is not approval of the coaching experience.
 

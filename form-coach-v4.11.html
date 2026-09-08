@@ -724,7 +724,7 @@ const M = {
          between the two that is forced by physics rather than by choice.
          If the foot landmarks are missing/low-confidence this target is simply
          skipped, and we fall back to torsoLevel. Safe degradation. */
-      {id:"feetUp", m:{k:"vert",a:"heel",b:"toe",agg:"mean"}, ideal:128, tol:38, range:66, w:0, pos:true},
+      {id:"feetUp", m:{k:"vert",a:"heel",b:"toe",agg:"mean"}, ideal:128, tol:38, range:66, w:0, pos:true, optionalObservation:true},
       {id:"hipAngle", m:{k:"angle",v:"hip",a:"shoulder",c:"ankle"}, ideal:115, tol:25, range:60, w:1},
       {id:"kneesStraight", m:{k:"angle",v:"knee",a:"hip",c:"ankle",agg:"worst"}, ideal:178, tol:16, range:45, w:1,
        below:"knees"}
@@ -1149,11 +1149,11 @@ function buildFrame(lms, aspect = 1){
      was discarded (`ok:false`), which reads to the user as "I can't see you" while
      they are standing in perfectly good view. And a movement that genuinely needs the
      ear (crunch, plank neck) got no confidence signal from it at all.
-     `Evaluator.confFor` replaces it per movement. What survives here is the pick of
+     The evaluator now checks each target's actual observations. What survives here is the pick of
      WHICH SIDE is the camera side (`cam` below) — shoulder and hip are the two joints
      visible from every angle this app supports, so they are the honest basis for that
-     choice. `frame.conf` itself now has no reader outside confFor's empty-`need`
-     fallback; it is kept because `cam` is derived from the same pair. */
+     choice. `frame.conf` is retained as adapter diagnostic data, not as a substitute
+     for per-target observation validity. */
   const conf = f => {
     const core = ["shoulder","hip"].map(j => f[j]?.c ?? 0);
     return core.reduce((a,b)=>a+b,0) / 2;
@@ -1222,7 +1222,7 @@ function readinessFx(core, key, now, E){
 // These are current measurable facts, not a new score or a second cue selector.
 // They allow playback to withdraw an old instruction even during cue cooldown.
 function coachingFacts(r, mv){
-  const observed = !!r?.ok && !r.repPaused;
+  const observed = !!r?.ok && !r.repPaused && !r.observationPaused;
   const keys = observed ? r.readings.filter(x => x.cue && !x.t.pos &&
     (!mv.reps || x.t.id !== mv.reps.driver) &&
     !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168)).map(x => x.cue) : [];
@@ -1233,14 +1233,10 @@ function coachingFacts(r, mv){
    themselves — the same content-as-data trick as the tint, so no new authoring.
    A crunch doesn't grade your feet; a squat doesn't grade your wrists. Framing
    should only insist on the parts the coaching depends on. */
-/* Joints framing must actually see. JUDGING targets only — graded targets, quality
-   gates and the rep driver. Position gates are deliberately excluded: they decide
-   whether you're set up, and if one of their joints is off-screen that gate simply
-   fails, which already prevents arming through the movement's own declared logic.
-   Including them meant a crunch demanded your ANKLES — read only by the "knees bent"
-   setup check — and refused to count reps when your feet ran off the edge. Testers
-   hit that immediately, and they were right: don't withhold coaching over a limb the
-   exercise never looks at. */
+/* Full judging-joint inventory, retained for the content/vector contract. This is
+   NOT the minimum required for counting. movementTargets below separates required
+   position/driver/hold evidence from optional form; evaluate validates each target
+   instead of treating this union as a whole-frame visibility veto. */
 function neededJoints(mv){
   const add = (s, m) => {
     if(m.k === "angle"){ [m.v, m.a, m.c].forEach(j => j && s.add(j)); }
@@ -1272,7 +1268,7 @@ function framing(frame, need){
   for(const cam of ["left","right"]){
     const side = frame[cam]; if(!side) continue;
     for(const j in side){
-      const p = side[j]; if(!p || (p.c ?? 1) <= 0.4) continue;
+      const p = side[j]; if(!p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || (p.c ?? 1) <= 0.4) continue;
       all.push(p);
       if(!need || !need.size || need.has(j)) pts.push(p);
     }
@@ -1424,6 +1420,38 @@ function tintSegs(m){
 const TINT_IN  = [78, 52];   // enter amber / enter red
 const TINT_OUT = [86, 62];   // leave amber / leave red
 
+// Camera evidence is separate from coordinate arithmetic (REF is isotropic, not
+// a camera frame). Missing targets never become passing gates or fabricated form.
+function metricJoints(m){
+  return m.k === "angle" ? [m.v,m.a,m.c] : m.k === "line" ? [m.of,m.from,m.to]
+    : m.k === "vert" ? [m.a,m.b] : [];
+}
+function targetObservation(t, frame){
+  const names = (t.m.agg || "camera") === "camera" ? [frame.cam] : ["left","right"];
+  const joints = metricJoints(t.m);
+  let clipped = false;
+  const visible = names.filter(side => joints.length && joints.every(j => {
+    const p = frame[side]?.[j];
+    if(!p || !Number.isFinite(p.c) || p.c < .5 || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return false;
+    if(p.x < .02 || p.x > .98 || p.y < .02 || p.y > .98){ clipped = true; return false; }
+    return true;
+  }));
+  const sides = visible.filter(side => {
+    const p = frame[side], m = t.m, aspect = frame.aspect ?? 1;
+    if(!Number.isFinite(aspect) || aspect <= 0) return false;
+    // atan2(0,0) and the line's near-vertical guard yield finite zeros, but a
+    // coincident segment supplies no direction. Reject it at the camera boundary.
+    const distinct = (a,b) => Math.hypot((p[a].x-p[b].x)*aspect,p[a].y-p[b].y) >= 1e-9;
+    if(m.k === "vert" && !distinct(m.a,m.b) || m.k === "line" && !distinct(m.from,m.to)) return false;
+    return readMetric(m, frame, side) != null;
+  });
+  return {sides, reason:sides.length ? null : visible.length ? "unreadable" : clipped ? "clipped" : "tracking"};
+}
+function movementTargets(mv){
+  return mv.targets.filter(t => t.pos && !t.optionalObservation ||
+    t.id === mv.reps?.driver || mv.kind !== "reps" && t.gate);
+}
+
 class Evaluator {
   constructor(mv, tier){
     this.mv = mv; this.tier = tier;
@@ -1440,7 +1468,8 @@ class Evaluator {
     this.scoreTrace = [];          // [{t, s}] — the form curve across the set
     this.lastTraceBucket = -1;     // clock-bucket sampling, not frame-count
     this.sev = {};                 // per-target tint severity, hysteresis-latched
-    this.need = neededJoints(mv);  // joints framing must actually see for THIS movement
+    this.movementNeed = new Set(movementTargets(mv).flatMap(t => metricJoints(t.m)));
+    this.scorePool = null; this.driverSource = null; this.targetSources = {};
     this.armedAt = null;
     this.rep = mv.reps ? new Rep(mv.reps) : null;
   }
@@ -1463,22 +1492,11 @@ class Evaluator {
     return l;
   }
 
-  /* The joints THIS movement is judged on, averaged. A joint the movement never reads
-     cannot make the app claim it can't see you. */
-  confFor(frame){
-    const side = frame[frame.cam] || frame.left || {};
-    const js = [...this.need];
-    if(!js.length) return frame.conf ?? 1;
-    let sum = 0, k = 0;
-    for(const j of js){ sum += side[j]?.c ?? 0; k++; }
-    return k ? sum / k : (frame.conf ?? 1);
-  }
-
   interrupt(){
-    if(!this.rep) return;
-    this.rep.interrupt();
+    this.driverSource = null;
+    if(this.rep) this.rep.interrupt();
     // Never blend an unseen/off-position driver into the recovery frame.
-    this.ema = {}; this.sev = {};
+    this.ema = {}; this.sev = {}; this.targetSources = {}; this.scorePool = "";
   }
 
   evaluate(frame, dt, now){
@@ -1486,33 +1504,84 @@ class Evaluator {
                   score:null, rep:null, reps:this.rep ? this.rep.display() : 0,
                   ok:true, regress:false, suppressed:[] };
 
-    out.framing = framing(frame, this.need);
+    const observations = new Map(this.mv.targets.map(t => {
+      const o = targetObservation(t, frame);
+      const raw = o.sides.length ? this.read(t, {...frame,
+        left:o.sides.includes("left") ? frame.left : {}, right:o.sides.includes("right") ? frame.right : {}}) : null;
+      if(o.sides.length && (raw == null || !Number.isFinite(raw))){ o.sides = []; o.reason = "unreadable"; }
+      return [t.id, {...o, raw:o.sides.length ? raw : null}];
+    }));
+    const required = movementTargets(this.mv);
+    const missing = required.filter(t => !observations.get(t.id).sides.length)
+      .map(t => ({target:t.id, reason:observations.get(t.id).reason}));
+    const formTargets = this.mv.kind === "guided" ? [] : this.mv.targets.filter(t =>
+      (!this.rep || !t.pos && t.id !== this.mv.reps.driver) && ((t.w ?? 1) > 0 || t.gate));
+    out.evidence = {schema:"movement-evidence/1",
+      movement:{status:missing.length ? "unavailable" : "observed", eligible:false, missing},
+      form:{status:"unavailable", observed:[], missing:[]}};
+    const form = out.evidence.form;
+    for(const t of formTargets){
+      const o = observations.get(t.id);
+      if(o.sides.length) form.observed.push({target:t.id, sides:o.sides});
+      else form.missing.push({target:t.id, reason:o.reason});
+    }
+    form.status = !formTargets.length ? "unscored" : !form.observed.length ? "unavailable" : form.missing.length ? "partial" : "complete";
+    // Only required observations can request reframing. Ignore a hidden far-side
+    // limb when a complete observed side supplies an aggregated measurement.
+    const framingFrame = {...frame, left:{...frame.left}, right:{...frame.right}};
+    for(const s of ["left","right"]) for(const j of this.movementNeed) delete framingFrame[s][j];
+    for(const t of required){
+      const o = observations.get(t.id);
+      const sides = o.sides.length ? o.sides : (t.m.agg || "camera") === "camera" ? [frame.cam] : ["left","right"];
+      for(const s of sides) for(const j of metricJoints(t.m)) if(frame[s]?.[j]) framingFrame[s][j] = frame[s][j];
+    }
+    out.framing = framing(framingFrame, this.movementNeed);
+    const observedRead = t => {
+      const o = observations.get(t.id);
+      const raw = o.raw;
+      if(raw == null || !Number.isFinite(raw)){
+        delete this.ema[t.id]; delete this.sev[t.id]; delete this.targetSources[t.id];
+        if(!out.suppressed.includes("unobserved⊘" + t.id)) out.suppressed.push("unobserved⊘" + t.id);
+        return null;
+      }
+      const source = o.sides.join("+");
+      if(this.targetSources[t.id] != null && this.targetSources[t.id] !== source){
+        delete this.ema[t.id]; delete this.sev[t.id];
+      }
+      this.targetSources[t.id] = source;
+      return raw;
+    };
     /* Judged on the joints this movement needs, not a fixed list — see buildFrame. */
-    if(this.confFor(frame) < 0.5){ this.interrupt(); out.ok = false; return out; }
+    // Availability is per target/side, not an average diluted by unrelated form.
+    if(![...observations.values()].some(o => o.sides.length)){
+      if(out.framing.verdict === "clipped") out.blocking.push("framing");
+      this.interrupt(); out.ok = false; return out;
+    }
 
     /* GUIDED — we check you're in the right POSITION (gates), but make no claims
        about the QUALITY of a pose we cannot honestly measure. */
     if(this.mv.kind === "guided"){
       for(const t of this.mv.targets){
-        const raw = this.read(t, frame);
+        const raw = observedRead(t);
         if(raw == null) continue;
         const v = this.smooth(t.id, raw, t.m.sm || 0.35, dt);
         out.readings.push({ t, v, s: scoreTarget(t, v, this.tier), cue: null });
       }
       const gates = out.readings.filter(r => r.t.pos || r.t.gate);
-      out.inPose = gates.length ? gates.every(r => r.s > 0) : true;
+      out.inPose = !missing.length && (gates.length ? gates.every(r => r.s > 0) : true);
       out.inPosition = out.inPose;
-      out.blocking = gates.filter(r => r.s <= 0).map(r => r.t.id);
+      out.blocking = [...missing.map(x => x.target), ...gates.filter(r => r.s <= 0).map(r => r.t.id)];
       if(out.framing.verdict === "clipped"){
         out.inPosition = false; out.inPose = false; out.blocking.push("framing");
       }
       if(out.inPose) this.hold += dt;
+      out.evidence.movement.eligible = out.inPose;
       out.guided = true;
       return out;
     }
 
     for(const t of this.mv.targets){
-      const raw = this.read(t, frame);
+      const raw = observedRead(t);
       if(raw == null) continue;
       const v = this.smooth(t.id, raw, t.m.sm || 0.35, dt);
       out.readings.push({ t, v, s: scoreTarget(t, v, this.tier), cue: cueFor(t, v, this.tier) });
@@ -1525,10 +1594,12 @@ class Evaluator {
        Session setup times both continuously, explaining quality blockers before
        arming. Rep observation validity must not require perfect form. */
     const posGates = out.readings.filter(r => r.t.pos);
-    out.inPosition = posGates.length ? posGates.every(r => r.s > 0) : true;
+    out.inPosition = !missing.length && (posGates.length ? posGates.every(r => r.s > 0) : true);
     const qGates   = out.readings.filter(r => r.t.gate);
-    out.inPose     = out.inPosition && (qGates.length ? qGates.every(r => r.s > 0) : true);
-    out.blocking   = [...posGates, ...qGates].filter(r => r.s <= 0).map(r => r.t.id);
+    const missingGates = this.mv.targets.filter(t => t.gate && !out.readings.some(r => r.t.id === t.id));
+    out.inPose     = out.inPosition && !missingGates.length && (qGates.length ? qGates.every(r => r.s > 0) : true);
+    out.blocking   = [...new Set([...missing.map(x => x.target), ...missingGates.map(t => t.id),
+      ...[...posGates, ...qGates].filter(r => r.s <= 0).map(r => r.t.id)])];
     /* A clipped body can't be assessed and mustn't arm a set — otherwise the coach
        says "step back, I can't see all of you" and starts the clock in the same
        breath. "far" still arms (a quality nudge only); "clipped" does not. */
@@ -1558,24 +1629,39 @@ class Evaluator {
       }
     }
 
+    if(missing.length && !this.rep){
+      out.observationPaused = true;
+      if(missing.some(x => x.reason !== "clipped")) out.blocking.push("tracking");
+      this.interrupt(); this.outOfPose = 0;
+      return out; // explain missing hold evidence, never score it as bad form
+    }
+
     if(this.rep){
       // Raw position guards close even a one-frame gap; smoothed gates alone
       // can carry the previous good pose through the beginning of an interruption.
       const rawBlocked = this.mv.targets.filter(t => t.pos).filter(t => {
-        const v = this.read(t, frame); return v != null && scoreTarget(t, v, this.tier) <= 0;
+        const v = observedRead(t); return v == null ? !t.optionalObservation : scoreTarget(t, v, this.tier) <= 0;
       }).map(t => t.id);
       const driver = out.readings.find(r => r.t.id === this.mv.reps.driver);
-      const driverSpec = this.mv.targets.find(t => t.id === this.mv.reps.driver);
-      const driverJoints = neededJoints({targets:[driverSpec]});
-      const driverVisible = [...driverJoints].every(j => (frame[frame.cam]?.[j]?.c ?? 0) >= .5);
+      const driverSides = observations.get(this.mv.reps.driver).sides;
+      const driverVisible = driverSides.length > 0;
       if(!out.inPosition || rawBlocked.length || !driver || !driverVisible){
         out.blocking = [...new Set([...out.blocking, ...rawBlocked, ...(!driver || !driverVisible ? ["tracking"] : [])])];
         out.inPosition = false; out.inPose = false; out.repPaused = true;
-        out.suppressed = out.readings.filter(r => r.cue).map(r => "unobserved⊘" + r.cue);
+        out.suppressed.push(...out.readings.filter(r => r.cue).map(r => "unobserved⊘" + r.cue));
         this.interrupt();
         return out; // no score, tint, praise or partial rep from invalid observations
       }
+      const source = driverSides.join("+");
+      if(this.driverSource != null && this.driverSource !== source){
+        this.interrupt();
+        // Don't use the previous side's smoothed driver after changing source.
+        driver.v = observedRead(driver.t); this.ema[driver.t.id] = driver.v;
+      }
+      this.driverSource = source;
+      out.evidence.movement.source = source;
     }
+    out.evidence.movement.eligible = this.rep ? out.inPosition : out.inPose;
 
     // weighted form score
     /* w:0 targets (rep drivers, position gates) must not enter the pool — a movement
@@ -1588,11 +1674,13 @@ class Evaluator {
     const quality = out.readings.filter(r => !this.rep || (!r.t.pos && r.t.id !== this.mv.reps.driver));
     let pool = quality.filter(r => !r.t.gate && wOf(r) > 0);
     if(!pool.length) pool = quality.filter(r => r.t.gate && !r.t.pos);
-    if(!pool.length && !this.rep) pool = out.readings;
+    const poolKey = pool.map(r => r.t.id + ":" + observations.get(r.t.id).sides.join("+")).join("|");
+    const changedPool = this.scorePool != null && this.scorePool !== poolKey;
+    this.scorePool = poolKey;
     if(pool.length){
     const tw = pool.reduce((a,r) => a + Math.max(wOf(r), 0.001), 0);
     const raw = pool.reduce((a,r) => a + r.s * Math.max(wOf(r), 0.001), 0) / tw;
-    this.score += emaAlpha(0.1, dt)*(raw - this.score);
+    this.score = changedPool ? raw : this.score + emaAlpha(0.1, dt)*(raw - this.score);
     this.sum += this.score; this.n++;
     out.score = Math.round(this.score);
     /* 5 Hz on the CLOCK, by sample INDEX. Frame counting sampled twice as often at
@@ -1643,7 +1731,7 @@ class Evaluator {
       viewDropped = offenders.filter(depth).map(r => "view⊘" + r.cue);
       offenders = offenders.filter(r => !depth(r));
     }
-    this.suppressed = [...viewDropped, ...offenders.slice(1).map(r => r.cue)];
+    this.suppressed = [...new Set(out.suppressed), ...viewDropped, ...offenders.slice(1).map(r => r.cue)];
     out.suppressed = this.suppressed;
 
     /* ── which parts to colour ──
@@ -1662,6 +1750,7 @@ class Evaluator {
        something visible IS happening (the clock has stopped) and colour explains it. */
     const judged = quality.filter(r =>
       !r.t.pos && !unreliable.has(r.t.id) &&
+      observations.get(r.t.id).sides.includes(frame.cam) &&
       ((!r.t.gate && (r.t.w ?? 1) > 0) || (r.t.gate && r.s <= 0)));
     let worst = null;
     for(const r of judged){
@@ -1728,6 +1817,7 @@ class Evaluator {
                                       during setup, but the per-target EMAs were surviving
                                       it, so the first frames of every set were judged on
                                       the posture someone had while getting into position. */
+    this.scorePool = null; this.driverSource = null; this.targetSources = {};
     if(this.rep){
       this.rep.reps = 0; this.rep.state = "down"; this.rep.last = null;
       this.rep.base = null; this.rep.primed = false; this.rep.pMax = 0;
@@ -2189,6 +2279,7 @@ class SessionCore {
         const notReady = r.viewCue ? r.viewCue
                        : (r.framing && !r.framing.ok) ? framingCue(r.framing)
                        : (r.framing && r.framing.verdict === "far") ? "tooFar"
+                       : r.evidence?.movement.missing.length ? "trackingLost"
                        : !r.inPosition ? "getin" : !r.inPose ? (shapeCue || "setupShape") : null;
         if(notReady){
           readinessFx(this, notReady, now, E);
@@ -2200,7 +2291,7 @@ class SessionCore {
       return E;
     }
 
-    if(r.repPaused){
+    if(r.repPaused || r.observationPaused){
       this.pendingFix = null;
       readinessFx(this, r.viewCue || (!r.framing.ok ? framingCue(r.framing) : r.blocking.includes("tracking") ? "trackingLost" : "repPosition"), now, E);
       E.push({t:"scoreCol", on:false});
@@ -2535,6 +2626,12 @@ class CalibrationCore {
         [x.t.id, +x.v.toFixed(Math.abs(x.v) < 1 ? 4 : 1)])) }});
     E.push({t:"scoreCol", on:r.score != null});
     if(r.score != null) E.push({t:"scoreFill", pct:r.score});
+
+    if(r.observationPaused){
+      this.armT = 0;
+      readinessFx(this, r.viewCue || (!r.framing.ok ? framingCue(r.framing) : "trackingLost"), now, E);
+      return E;
+    }
 
     if(!this.armed){
       E.push({t:"bigLabel", s:"GET SET"});
@@ -3013,7 +3110,8 @@ class DiagnosticBuffer {
       }
       const d = JSON.parse(entry.text).data;
       const state = {phase:d.phase, movement:d.movement, tier:d.tier, target:d.target, state:d.after?.state || d.stateBefore,
-        reps:d.reps, blocked:d.blocked, tracking:d.frame !== null};
+        reps:d.reps, blocked:d.blocked, tracking:d.frame !== null,
+        evidence:d.evidence || null};
       summaryKey = JSON.stringify(state);
       if(at - this.summaryAt >= 1000 || summaryKey !== this.summaryKey)
         summary = this.record("summary", at, {...state, held:d.held, score:d.score ?? null,
@@ -3138,6 +3236,7 @@ function diagnosticFrame(stamp, frame, dt, now, effects){
     stateBefore:stamp.state, after:stamp.after,
     reps:r?.reps ?? stamp.ev?.rep?.display() ?? 0, held:stamp.ev?.hold ?? 0, score:r?.score ?? null,
     blocked:r?.blocking || (frame === null ? ["tracking"] : []), suppressed:r?.suppressed || [],
+    evidence:r?.evidence || null,
     readings:(r?.readings || []).map(x => ({id:x.t.id, value:x.v, score:x.s, cue:x.cue})),
     counter:stamp.ev?.rep ? {state:stamp.ev.rep.state, primed:stamp.ev.rep.primed, base:stamp.ev.rep.base,
       peak:stamp.ev.rep.peak, progressMax:stamp.ev.rep.pMax} : null,

@@ -56,6 +56,15 @@ export function exerciseInputs(poses) {
       // Historical screen recordings suggested counting during repositioning.
       // These are independent synthetic inputs, NOT landmarks recovered from video.
       if (mode === 'clipped-cycle') return frame(id, cycle(t), { clipped: true });
+      if (['quality-cropped-rest', 'quality-cropped-cycle', 'driver-missing-cycle'].includes(mode)) {
+        if (id !== 'crunch') throw new Error('These partial-view inputs are explicitly authored for Crunch');
+        const f = frame(id, mode.endsWith('rest') ? 0 : cycle(t));
+        for (const side of ['left', 'right']) {
+          if (mode === 'driver-missing-cycle') delete f[side].knee;
+          else f[side].ear.x = 1.05;
+        }
+        return f;
+      }
       if (mode === 'upright-cycle') {
         if (id !== 'push-up') throw new Error('Upright elbow-bend fixture is authored for push-up only');
         const p = cycle(t), f = frame(id, p);

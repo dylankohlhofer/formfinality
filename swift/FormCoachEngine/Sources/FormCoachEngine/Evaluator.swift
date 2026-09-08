@@ -2,9 +2,39 @@ import Foundation
 
 public struct Reading {
     public let target: PoseTarget
-    public let v: Double
+    public var v: Double
     public let s: Double
     public let cue: String?
+}
+
+public struct MissingEvidence: Codable, Equatable {
+    public let target: String
+    public let reason: String?
+}
+
+public struct ObservedEvidence: Codable, Equatable {
+    public let target: String
+    public let sides: [String]
+}
+
+public struct MovementObservation: Codable, Equatable {
+    public var status = "unavailable"
+    public var eligible = false
+    public var missing: [MissingEvidence] = []
+    public var source: String? = nil
+}
+
+public struct FormObservation: Codable, Equatable {
+    public var status = "unavailable"
+    public var observed: [ObservedEvidence] = []
+    public var missing: [MissingEvidence] = []
+}
+
+/// Camera evidence is separate from geometry, form quality and completed work.
+public struct MovementEvidence: Codable, Equatable {
+    public var schema = "movement-evidence/1"
+    public var movement = MovementObservation()
+    public var form = FormObservation()
 }
 
 public struct FormResult {
@@ -16,6 +46,8 @@ public struct FormResult {
     public var score: Int? = nil
     public var rep: RepEvent? = nil
     public var repPaused = false
+    public var observationPaused = false
+    public var evidence = MovementEvidence()
     /// Set at the up-crossing, one whole half-cycle BEFORE `rep`. `reps` does not move
     /// with it. The shell turns this into the repPeak effect; `rep` is what counts.
     public var atPeak: RepEvent? = nil
@@ -63,13 +95,8 @@ public struct TracePoint { public let t: Double; public let s: Int }
 public struct Framing { public var ok: Bool; public var verdict: String
     public var dir: String? = nil; public var fill: Double = 0 }
 
-/// Which joints does this movement actually measure? Derived from the metric specs,
-/// so a crunch doesn't insist on seeing your feet. Same content-as-data trick as tint.
-/// Joints framing must actually see: JUDGING targets only (graded, quality gates,
-/// the rep driver). Position gates are excluded — they decide whether you're set up,
-/// and an off-screen joint makes that gate fail on its own. Including them meant a
-/// crunch demanded ankles it never reads. Guided movements have no judging targets,
-/// so they fall back to their own position gates rather than to "every joint".
+/// Full judging-joint inventory retained for content/vector parity. Required
+/// movement evidence is derived separately by movementTargets, not this union.
 public func neededJoints(_ mv: Movement) -> Set<String> {
     func add(_ s: inout Set<String>, _ m: MetricSpec) {
         if m.k == "angle" { for j in [m.v, m.a, m.c] { if let j { s.insert(j) } } }
@@ -86,16 +113,21 @@ public func neededJoints(_ mv: Movement) -> Set<String> {
 
 public func framing(_ frame: PoseFrame, need: Set<String>? = nil) -> Framing {
     var pts: [Joint] = []
+    var all: [Joint] = []
     for side in [frame.left, frame.right] {
-        for (j, p) in side where (p.c ?? 1) > 0.4 {
-            if let need, !need.isEmpty, !need.contains(j) { continue }   // irrelevant limb
+        for (j, p) in side where p.x.isFinite && p.y.isFinite && !(p.c <= 0.4) {
+            all.append(p)
+            if let need, !need.isEmpty, !need.contains(j) { continue }
             pts.append(p)
         }
     }
-    if pts.count < 4 { return Framing(ok: true, verdict: "unsure") }
+    if all.count < 4 || pts.count < 2 { return Framing(ok: true, verdict: "unsure") }
     var minX = 1.0, maxX = 0.0, minY = 1.0, maxY = 0.0
     for p in pts { minX = min(minX, p.x); maxX = max(maxX, p.x)
                    minY = min(minY, p.y); maxY = max(maxY, p.y) }
+    var bodyX0 = 1.0, bodyX1 = 0.0, bodyY0 = 1.0, bodyY1 = 0.0
+    for p in all { bodyX0 = min(bodyX0, p.x); bodyX1 = max(bodyX1, p.x)
+                   bodyY0 = min(bodyY0, p.y); bodyY1 = max(bodyY1, p.y) }
     let w = maxX - minX, h = maxY - minY, M = 0.02
     let cl = (l: minX < M, r: maxX > 1 - M, t: minY < M, b: maxY > 1 - M)
     if cl.l || cl.r || cl.t || cl.b {
@@ -107,9 +139,62 @@ public func framing(_ frame: PoseFrame, need: Set<String>? = nil) -> Framing {
         }
         return Framing(ok: false, verdict: "clipped", dir: dir, fill: max(w, h))
     }
-    let fill = max(w, h)
+    let fill = max(bodyX1 - bodyX0, bodyY1 - bodyY0)
     if fill < 0.35 { return Framing(ok: true, verdict: "far", fill: fill) }
     return Framing(ok: true, verdict: "framed", fill: fill)
+}
+
+func metricJoints(_ m: MetricSpec) -> [String] {
+    switch m.k {
+    case "angle": return [m.v, m.a, m.c].compactMap { $0 }
+    case "line": return [m.of, m.from, m.to].compactMap { $0 }
+    case "vert": return [m.a, m.b].compactMap { $0 }
+    default: return []
+    }
+}
+
+struct TargetObservation {
+    var sides: [String]
+    var reason: String?
+    var raw: Double? = nil
+}
+
+func targetObservation(_ t: PoseTarget, _ frame: PoseFrame) -> TargetObservation {
+    let names = (t.m.agg ?? "camera") == "camera" ? [frame.cam] : ["left", "right"]
+    let joints = metricJoints(t.m)
+    var clipped = false
+    let visible = names.filter { side in
+        !joints.isEmpty && joints.allSatisfy { joint in
+            guard let p = frame.side(side)[joint], p.c.isFinite, p.c >= 0.5,
+                  p.x.isFinite, p.y.isFinite else { return false }
+            if p.x < 0.02 || p.x > 0.98 || p.y < 0.02 || p.y > 0.98 {
+                clipped = true
+                return false
+            }
+            return true
+        }
+    }
+    let sides = visible.filter { side in
+        let points = frame.side(side), metric = t.m, aspect = frame.aspect ?? 1
+        guard aspect.isFinite, aspect > 0 else { return false }
+        func distinct(_ a: String?, _ b: String?) -> Bool {
+            guard let a, let b, let first = points[a], let second = points[b] else { return false }
+            return hypot((first.x - second.x) * aspect, first.y - second.y) >= 1e-9
+        }
+        if metric.k == "vert" && !distinct(metric.a, metric.b) { return false }
+        if metric.k == "line" && !distinct(metric.from, metric.to) { return false }
+        guard let value = readMetric(metric, frame, side) else { return false }
+        return value.isFinite
+    }
+    let reason: String? = !sides.isEmpty ? nil : !visible.isEmpty ? "unreadable" : clipped ? "clipped" : "tracking"
+    return TargetObservation(sides: sides, reason: reason)
+}
+
+func movementTargets(_ mv: Movement) -> [PoseTarget] {
+    mv.targets.filter {
+        (($0.pos ?? false) && !($0.optionalObservation ?? false)) ||
+        $0.id == mv.reps?.driver || (mv.kind != "reps" && ($0.gate ?? false))
+    }
 }
 
 public final class Evaluator {
@@ -130,11 +215,14 @@ public final class Evaluator {
     var armedAt: Double? = nil
     var lastTraceBucket = -1
     var sev: [String: Int] = [:]        // latched tint severity
-    let need: Set<String>               // joints framing must see for THIS movement
+    let movementNeed: Set<String>
+    var scorePool: String? = nil
+    var driverSource: String? = nil
+    var targetSources: [String: String] = [:]
     public var rep: RepCounter?
 
     public init(_ mv: Movement, tier: TierSpec) {
-        self.need = neededJoints(mv)
+        self.movementNeed = Set(movementTargets(mv).flatMap { metricJoints($0.m) })
         self.mv = mv
         self.tier = tier
         self.rep = mv.reps.map { RepCounter($0) }
@@ -161,61 +249,118 @@ public final class Evaluator {
         return lv
     }
 
-    /// The joints THIS movement is judged on, averaged. A joint the movement never
-    /// reads cannot make the app claim it can't see you.
-    ///
-    /// `PoseFrame.conf` averages a fixed core, which is wrong in both directions: a
-    /// wall sit is judged on shoulder and hip alone, so a poorly-seen ankle discarded
-    /// the whole frame while the user stood in perfectly good view; and a movement
-    /// that genuinely needs the ear (crunch, plank neck) got no signal from it at all.
-    func confFor(_ frame: PoseFrame) -> Double {
-        let side = frame.side(frame.cam)
-        if need.isEmpty { return frame.conf }
-        var sum = 0.0
-        for j in need { sum += side[j]?.c ?? 0 }
-        return sum / Double(need.count)
-    }
-
     public func interrupt() {
-        guard let rep else { return }
-        rep.interrupt(); ema = [:]; sev = [:]
+        driverSource = nil
+        rep?.interrupt()
+        ema = [:]; sev = [:]; targetSources = [:]; scorePool = ""
     }
 
     public func evaluate(_ frame: PoseFrame, dt: Double, now: Double) -> FormResult {
         var out = FormResult()
         out.reps = rep?.display() ?? 0
 
-        out.framing = framing(frame, need: need)
-        // Judged on the joints this movement needs, not a fixed list.
-        if confFor(frame) < 0.5 { interrupt(); out.ok = false; return out }
+        var observations: [String: TargetObservation] = [:]
+        for t in mv.targets {
+            var observation = targetObservation(t, frame)
+            var observedFrame = frame
+            if !observation.sides.contains("left") { observedFrame.left = [:] }
+            if !observation.sides.contains("right") { observedFrame.right = [:] }
+            let raw = observation.sides.isEmpty ? nil : read(t, observedFrame)
+            if !observation.sides.isEmpty && (raw == nil || !raw!.isFinite) {
+                observation.sides = []; observation.reason = "unreadable"
+            }
+            observation.raw = observation.sides.isEmpty ? nil : raw
+            observations[t.id] = observation
+        }
+        let required = movementTargets(mv)
+        let missing = required.filter { observations[$0.id]!.sides.isEmpty }.map {
+            MissingEvidence(target: $0.id, reason: observations[$0.id]!.reason)
+        }
+        let formTargets = mv.kind == "guided" ? [] : mv.targets.filter {
+            (rep == nil || (!($0.pos ?? false) && $0.id != mv.reps?.driver)) &&
+            (($0.w ?? 1) > 0 || ($0.gate ?? false))
+        }
+        out.evidence.movement.status = missing.isEmpty ? "observed" : "unavailable"
+        out.evidence.movement.missing = missing
+        for t in formTargets {
+            let observation = observations[t.id]!
+            if !observation.sides.isEmpty {
+                out.evidence.form.observed.append(ObservedEvidence(target: t.id, sides: observation.sides))
+            } else {
+                out.evidence.form.missing.append(MissingEvidence(target: t.id, reason: observation.reason))
+            }
+        }
+        out.evidence.form.status = formTargets.isEmpty ? "unscored" :
+            out.evidence.form.observed.isEmpty ? "unavailable" :
+            out.evidence.form.missing.isEmpty ? "complete" : "partial"
+
+        // Required targets request framing only on complete observed sides. Retain
+        // unrelated visible joints for the whole-body distance estimate.
+        var framingFrame = frame
+        for j in movementNeed {
+            framingFrame.left.removeValue(forKey: j)
+            framingFrame.right.removeValue(forKey: j)
+        }
+        for t in required {
+            let observation = observations[t.id]!
+            let sides = observation.sides.isEmpty ?
+                ((t.m.agg ?? "camera") == "camera" ? [frame.cam] : ["left", "right"]) : observation.sides
+            for side in sides {
+                for j in metricJoints(t.m) {
+                    if let p = frame.side(side)[j] {
+                        if side == "left" { framingFrame.left[j] = p } else { framingFrame.right[j] = p }
+                    }
+                }
+            }
+        }
+        out.framing = framing(framingFrame, need: movementNeed)
+        func observedRead(_ t: PoseTarget) -> Double? {
+            guard let raw = observations[t.id]!.raw, raw.isFinite else {
+                ema.removeValue(forKey: t.id); sev.removeValue(forKey: t.id)
+                targetSources.removeValue(forKey: t.id)
+                let key = "unobserved⊘" + t.id
+                if !out.suppressed.contains(key) { out.suppressed.append(key) }
+                return nil
+            }
+            let source = observations[t.id]!.sides.joined(separator: "+")
+            if let previous = targetSources[t.id], previous != source {
+                ema.removeValue(forKey: t.id); sev.removeValue(forKey: t.id)
+            }
+            targetSources[t.id] = source
+            return raw
+        }
+        if !observations.values.contains(where: { !$0.sides.isEmpty }) {
+            if out.framing.verdict == "clipped" { out.blocking.append("framing") }
+            interrupt(); out.ok = false; return out
+        }
 
         // GUIDED — position checked, no claims about quality.
         if mv.kind == "guided" {
             for t in mv.targets {
-                guard let raw = read(t, frame) else { continue }
-                let v = smooth(t.id, raw, alpha: t.m.sm ?? 0.35, dt: dt)
+                guard let raw = observedRead(t) else { continue }
+                let v = smooth(t.id, raw, alpha: (t.m.sm == nil || t.m.sm == 0) ? 0.35 : t.m.sm!, dt: dt)
                 out.readings.append(Reading(target: t, v: v,
                     s: scoreTarget(t, v, tierTol: tier.tol), cue: nil))
             }
             let gates = out.readings.filter { ($0.target.pos ?? false) || ($0.target.gate ?? false) }
-            out.inPose = gates.isEmpty ? true : gates.allSatisfy { $0.s > 0 }
+            out.inPose = missing.isEmpty && gates.allSatisfy { $0.s > 0 }
             out.inPosition = out.inPose
-            out.blocking = gates.filter { $0.s <= 0 }.map { $0.target.id }
-        // A clipped body can't be assessed and mustn't arm a set — mirrors the browser.
-        // "far" still arms (quality nudge only); "clipped" does not.
-        if out.framing.verdict == "clipped" {
-            out.inPosition = false
-            out.inPose = false
-            if !out.blocking.contains("framing") { out.blocking.append("framing") }
-        }
+            out.blocking = missing.map { $0.target } + gates.filter { $0.s <= 0 }.map { $0.target.id }
+            // "far" is a quality nudge; a clipped body cannot arm the set.
+            if out.framing.verdict == "clipped" {
+                out.inPosition = false
+                out.inPose = false
+                out.blocking.append("framing")
+            }
             if out.inPose { hold += dt }
+            out.evidence.movement.eligible = out.inPose
             out.guided = true
             return out
         }
 
         for t in mv.targets {
-            guard let raw = read(t, frame) else { continue }
-            let v = smooth(t.id, raw, alpha: t.m.sm ?? 0.35, dt: dt)
+            guard let raw = observedRead(t) else { continue }
+            let v = smooth(t.id, raw, alpha: (t.m.sm == nil || t.m.sm == 0) ? 0.35 : t.m.sm!, dt: dt)
             out.readings.append(Reading(target: t, v: v,
                 s: scoreTarget(t, v, tierTol: tier.tol),
                 cue: cueFor(t, v, tierTol: tier.tol)))
@@ -224,10 +369,16 @@ public final class Evaluator {
 
         // POSITION gates decide arming; QUALITY gates decide only the hold clock.
         let posGates = out.readings.filter { $0.target.pos ?? false }
-        out.inPosition = posGates.isEmpty ? true : posGates.allSatisfy { $0.s > 0 }
+        out.inPosition = missing.isEmpty && posGates.allSatisfy { $0.s > 0 }
         let qGates = out.readings.filter { $0.target.gate ?? false }
-        out.inPose = out.inPosition && (qGates.isEmpty ? true : qGates.allSatisfy { $0.s > 0 })
-        out.blocking = (posGates + qGates).filter { $0.s <= 0 }.map { $0.target.id }
+        let missingGates = mv.targets.filter { t in
+            (t.gate ?? false) && !out.readings.contains { $0.target.id == t.id }
+        }
+        out.inPose = out.inPosition && missingGates.isEmpty && qGates.allSatisfy { $0.s > 0 }
+        for key in missing.map({ $0.target }) + missingGates.map({ $0.id }) +
+            (posGates + qGates).filter({ $0.s <= 0 }).map({ $0.target.id }) {
+            if !out.blocking.contains(key) { out.blocking.append(key) }
+        }
         // Previously this guard was accidentally present only in the guided branch.
         if out.framing.verdict == "clipped" {
             out.inPosition = false; out.inPose = false
@@ -249,36 +400,58 @@ public final class Evaluator {
             }
         }
 
+        if !missing.isEmpty && rep == nil {
+            out.observationPaused = true
+            if missing.contains(where: { $0.reason != "clipped" }) { out.blocking.append("tracking") }
+            interrupt(); outOfPose = 0
+            return out
+        }
+
         if rep != nil, let spec = mv.reps {
             let rawBlocked = mv.targets.filter { $0.pos ?? false }.filter { t in
-                guard let v = read(t, frame) else { return false }
+                guard let v = observedRead(t) else { return !(t.optionalObservation ?? false) }
                 return scoreTarget(t, v, tierTol: tier.tol) <= 0
             }.map { $0.id }
-            let driver = out.readings.first { $0.target.id == spec.driver }
-            let metric = mv.targets.first { $0.id == spec.driver }!.m
-            let joints = [metric.v, metric.a, metric.b, metric.c, metric.of, metric.from, metric.to].compactMap { $0 }
-            let driverVisible = joints.allSatisfy { (frame.side(frame.cam)[$0]?.c ?? 0) >= 0.5 }
-            if !out.inPosition || !rawBlocked.isEmpty || driver == nil || !driverVisible {
-                for key in rawBlocked + ((driver == nil || !driverVisible) ? ["tracking"] : []) {
+            let driverIndex = out.readings.firstIndex { $0.target.id == spec.driver }
+            let driverSides = observations[spec.driver]!.sides
+            let driverVisible = !driverSides.isEmpty
+            if !out.inPosition || !rawBlocked.isEmpty || driverIndex == nil || !driverVisible {
+                for key in rawBlocked + ((driverIndex == nil || !driverVisible) ? ["tracking"] : []) {
                     if !out.blocking.contains(key) { out.blocking.append(key) }
                 }
                 out.inPosition = false; out.inPose = false; out.repPaused = true
-                out.suppressed = out.readings.compactMap { $0.cue.map { "unobserved⊘" + $0 } }
+                out.suppressed += out.readings.compactMap { $0.cue.map { "unobserved⊘" + $0 } }
                 interrupt()
                 return out
             }
+            let source = driverSides.joined(separator: "+")
+            if let driverSource, driverSource != source {
+                interrupt()
+                let index = driverIndex!
+                let target = out.readings[index].target
+                let raw = observedRead(target)!
+                out.readings[index].v = raw
+                ema[target.id] = raw
+            }
+            driverSource = source
+            out.evidence.movement.source = source
         }
+        out.evidence.movement.eligible = rep != nil ? out.inPosition : out.inPose
 
         // Drivers measure cycle range/tempo, not static posture. Empty means nil.
         func wOf(_ r: Reading) -> Double { r.target.w ?? 1 }
         let quality = out.readings.filter { rep == nil || (!($0.target.pos ?? false) && $0.target.id != mv.reps?.driver) }
         var pool = quality.filter { !($0.target.gate ?? false) && wOf($0) > 0 }
         if pool.isEmpty { pool = quality.filter { ($0.target.gate ?? false) && !($0.target.pos ?? false) } }
-        if pool.isEmpty && rep == nil { pool = out.readings }
+        let poolKey = pool.map {
+            $0.target.id + ":" + observations[$0.target.id]!.sides.joined(separator: "+")
+        }.joined(separator: "|")
+        let changedPool = scorePool != nil && scorePool != poolKey
+        scorePool = poolKey
         if !pool.isEmpty {
         let tw = pool.reduce(0.0) { $0 + max(wOf($1), 0.001) }
         let raw = pool.reduce(0.0) { $0 + $1.s * max(wOf($1), 0.001) } / tw
-        score += emaAlpha(0.1, dt) * (raw - score)
+        score = changedPool ? raw : score + emaAlpha(0.1, dt) * (raw - score)
         sum += score; n += 1
         out.score = Int(score.rounded())
         // 5 Hz by clock BUCKET — frame counting sampled twice as often at 60fps,
@@ -335,7 +508,9 @@ public final class Evaluator {
             viewDropped = offenders.filter(depth).map { "view⊘" + ($0.cue ?? "") }
             offenders = offenders.filter { !depth($0) }
         }
-        suppressed = viewDropped + offenders.dropFirst().compactMap { $0.cue }
+        var unobserved: [String] = []
+        for key in out.suppressed where !unobserved.contains(key) { unobserved.append(key) }
+        suppressed = unobserved + viewDropped + offenders.dropFirst().compactMap { $0.cue }
         out.suppressed = suppressed
 
         // ── which parts to colour ──
@@ -352,6 +527,7 @@ public final class Evaluator {
         // glowing red while the form bar reads 77 is a trust problem.
         let judged = quality.filter { r in
             !(r.target.pos ?? false) && !unreliable.contains(r.target.id) &&
+            observations[r.target.id]!.sides.contains(frame.cam) &&
             ((!(r.target.gate ?? false) && (r.target.w ?? 1) > 0) ||
              ((r.target.gate ?? false) && r.s <= 0))
         }
@@ -413,6 +589,7 @@ public final class Evaluator {
         // readings still smoothed from the shuffle into position (bug #18).
         sev = [:]
         ema = [:]
+        scorePool = nil; driverSource = nil; targetSources = [:]
         if let rc = rep {
             rc.reps = 0; rc.state = "down"; rc.last = nil
             rc.base = nil; rc.primed = false; rc.pMax = 0

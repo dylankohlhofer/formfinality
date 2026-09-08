@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "crunch-partial-quality",
+  "description": "FC-LAB-009: optional head cropping permits observed Crunch cycles, never invents neck form, and still rejects hidden torso cycles. Real shell and engine share this case.",
+  "oracle": "Three complete four-second cycles count with the neck-only ear outside the image. Removing the knee driver then hides two cycles: count stays three. Fresh rest/peak/return after recovery adds exactly one. Optional neck quality remains unscored throughout the first block.",
+  "tier": "building",
+  "plan": "lab-crunch-partial-quality",
+  "planSpec": {"id":"lab-crunch-partial-quality","name":"Partial-view Crunch","tiers":["building"],"disc":"TEST","steps":[{"ex":"crunch","t":100}]},
+  "steps": [
+    {"do":"start","core":"session"},
+    {"do":"frames","pose":"exercise:crunch:quality-cropped-rest","seconds":3},
+    {"do":"check","label":"Requested movement remains Crunch","path":"movement","equals":"crunch"},
+    {"do":"frames","pose":"exercise:crunch:quality-cropped-cycle","seconds":12},
+    {"do":"check","label":"Three observed cycles count despite cropped ears","path":"reps","equals":3},
+    {"do":"check","label":"No unobserved neck scores enter the session average","path":"scoreN","equals":0},
+    {"do":"ui","label":"The visible counter reflects the three observed repetitions","selector":"#big","text":"3/100"},
+    {"do":"ui","label":"No form bar for an unseen neck","selector":"#scoreCol","visible":false},
+    {"do":"frames","pose":"exercise:crunch:driver-missing-cycle","seconds":8},
+    {"do":"check","label":"Missing driver cannot contribute unseen cycles","path":"reps","equals":3},
+    {"do":"frames","pose":"exercise:crunch:quality-cropped-rest","seconds":2},
+    {"do":"frames","pose":"exercise:crunch:quality-cropped-cycle","seconds":4},
+    {"do":"check","label":"Fresh observed cycle after recovery adds exactly one","path":"reps","equals":4},
+    {"do":"finishBySkipping"},
+    {"do":"check","label":"User can finish the partially assessed session","path":"done","equals":true},
+    {"do":"check","label":"Skipped phase remains unscored","path":"out.0.score","equals":null}
+  ]
+}
