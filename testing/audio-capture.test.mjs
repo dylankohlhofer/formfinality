@@ -19,6 +19,78 @@ test('real decoded playback control is audible and sequential', async () => {
     verification: { variant: 'healthy control', expected: 'passes', source: 'testing/audio-capture.test.mjs' } });
   assert.equal(r.status, 'passed', JSON.stringify(r));
 });
+test('pausing pending real playback is retained as cancellation, with per-request ownership on reuse', async () => {
+  const target = resolve(dir, 'pending-pause');
+  const [r] = await audioSweep({ root, html, dir: target, only: 'clips-steady-building', repeatFailures: false,
+    verification: { variant: 'pause pending playback then reuse the same element', expected: 'observed AbortError cancellation is retained; the next request plays', source: 'testing/audio-capture.test.mjs' },
+    mutate: page => page.evaluate(() => {
+      const sequence = window.__audioLab.sequence;
+      window.__audioLab.sequence = async () => {
+        const a = window.__testLab.audioAccess().AudioBank.get('voice/steady/num/3.mp3');
+        const first = a.play(); a.pause();
+        const second = a.play(); // Start before the first rejection callback runs.
+        let rejected = false;
+        await first.catch(error => {
+          if (error.name !== 'AbortError') throw error;
+          rejected = true;
+        });
+        if (!rejected) throw new Error('The pending-play cancellation was not exercised');
+        await second; a.pause();
+        return sequence();
+      };
+    }) });
+  assert.equal(r.status, 'passed', JSON.stringify(r));
+  const e = JSON.parse(await readFile(resolve(target, 'audio-clips-steady-building/audio.json')));
+  const requests = e.events.filter(e => e.type === 'clip-request' && e.path === 'voice/steady/num/3.mp3');
+  assert.equal(requests.length, 2);
+  const cancelled = e.events.filter(e => e.type === 'clip-cancelled');
+  assert.equal(cancelled.length, 1);
+  assert.equal(cancelled[0].playId, requests[0].playId);
+  assert.equal(cancelled[0].errorName, 'AbortError');
+  // The marker and log sample the clock separately; require ordering/ownership,
+  // not identical rounded timestamps from those two reads.
+  assert.ok(e.events.some(e => e.type === 'clip-pause-request' && e.playId === requests[0].playId &&
+    e.ms >= cancelled[0].pausedAt && e.ms <= cancelled[0].ms));
+  assert.ok(e.events.some(e => e.type === 'clip-start' && e.playId === requests[1].playId));
+  assert.ok(!e.events.some(e => e.type === 'clip-start' && e.playId === requests[0].playId));
+  assert.match(await readFile(resolve(target, 'audio-clips-steady-building/audio-review.html'), 'utf8'), /clip-cancelled/);
+});
+for (const variant of ['unrequested-abort', 'paused-decode-error', 'reused-unrequested-abort']) {
+  test(`the capture tap still fails ${variant}`, async () => {
+    const target = resolve(dir, variant);
+    const [r] = await audioSweep({ root, html, dir: target, only: 'clips-steady-building', repeatFailures: false,
+      verification: { variant, expected: 'real playback-error assertion fails; NOT an app bug', source: 'testing/audio-capture.test.mjs' },
+      mutate: page => page.evaluate(variant => {
+        const nativePlay = HTMLMediaElement.prototype.play;
+        HTMLMediaElement.prototype.play = function() {
+          if (this.src.endsWith('/voice/steady/num/3.mp3'))
+            return Promise.reject(new DOMException('Deliberate capture mutation', variant === 'paused-decode-error' ? 'NotSupportedError' : 'AbortError'));
+          return nativePlay.call(this);
+        };
+        const sequence = window.__audioLab.sequence;
+        window.__audioLab.sequence = async () => {
+          const a = window.__testLab.audioAccess().AudioBank.get('voice/steady/num/3.mp3');
+          const pending = a.play();
+          if (variant !== 'unrequested-abort') a.pause();
+          await pending.catch(() => {}); // The independent tap must still fail.
+          if (variant === 'reused-unrequested-abort') await a.play().catch(() => {});
+          return sequence();
+        };
+      }, variant) });
+    assert.ok(!r.error, r.error);
+    const failure = r.checks.find(c => !c.pass && c.label === 'No media load, playback or capture errors');
+    assert.ok(failure, JSON.stringify(r));
+    assert.equal(failure.actual.length, 1);
+    assert.equal(failure.actual[0].errorName, variant === 'paused-decode-error' ? 'NotSupportedError' : 'AbortError');
+    const e = JSON.parse(await readFile(resolve(target, 'audio-clips-steady-building/audio.json')));
+    assert.equal(e.events.filter(e => e.type === 'clip-cancelled').length, variant === 'reused-unrequested-abort' ? 1 : 0);
+    if (variant === 'reused-unrequested-abort') {
+      const requests = e.events.filter(e => e.type === 'clip-request' && e.path === 'voice/steady/num/3.mp3');
+      assert.equal(failure.actual[0].playId, requests[1].playId);
+      assert.equal(failure.actual[0].pausedAt, null);
+    }
+  });
+}
 test('muting actual media elements is caught as silence', async () => {
   const [r] = await audioSweep({ root, html, dir: resolve(dir, 'silence'), only: 'clips-steady-building', repeatFailures: false,
     verification: { variant: 'deliberately muted media elements', expected: 'silence assertions fail; NOT an app bug', source: 'testing/audio-capture.test.mjs' },

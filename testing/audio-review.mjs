@@ -75,7 +75,7 @@ export function auditAudio(evidence) {
 }
 
 export function audioReviewPage(scenario, evidence, audit) {
-  const rows = evidence.events.filter(e => ['speech-start', 'clip-start', 'clip-end', 'dropped', 'tts-request', 'tts-unavailable', 'observation', 'action'].includes(e.type));
+  const rows = evidence.events.filter(e => ['speech-start', 'clip-start', 'clip-end', 'clip-pause-request', 'clip-cancelled', 'clip-error', 'dropped', 'tts-request', 'tts-unavailable', 'observation', 'action'].includes(e.type));
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Voice review — ${escape(scenario.id)}</title>
   <style>body{font:16px/1.5 system-ui;max-width:1100px;margin:32px auto;padding:0 20px;color:#222}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}small{color:#555}audio{width:100%}button,a{color:#534693}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
   <h1>${escape(scenario.id)} — voice review</h1><p>${escape(scenario.description)}</p>
@@ -86,7 +86,7 @@ export function audioReviewPage(scenario, evidence, audit) {
   ${audit.concerns.map(c => `<li>REVIEW at ${(c.ms / 1000).toFixed(2)}s: ${escape(c.detail)}</li>`).join('')}
   ${audit.gaps.map(g => `<li>COVERAGE GAP: ${escape(g)}</li>`).join('')}</ul>
   <h2>Speech and exercise timeline</h2><table><thead><tr><th>Time</th><th>Event</th><th>Exercise / input</th><th>Intended words or clip</th></tr></thead><tbody>
-  ${rows.map(e => `<tr><td><button data-seek="${Math.max(0, (e.ms - (evidence.events.find(x => x.type === 'capture-start')?.ms || 0)) / 1000)}">${(e.ms / 1000).toFixed(2)}s</button></td><td>${escape(e.type)}<br><small>${escape(e.reason || e.action || '')}</small></td><td>${escape(e.state.movement || 'no session')}<br><small>${escape(e.state.state || '')} · ${escape(e.state.observation.pose)}</small></td><td>${escape(e.item?.text || e.path || '')}<br><small>${escape(e.item?.key || '')}</small></td></tr>`).join('')}</tbody></table>
+  ${rows.map(e => `<tr><td><button data-seek="${Math.max(0, (e.ms - (evidence.events.find(x => x.type === 'capture-start')?.ms || 0)) / 1000)}">${(e.ms / 1000).toFixed(2)}s</button></td><td>${escape(e.type)}<br><small>${escape(e.reason || e.action || e.error || '')}</small></td><td>${escape(e.state.movement || 'no session')}<br><small>${escape(e.state.state || '')} · ${escape(e.state.observation.pose)}</small></td><td>${escape(e.item?.text || e.path || '')}<br><small>${escape(e.item?.key || '')}</small></td></tr>`).join('')}</tbody></table>
   <h2>Limits</h2><ul>${evidence.limitations.map(l => `<li>${escape(l)}</li>`).join('')}</ul>
   <script>document.querySelectorAll('[data-seek]').forEach(b=>b.onclick=()=>{document.getElementById('audio').currentTime=Number(b.dataset.seek)});</script></html>`;
 }

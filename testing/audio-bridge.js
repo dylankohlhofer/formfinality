@@ -85,17 +85,34 @@ window.__audioLab = (() => {
     // Only the recorder receives sound: no surprise speaker playback during CI.
     const data = new Float32Array(analyser.fftSize);
     let playId;
+    const pending = new Set();
     const play = a.play.bind(a), pause = a.pause.bind(a);
     a.play = () => {
-      playId = ++sequence;
-      log('clip-request', { playId, path, item: activeItem });
-      return play().catch(error => { log('clip-error', { playId, path, error: error.message }); throw error; });
+      const request = { playId: ++sequence, pausedAt: null };
+      playId = request.playId; pending.add(request);
+      log('clip-request', { playId: request.playId, path, item: activeItem });
+      return play().catch(error => {
+        // pause() may reject a still-pending play() before any "playing" event.
+        // Record the observed cancellation, but return the original rejection to
+        // production. A different error, or an AbortError without this request's
+        // pause, remains a failure. Never use another play's mutable ID/history.
+        const cancelled = request.pausedAt !== null && error.name === 'AbortError';
+        log(cancelled ? 'clip-cancelled' : 'clip-error', { playId: request.playId, path,
+          error: error.message, errorName: error.name, pausedAt: request.pausedAt });
+        throw error;
+      }).finally(() => pending.delete(request));
     };
     const end = reason => {
       if (!live.has(a)) return;
       log('clip-end', { playId: live.get(a).playId, path, reason }); live.delete(a);
     };
-    a.pause = () => { end('paused'); return pause(); };
+    a.pause = () => {
+      for (const request of pending) if (request.pausedAt === null) {
+        request.pausedAt = now();
+        log('clip-pause-request', { playId: request.playId, path });
+      }
+      end('paused'); return pause();
+    };
     a.addEventListener('playing', () => {
       if (live.has(a)) return;
       live.set(a, { playId, analyser, data });
