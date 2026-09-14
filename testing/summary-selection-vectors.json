@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "summary": {
+    "schema": "workout-summary/1",
+    "headline": "Your recorded work is below. Choose one focus for next time, at your own pace.",
+    "coverage": "Only observed work contributes to camera totals. Missing observations are not failed movement.",
+    "cards": [
+      {"id":"set-1-focus","movement":"Plank","kind":"observation","text":"Recorded coaching flagged hips dropping. This does not tell us why.","tip":"Review the alignment shown in this movement's demonstration."},
+      {"id":"set-1-work","movement":"Plank","kind":"recorded","text":"The camera recorded 12 seconds of held time.","tip":null},
+      {"id":"set-2-work","movement":"Glute Bridge","kind":"recorded","text":"The camera counted 6 reps.","tip":null}
+    ],
+    "defaultCardIds": ["set-1-focus","set-2-work"]
+  },
+  "cases": [
+    {"name":"no model requested","selection":null,"expected":{"source":"template","reason":"not-requested","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"one known card","selection":{"cardIds":["set-1-work"]},"expected":{"source":"on-device","reason":"selected","cardIds":["set-1-work"]}},
+    {"name":"two known cards preserve model order","selection":{"cardIds":["set-2-work","set-1-focus"]},"expected":{"source":"on-device","reason":"selected","cardIds":["set-2-work","set-1-focus"]}},
+    {"name":"empty selection is not permission to invent praise","selection":{"cardIds":[]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"unobserved exercise","selection":{"cardIds":["set-99-focus"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"one invalid ID rejects whole response","selection":{"cardIds":["set-1-focus","set-99-focus"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"duplicates rejected","selection":{"cardIds":["set-1-focus","set-1-focus"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"too many cards","selection":{"cardIds":["set-1-focus","set-1-work","set-2-work"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"prose is not a summary selection","selection":"Your form was perfect and you should go harder.","expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"extra generated medical claim","selection":{"cardIds":["set-1-focus"],"text":"Your pain is an injury."},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"extra invented score","selection":{"cardIds":["set-1-focus"],"score":100},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"array in place of object","selection":["set-1-focus"],"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"string in place of ID array","selection":{"cardIds":"set-1-focus"},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"null in place of ID array","selection":{"cardIds":null},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"null ID","selection":{"cardIds":[null]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"numeric ID","selection":{"cardIds":[1]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"nested ID object","selection":{"cardIds":[{"id":"set-1-focus"}]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"missing IDs","selection":{},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"boolean response","selection":false,"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"case mismatch","selection":{"cardIds":["SET-1-FOCUS"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"prototype property cannot act as a card","selection":{"cardIds":["__proto__"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}},
+    {"name":"HTML cannot act as a card","selection":{"cardIds":["<img src=x onerror=alert(1)>"]},"expected":{"source":"template","reason":"invalid-selection","cardIds":["set-1-focus","set-2-work"]}}
+  ]
+}

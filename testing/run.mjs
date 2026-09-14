@@ -49,11 +49,12 @@ await writeFile(resolve(dir, 'build.html'), html);
 run.fixtureHash = hash(await readFile(resolve(root, 'conformance-vectors.json')));
 run.lockfileHash = hash(await readFile(resolve(root, 'package-lock.json')));
 run.bridgeHash = hash(await readFile(resolve(root, 'testing/bridge.js')));
+run.summaryFixtureHash = hash(await readFile(resolve(root, 'testing/summary-selection-vectors.json')));
 run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface']) {
+  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });

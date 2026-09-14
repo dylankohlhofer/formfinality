@@ -276,8 +276,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 .ins{ padding:13px 15px; border-radius:10px; background:var(--ground);
   border-left:2px solid var(--line-2); margin-bottom:8px; font-size:14px; color:var(--bone-2) }
 .ins b{ color:var(--bone); font-weight:600 }
-.ins.fatigue{ border-left-color:var(--warn) }
-.ins.technique{ border-left-color:var(--bad) }
+.summaryNote{ font-size:12px; line-height:1.5; color:var(--bone-3) }
+.insights summary,.summaryNote summary{ cursor:pointer; min-height:44px; padding:13px 0 }
 .drill{ display:block; margin-top:7px; font-size:12.5px; color:var(--bone-3) }
 .phases{ text-align:left; margin:18px 0; border-top:1px solid var(--line) }
 .prow{ display:flex; justify-content:space-between; gap:14px; align-items:baseline;
@@ -1540,9 +1540,8 @@ class Evaluator {
     this.suppressed = [];          // what the budget made us swallow (for telemetry)
     this.lastCueAt = -1e9;
     this.outOfPose = 0;
-    /* WHEN a correction fired, not just how many. This is what lets the debrief tell
-       FATIGUE ("held for 20s, then the hips went") from TECHNIQUE ("wrong from rep one").
-       Same data, opposite advice. It's the most trainer-like thing in the app. */
+    /* Record when coaching fired. Timing is an observation, not evidence of
+       fatigue, ability or the cause of a form change. */
     this.log = [];                 // [{key, at}] — set-relative seconds
     this.scoreTrace = [];          // [{t, s}] — the form curve across the set
     this.lastTraceBucket = -1;     // clock-bucket sampling, not frame-count
@@ -2022,17 +2021,12 @@ class Rep {
 
 /* ═══════════════════════════════════════════════════════════════
    INSIGHT ENGINE
-   A form score tells you WHAT happened. Timestamps tell you WHY — and why is the
-   only part that changes what you should do next time.
-
-       sag at 22s of a 30s plank   → fatigue   → hold shorter sets, perfectly
-       sag at 2s  of a 30s plank   → technique → fix the setup before adding time
-
-   Same correction. Same count. Opposite advice. No competitor does this.
+   Describe recorded observations, never infer their cause. Optional native AI
+   selects approved cards; it cannot write a measurement or a new coaching claim.
    ═══════════════════════════════════════════════════════════════ */
 const FOCUS = {
   sag:"hips dropping", pike:"hips riding high", sagside:"the bottom hip sinking",
-  neck:"the head dropping", neckpull:"pulling on the neck", backarch:"the lower back arching",
+  neck:"the head dropping", neckpull:"neck alignment", backarch:"the lower back arching",
   knees:"bent legs", elbows:"elbow position", chestup:"the chest dropping",
   bridgehigh:"not locking out at the top", reachback:"a short reach with the leg",
   reachforward:"a short reach with the arm", sitlower:"not sitting low enough",
@@ -2041,65 +2035,107 @@ const FOCUS = {
   hollowlow:"the legs riding too high"
 };
 const DRILL = {
-  sag:"Squeeze your glutes before you even lift into it — a braced plank doesn't sag.",
-  pike:"Think about pushing your heels backwards, not your hips upwards.",
-  sagside:"Push the bottom elbow hard into the floor — that's what lifts the hip.",
-  neck:"Put a spot on the floor a hand's length in front of you and stare at it.",
-  neckpull:"Rest your fingertips behind your ears instead of lacing them — you can't pull.",
-  backarch:"Make the movement smaller. Range means nothing if the back lifts.",
-  knees:"Point your toes — it switches the whole leg on.",
+  sag:"Review the alignment shown in this movement's demonstration.",
+  pike:"Review the demonstration and practise keeping your hips in line with your shoulders.",
+  sagside:"Review the side-plank demonstration before your next set.",
+  neck:"Try looking at a spot on the floor just ahead of your hands.",
+  neckpull:"Review the neck position shown in this movement's demonstration.",
+  backarch:"Review the demonstration and try a smaller, comfortable range.",
+  knees:"Review the leg position in the demonstration for your selected movement.",
   bridgehigh:"Pause for a full second at the top of every rep.",
   chestup:"Pick a spot at eye level and keep looking at it the whole way down."
 };
 
 /** Read one phase's history and say the most useful true thing about it. */
 function phaseInsight(o){
-  const dur = o.kind === "reps" ? (o.repMs.length || 1) : Math.max(o.achieved, 1);
-  const top = Object.entries(
-    o.log.reduce((a,c) => (a[c.key] = (a[c.key]||0)+1, a), {})
-  ).sort((a,b) => b[1]-a[1])[0];
-
-  // ── rep tempo: did the back half get rushed? ──
-  if(o.kind === "reps" && o.repMs.length >= 4){
-    const h = Math.floor(o.repMs.length/2);
-    const early = o.repMs.slice(0,h).reduce((a,b)=>a+b,0)/h;
-    const late  = o.repMs.slice(h).reduce((a,b)=>a+b,0)/(o.repMs.length-h);
+  if(o.skipped || o.followAlong || o.stopped || o.kind === "guided") return null;
+  const counts = new Map();
+  for(const c of o.log || []){
+    if(!Object.hasOwn(FOCUS,c.key) || !Number.isFinite(c.at) || c.at < 0) continue;
+    counts.set(c.key,(counts.get(c.key)||0)+1);
+  }
+  const top = [...counts].sort((a,b)=>b[1]-a[1])[0];
+  if(top){
+    const key = top[0];
+    return {kind:"observation", text:`Recorded coaching flagged ${FOCUS[key]}. This does not tell us why.`,
+      ...(Object.hasOwn(DRILL,key) ? {drill:DRILL[key]} : {})};
+  }
+  // Completed cycles have measured durations; their timing cannot establish
+  // control, fatigue, poor form, or an improvement over another workout.
+  const ms = o.repMs || [];
+  if(o.kind === "reps" && ms.length >= 4 && ms.every(v=>Number.isFinite(v) && v > 0)){
+    const h = Math.floor(ms.length/2);
+    const early = ms.slice(0,h).reduce((a,b)=>a+b,0)/h;
+    const late = ms.slice(h).reduce((a,b)=>a+b,0)/(ms.length-h);
     if(late < early * 0.72)
       return { kind:"tempo",
-        text:`Your first ${h} reps were controlled, then you started rushing. The back half is where the work is — slow those down.` };
+        text:`The later recorded rep cycles averaged ${(late/1000).toFixed(1)} seconds, compared with ${(early/1000).toFixed(1)} seconds earlier. Timing alone does not establish form or fatigue.` };
   }
-
-  if(!top) return null;
-  const [key, n] = top;
-  const first = o.log.find(c => c.key === key).at;
-  const what  = FOCUS[key] || "form breaking down";
-
-  // ── WHEN did it start? (fraction of the set) ──
-  const frac = o.kind === "reps"
-    ? (o.log.find(c => c.key === key).at / Math.max(o.achieved * 3, 1))   // ≈3s per rep
-    : first / Math.max(o.achieved, 1);
-
-  if(frac > 0.55)
-    return { kind:"fatigue",
-      text:`Your form held for the first ${Math.round(first)} seconds — ${what} only started once you tired. That's endurance, not technique. Hold shorter sets with a perfect shape and the time will come.` };
-
-  if(frac < 0.25)
-    return { kind:"technique", drill:DRILL[key],
-      text:`${what[0].toUpperCase()+what.slice(1)} was there from the very start — so it's a setup problem, not a fitness one.` };
-
-  return { kind:"mixed", drill:DRILL[key],
-    text:`${what[0].toUpperCase()+what.slice(1)} crept in about halfway through.` };
+  return null;
 }
 
 /** The whole session, in the coach's voice. */
 function sessionInsights(out){
   const res = [];
   for(const o of out){
-    if(o.kind === "guided" || o.followAlong || o.stopped) continue;
     const i = phaseInsight(o);
     if(i) res.push({ movement:o.name, ...i });
   }
   return res;
+}
+
+/** Versioned, memory-only debrief contract. No video, joints, identity, free-text
+    skip reasons or session history cross this boundary. Numbers stay in the
+    deterministic UI; a native selector receives only the approved card catalog. */
+function buildWorkoutSummary(out, avg, stopped=false){
+  const skipped = out.filter(o=>o.skipped);
+  const followed = out.filter(o=>o.followAlong && !o.skipped);
+  const headline = stopped
+    ? "Workout ended early. This summary includes only recorded work; unstarted sets are not listed."
+    : out.length && skipped.length === out.length
+    ? "You skipped everything this time. Any work observed before skipping is retained; skipped sets receive no score."
+    : followed.length
+    ? `${followed.map(o=>o.name).join(", ")} completed in follow-along mode — not camera-assessed.${skipped.length ? " Skipped sets are listed below." : ""}`
+    : skipped.length
+    ? "Your recorded work is saved in this summary. Skipped sets are named below and receive no score."
+    : !out.length ? "No exercise sets were recorded. No score or form judgement is available."
+    : "Your recorded work is below. Choose one focus for next time, at your own pace.";
+  const coverage = "Only observed work contributes to camera totals. Missing observations are not failed movement. " +
+    (avg == null ? "No form score was measured." : "The form average covers measured frames only, not the whole workout.") +
+    " Guided and follow-along time are not assessed holds. No comparison with previous workouts was made.";
+  const cards = [];
+  for(const [index,o] of out.entries()){
+    if(o.skipped || o.stopped || o.followAlong || o.kind === "guided") continue;
+    const insight = phaseInsight(o);
+    if(insight) cards.push({id:`set-${index+1}-focus`,movement:o.name,kind:insight.kind,
+      text:insight.text,tip:insight.drill || null});
+    if(Number.isFinite(o.achieved) && o.achieved > 0)
+      cards.push({id:`set-${index+1}-work`,movement:o.name,kind:"recorded",
+        text:o.kind === "reps" ? `The camera counted ${o.achieved} reps.`
+          : `The camera recorded ${Math.floor(o.achieved)} seconds of held time.`,tip:null});
+  }
+  // Bounded model context, stable IDs and a deterministic fallback. Prefer a
+  // focus and one recorded-work card; never manufacture a card to fill a slot.
+  const catalog = cards.slice(0,24);
+  const first = catalog.find(c=>c.kind !== "recorded") || catalog[0];
+  const second = catalog.find(c=>c.kind === "recorded" && c.movement !== first?.movement)
+    || catalog.find(c=>c.kind === "recorded" && c.id !== first?.id);
+  return {schema:"workout-summary/1",headline:headline+(avg == null ? " No form score was measured." : ""),coverage,cards:catalog,
+    defaultCardIds:[first?.id,second?.id].filter(Boolean)};
+}
+
+/** Model output is a selection, never prose. Reject the WHOLE response on an
+    unknown/repeated ID, excess cards, added fields or invented wording. */
+function selectSummaryCards(summary, selection=null){
+  const fallback = reason => ({source:"template",reason,cardIds:summary.defaultCardIds.slice()});
+  if(selection === null) return fallback("not-requested");
+  if(!selection || typeof selection !== "object" || Array.isArray(selection) ||
+      Object.keys(selection).length !== 1 || !Object.hasOwn(selection,"cardIds") ||
+      !Array.isArray(selection.cardIds) || selection.cardIds.length < 1 || selection.cardIds.length > 2 ||
+      new Set(selection.cardIds).size !== selection.cardIds.length ||
+      selection.cardIds.some(id=>typeof id !== "string" || !summary.cards.some(c=>c.id === id)))
+    return fallback("invalid-selection");
+  return {source:"on-device",reason:"selected",cardIds:selection.cardIds.slice()};
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2691,36 +2727,10 @@ class SessionCore {
        any completed session had scored frames — and the shell renders null as "—". */
     const avg = this.scoreN ? Math.round(this.scoreSum/this.scoreN) : null;
     const insights = sessionInsights(this.out);
-    const fatigue   = insights.find(i => i.kind === "fatigue");
-    const technique = insights.find(i => i.kind === "technique");
-    const tempo     = insights.find(i => i.kind === "tempo");
-    const lead      = fatigue || technique || tempo || insights[0];
-    /* A SKIP IS NOT A CLEAN PERFORMANCE. Skipped phases raise no insights — there
-       is nothing to raise them from — so without this the old `nothingWrong = !lead`
-       would hand a session that was skipped straight through the headline "nothing
-       to fix, you held the shapes well". That is exactly the claim rule 6 forbids:
-       we watched nothing, so we cannot praise it. Unreachable until something has
-       actually been skipped; with no skips both lines below are the originals. */
-    const skipped = this.out.filter(o => o.skipped);
-    const followed = this.out.filter(o => o.followAlong && !o.skipped);
-    const names = skipped.map(o => o.name);
-    const nothingWrong = !this.stopped && !lead && !skipped.length && !followed.length && avg != null;
-    const headline = this.stopped ? "Workout ended early. This summary includes only camera-observed work, if any. Unassessed time is not counted; unstarted sets are not listed."
-      : followed.length
-      ? `${followed.map(o => o.name).join(", ")} completed in follow-along mode — not camera-assessed. Totals and average include only camera-observed work, if any.${skipped.length ? " Skipped sets are listed below." : ""}`
-      : lead ? lead.text
-      : !skipped.length && avg == null
-        ? "Your completed movement is recorded. No form score was measured; range and tempo checks are not a full form assessment."
-      : nothingWrong
-        ? (this.tierId === "learning"
-            ? "Nothing to fix — you held the shapes well. That's real progress, and it's rarer than you'd think."
-            : "Nothing major to fix. Time to make it harder.")
-      : skipped.length === this.out.length
-        ? "You skipped everything this time, so there's nothing I watched and nothing I can honestly tell you. No score, no judgement — come back and try one."
-        : `Nothing to fix in what you did. You skipped ${
-            names.length <= 2 ? names.join(" and ") : names.length + " movements"
-          } — no score for those, and they'll be here next time.`;
-    E.push({t:"finish", payload:{ avg, insights, headline, nothingWrong,
+    const summary = buildWorkoutSummary(this.out,avg,this.stopped);
+    // A quiet cue log cannot establish "nothing wrong". Retain the legacy field
+    // for consumers, but never use it to claim perfect form or prescribe a tier.
+    E.push({t:"finish", payload:{ avg, insights, headline:summary.headline, nothingWrong:false, summary,
       bestHold:this.bestHold, reps:this.reps, out:this.out, tierId:this.tierId, stopped:this.stopped }});
   }
 }
@@ -4119,7 +4129,7 @@ function renderFinish(p){
 
   const rows = p.out.map(o => {
     const i = p.insights.find(x => x.movement === o.name);
-    const badge = i ? `<span class="tag ${i.kind}">${i.kind}</span>` : "";
+    const badge = i ? `<span class="tag">${i.kind === "tempo" ? "timing" : "recorded feedback"}</span>` : "";
     /* A skipped phase is NAMED, not numbered. Putting "4/10" here would present an
        abandoned movement as a result, and the row is muted because it is the one
        line on this screen that reports no measurement at all. */
@@ -4142,25 +4152,33 @@ function renderFinish(p){
       </div>`;
   }).join("");
 
-  const detail = p.insights.length ? `
-      <div class="insights">
-        ${p.insights.map(i => `
-          <div class="ins ${i.kind}">
-            <b>${i.movement}</b> ${i.text}
-            ${i.drill ? `<span class="drill">Try this: ${i.drill}</span>` : ""}
-          </div>`).join("")}
-      </div>` : "";
+  const summary = p.summary;
+  const selected = selectSummaryCards(summary);
+  const highlight = card => `<div class="ins" data-summary-card="${esc(card.id)}">
+    <b>${esc(card.movement)}</b> ${esc(card.text)}
+    ${card.tip ? `<span class="drill">For next time: ${esc(card.tip)}</span>` : ""}</div>`;
+  const more = summary.cards.filter(c=>!selected.cardIds.includes(c.id));
+  const detail = summary.cards.length ? `
+      <section class="insights" aria-label="Workout highlights" data-summary-source="${selected.source}">
+        <h3>From this workout</h3>
+        ${selected.cardIds.map(id=>highlight(summary.cards.find(c=>c.id === id))).join("")}
+        ${more.length ? `<details><summary>More recorded observations</summary>${more.map(highlight).join("")}</details>` : ""}
+      </section>` : "";
+  // Guided movement time is not an assessed hold. The engine's historical
+  // bestHold field remains unchanged; the summary names only assessed holds.
+  const observedBestHold = Math.max(0,...p.out.filter(o=>o.kind === "hold").map(o=>o.achieved));
 
   msgInner.innerHTML = `
       <h2>${p.stopped ? "Workout ended" : "Session complete"}</h2>
       <p>Camera-observed totals · not a complete assessment of your form</p>
       <div class="stats">
-        <div><b>${clock(p.bestHold)}</b><span>BEST HOLD</span></div>
+        <div><b>${clock(observedBestHold)}</b><span>BEST HOLD</span></div>
         <div><b>${p.reps}</b><span>TOTAL REPS</span></div>
         <div><b>${TIERS[p.tierId].showScore ? (p.avg ?? "—") : "—"}</b><span>AVG FORM</span></div>
       </div>
-      <div class="headline">${p.headline}</div>
+      <div class="headline">${esc(summary.headline)}</div>
       ${detail}
+      <details class="summaryNote"><summary>What this summary can tell you</summary><p>${esc(summary.coverage)}</p></details>
       <div class="phases">${rows}</div>
       <button class="ctl primary" id="againBtn">Choose another workout</button>
       <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;

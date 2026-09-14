@@ -6,6 +6,23 @@ on:
 permissions:
   contents: read
 jobs:
+  swift:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Engine parity and deterministic local-summary contracts
+        run: |
+          set -o pipefail
+          swift test --package-path swift/FormCoachEngine 2>&1 | tee swift-tests.log
+      - name: Preserve Swift checks, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-test-review
+          path: swift-tests.log
+          retention-days: 14
+          if-no-files-found: warn
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

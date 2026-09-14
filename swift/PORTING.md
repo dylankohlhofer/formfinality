@@ -133,3 +133,57 @@ the insight engine, TelLog, and all UI — they depend on speech timing and scre
 so they belong in the app target, ported against `technical-documentation.md`
 sections 4 and 6 once the engine is green. The engine here is the part where silent
 divergence would be fatal; that's why it gets the harness.
+
+## Optional debrief component — 14 September 2026
+
+`FormCoachSummary` is a separate library product in the same package, not a
+SessionCore or UI port. Its input is trusted HTML-engine `workout-summary/1`
+content, documented in `docs/workout-summary-contract.md`. It mirrors the HTML
+selection validator using the same root `testing/summary-selection-vectors.json`
+file. The engine's numerical conformance fixtures remain unchanged.
+
+The production provider uses only `SystemLanguageModel.default` on supported
+iOS/macOS 26+ environments, with runtime availability checks and an older-system
+template fallback. Foundation Models is not a dependency of FormCoachEngine.
+There is no camera/video input, custom model download, remote model, feedback
+attachment upload or persistent prompt store. AI selects approved card IDs; the
+component resolves them back to original engine text. It does not generate advice.
+
+Native integration sequence, on MainActor:
+
+```swift
+let summary = try WorkoutSummaryEnvelope.decodeTrustedEngineJSON(engineSummaryJSON)
+let coordinator = SummaryCoordinator()
+coordinator.show(summary) // Render current immediately: template, no model call.
+// Only after an explicit choice to use the local model for this debrief:
+// Capture this ID before scheduling an asynchronous UI task.
+if let requestID = coordinator.current?.requestID {
+    await coordinator.requestOnDeviceSelection(for: requestID)
+}
+// Render coordinator.current, including status, unchanged headline and coverage.
+// Keep exact workout totals and complete set rows from the session core.
+// On navigation, even if generation is still pending:
+coordinator.invalidate()
+```
+
+Keep the coordinator alive for the debrief; it is not an observable SwiftUI view
+model. The caller presents its snapshots and reports fallback status honestly.
+Never retain a selected result across a navigation/new-request identity. A timeout
+or cancellation releases the caller without waiting for an uncooperative provider;
+late results cannot publish, though cancellation cannot forcibly stop arbitrary
+provider work. The default deadline is ten seconds, including availability,
+and can be configured within the enforced 1 ms–30 s bounds. These are UX policy
+budgets, not measured physical-device performance guarantees.
+
+`swift test` exercises deterministic shared selection, validation and lifecycle
+contracts without model invocation. The existing CI workflow includes a macOS job.
+An opt-in real-model smoke uses only the shared synthetic catalog:
+
+```sh
+FORM_COACH_LOCAL_MODEL_SMOKE=1 swift test --filter LocalModelSmokeTests
+```
+
+The smoke uses the production ten-second deadline and records availability/status/IDs,
+not a transcript. A pass on one Mac does not validate latency across devices, selection usefulness,
+battery/thermal behavior, native speech or a physical iPhone. See the dated summary
+implementation note for the actual local result and current test counts.

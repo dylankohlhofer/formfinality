@@ -57,6 +57,47 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Evidence-backed summaries (14 September):** `summary.test.mjs` adds 50 checks
+and `summary-cases.mjs` adds ten browser cases through this same runner. The
+HTML-first `workout-summary/1` envelope is built from recorded work, not inferred
+fatigue, setup causes, perfect form or historical progress. Skips, early stops,
+guided and follow-along sets cannot acquire assessment highlights. Previously
+watched work still counts once; the best-hold tile excludes guided time.
+The mobile/desktop cases also protect measurement-limit disclosure, navigation,
+no summary persistence and the honest browser `template` source label.
+
+```sh
+node --test testing/summary.test.mjs
+node testing/check-shell.mjs form-coach-v4.11.html 'summary-*'
+swift test --package-path swift/FormCoachEngine
+```
+
+`summary-selection-vectors.json` contains 22 independently authored selection
+cases shared by JavaScript and native `FormCoachSummary`; the full runner records
+its hash and retains `summary.log`. Selection can return only one or two distinct
+approved card IDs, never new prose or measurements. Deliberate invalid-selection
+and causal-claim mutations must still be detected. Actual evaluator-to-summary
+cases protect Crunch neck alignment (not pulling) and movement-appropriate
+Push-Up/Knee Push-Up advice.
+
+The existing GitHub Actions workflow now has a macOS Swift job as well as the
+browser job. Swift tests validate the envelope, selection and asynchronous failure
+paths using local stubs. **They do not run Apple's model by default.** The opt-in
+synthetic model smoke is:
+
+```sh
+FORM_COACH_LOCAL_MODEL_SMOKE=1 swift test --package-path swift/FormCoachEngine --filter LocalModelSmokeTests
+```
+
+Read its availability/status output: unavailable is a coverage gap, not successful
+model inference. The smoke uses the coordinator's default ten-second budget with
+an immediate usable template. The first local Mac probe took about five seconds;
+this motivated increasing the initial three-second policy. A model-smoke pass on
+one Mac is not evidence of cold-start latency or acceptable performance across
+phones. No cloud provider, personal workout input or feedback upload is used.
+The browser has no native bridge and does not run a language model. See
+[the contract](../docs/workout-summary-contract.md).
+
 **Interface review (14 September):** `interface.test.mjs` adds 56 core/structural
 checks; `interface-cases.mjs` adds 13 shell cases in the same runner. Workout
 selection now opens a preview; tests explicitly choose Start workout. End opens a

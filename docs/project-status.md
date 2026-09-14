@@ -3,9 +3,9 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
-**Last updated:** 14 September 2026 — full interface review, workout previews,
-pause/resume, partial debriefs and camera interruption handling, following the
-body/clothing robustness work. Both use the existing test infrastructure. The 9 September
+**Last updated:** 14 September 2026 — evidence-backed debriefs and an optional
+on-device native AI selector, following the interface and body/clothing robustness
+work. These use the existing test infrastructure. The 9 September
 recording adds real-room evidence but is not a completed independent beginner
 protocol; that release gate remains open.
 
@@ -65,6 +65,37 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Evidence-backed summaries:** the browser now presents concise recorded-work
+highlights and explicit measurement limits. Unsupported fatigue/setup diagnoses,
+perfect-form/progress claims and automatic harder-tier advice are removed. Native
+`FormCoachSummary` is an optional, separately packaged on-device card selector;
+it cannot generate measurements or new coaching prose. The browser still uses
+templates, and SessionCore/CalibrationCore/native UI remain unported. See
+[the implementation and evidence](sessions/workout-summaries-2026-09-14.md).
+
+**Latest verification (14 September, summary checkpoint):** `npm test` exits **0**
+at `test-results/2026-09-14T13-36-38-583Z-35989/`. All **65 infrastructure tests**,
+**800 targeted regression checks across 11 suites**, all four original harnesses,
+**55 engine / 1,307 assertions**, **110 browser / 942**, **88 shell / 847**, and
+**15 recorded-audio / 301** pass. The new summary tests contribute **50 checks**
+and **ten shell cases / 70 assertions**. The original conformance vectors are
+unchanged; all 26 existing coverage-gap findings remain explicit. The separate
+blank-video smoke passes **14/14** at `2026-09-14T13-41-03-467Z-37556`.
+
+Swift passes **47 tests**, with one opt-in model smoke deliberately skipped in
+the default run. Its new summary tests share 22 selection vectors with JavaScript.
+The explicit real-model smoke separately passes on this Mac: local model available,
+one valid card selected in **3.110 seconds** within the final ten-second deadline.
+The initial probe took **5.032 seconds**, motivating the larger budget; templates
+are immediately available throughout. Neither run certifies selection quality or
+physical-phone performance. The existing CI workflow now includes a macOS Swift
+job, but remote CI has not been run/pushed in this turn.
+
+Final tested HTML SHA-256:
+`2989c28d498fc6a2f5a21e533d94bc4351a47c92ffe80696dd90d8d92a0d2e3d`.
+These are working-tree tests based on `bcdfdb0`; final app and JS test-source hashes
+match the saved report. Native changes were tested separately after that report.
+
 **Interface review:** clearer onboarding/navigation, actual expanded-set workout
 previews, current/next movement context, explicit pause/resume, background pause,
 early-end summaries and local in-app help. Startup no longer waits for the pose
@@ -77,7 +108,7 @@ an unobserved gap. No new service, dependency or persistent personal-data store.
 See [the feature-by-feature audit](sessions/interface-review-2026-09-14.md), including
 the explicit physical-device, accessibility and human-usability limits.
 
-**Latest verification (14 September, interface checkpoint):** `npm test` exits
+**Previous verification (14 September, interface checkpoint):** `npm test` exits
 **0** at `test-results/2026-09-14T05-52-19-649Z-29535/`. All **65 infrastructure
 tests**, **750 targeted regression checks across ten suites**, and all four
 original harnesses pass. The scenario results are:

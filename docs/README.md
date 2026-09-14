@@ -1,6 +1,6 @@
 # Form Coach — documentation
 
-**Start here.** Nineteen tracked root documents (18 Markdown and the narrated HTML),
+**Start here.** Twenty tracked root documents (19 Markdown and the narrated HTML),
 plus this index. Session handovers live under `sessions/`. Where any two disagree,
 `project-status.md` wins — it's the only one whose numbers are recomputed rather than
 remembered.
@@ -31,6 +31,7 @@ thing standing between here and the Swift port.
 | `architecture-guide.md` | **Start here if you're new.** The whole system explained from scratch — the four boxes, a tour of every file, what each group of functions is for, the principles underneath, and what the Swift port changes |
 | `system-reference.md` | How it works — pipeline, content model, mechanisms, limits |
 | `movement-evidence-contract.md` | Which visible evidence is required for movement, which form targets are optional, and what partial-view results do not prove |
+| `workout-summary-contract.md` | Evidence-backed debriefs, optional on-device AI highlight selection and mandatory fallback/claim boundaries |
 | `interface-principles.md` | The nine UI rules, and why each exists |
 | `concepts-deep-dive.md` | The computing and ML fundamentals, from zero |
 | `concepts-narrated.html` | The same, read aloud with sentence highlighting (~38 min) |
@@ -40,6 +41,7 @@ thing standing between here and the Swift port.
 | Document | Question it answers |
 |---|---|
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
+| `sessions/workout-summaries-2026-09-14.md` | Evidence-backed debriefs, optional native AI selection, actual local-model smoke and remaining limits |
 | `sessions/interface-review-2026-09-14.md` | Feature-by-feature UI audit, implemented workout controls, mobile contracts and remaining human/device checks |
 | `sessions/body-clothing-tolerance-2026-09-14.md` | Larger bodies and everyday clothing: implemented evidence selection, unassessed fallback, tests and real-person validation still needed |
 | `camera-placement-analysis.md` | How far back, how high — and why "3 metres" was wrong |

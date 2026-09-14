@@ -192,6 +192,22 @@ SessionCore/CalibrationCore are not yet in Swift; port their interruption contra
 together. See `docs/sessions/interface-review-2026-09-14.md` for the feature inventory
 and physical-device/accessibility checks still needed.
 
+End summaries now use `workout-summary/1`: observed facts and approved teaching,
+not fatigue/setup diagnoses, perfect-form claims or inferred progress. Silent cue
+logs cannot establish "nothing wrong"; that legacy payload field remains false.
+`testing/summary.test.mjs`, `summary-*` shell cases and shared
+`testing/summary-selection-vectors.json` run in the existing loop. No root vectors
+were regenerated. Skipped/stopped/follow-along/guided sets receive no assessment
+highlights; previously observed work still contributes once to existing totals.
+The browser uses deterministic cards, never pretends it ran a language model.
+Optional native `FormCoachSummary` selects at most two exact approved card IDs
+using `SystemLanguageModel.default`, never model prose, video or a cloud provider.
+Keep coverage/headline/totals outside model authority; extra output fields or unknown
+IDs reject the whole selection. Template-first, availability, timeout, cancellation
+and request-identity guards are mandatory. `swift test` covers the shared selection
+vectors and stubbed lifecycle failures; real model selection is a separate opt-in
+smoke, not automatically validated by green CI. Read `docs/workout-summary-contract.md`.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled
@@ -245,8 +261,10 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 ## Current state
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
-checks from the surviving vectors and exits 0. `swift test` passes 25/25, including the
-same root conformance JSON and 27 additional shared movement-evidence cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
+checks from the surviving vectors and exits 0. `swift test` passes 25 original engine
+tests and 22 deterministic summary tests; its real-model smoke is opt-in and skipped
+by default. They read the same root conformance JSON, 27 shared movement-evidence
+cases and 22 shared summary-selection cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise
@@ -266,7 +284,7 @@ proportions it was authored in, but not that it *reads* as the movement.
 
 ## Documentation
 
-`docs/` is an Obsidian vault — 18 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
+`docs/` is an Obsidian vault — 19 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
 `docs/README.md` for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
 Session notes from user testing go in `docs/sessions/`.
