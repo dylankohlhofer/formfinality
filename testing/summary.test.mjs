@@ -153,8 +153,14 @@ test('Returned card ID arrays do not alias engine defaults or model responses',(
   assert.deepEqual(summary,vectors.summary);assert.deepEqual(selection,{cardIds:['set-1-focus']});
 });
 test('Regression oracle rejects deliberate model-authority and diagnostic-causality mutations',async()=>{
-  const loose=await loadEngine(html.replace('if(selection === null) return fallback("not-requested");',
-    'if(selection === null) return fallback("not-requested"); if(selection.text) return {source:"on-device",reason:"selected",cardIds:selection.cardIds};'));
+  // The general choice selector has the same fallback line. Anchor this mutation
+  // to the summary function so a new additive selector cannot steal the target.
+  const anchor='function selectSummaryCards(summary, selection=null){';
+  const start=html.indexOf(anchor);assert.ok(start>=0);assert.equal(html.indexOf(anchor,start+1),-1);
+  const tail=html.slice(start),needle='if(selection === null) return fallback("not-requested");';
+  assert.ok(tail.includes(needle),'Summary mutation target must exist');
+  const loose=await loadEngine(html.slice(0,start)+tail.replace(needle,
+    needle+' if(selection.text) return {source:"on-device",reason:"selected",cardIds:selection.cardIds};'));
   const v=vectors.cases.find(x=>x.name==='extra generated medical claim');
   assert.notDeepEqual(loose.selectSummaryCards(vectors.summary,v.selection),v.expected);
   const causal=await loadEngine(html.replace('This does not tell us why.',"This happened once you tired."));

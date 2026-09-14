@@ -3,9 +3,10 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
-**Last updated:** 14 September 2026 — evidence-backed debriefs and an optional
-on-device native AI selector, following the interface and body/clothing robustness
-work. These use the existing test infrastructure. The 9 September
+**Last updated:** 14 September 2026 — local coaching controls, evidence-backed
+explanations, authored-workout requests, opt-in history and optional on-device
+quality review, following the debrief/interface/body-clothing work. These use
+the existing test infrastructure. The 9 September
 recording adds real-room evidence but is not a completed independent beginner
 protocol; that release gate remains open.
 
@@ -65,6 +66,62 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Local coaching interactions:** Ask coach pauses and explains recent measured
+counting conditions, with existing demos and repeat teaching. Typed and optional
+strictly local spoken commands use the actual controls, with expiring explicit
+Skip/Finish/End confirmation and no model authority over counting. Authored-plan
+search never relaxes a hard constraint or invents a routine. Independent local
+memory opt-ins save bounded preferences/activity counts, not scores or inferred
+improvement. Browser choices are deterministic; native `FormCoachInteraction`
+provides optional local speech and approved-ID AI selection for the future host.
+SessionCore/CalibrationCore and native UI remain unported. The existing runner
+prepares synthetic review evidence; `npm run test:review -- --run <exact-run>`
+optionally prioritises existing findings without changing an oracle or closing
+coverage gaps. See [implementation and evidence](sessions/local-coaching-2026-09-14.md).
+
+**Latest verification (14 September, local-coaching checkpoint):** `npm test`
+exits **0** at `test-results/2026-09-14T15-22-34-852Z-54396/`. All **67
+infrastructure tests**, **1,202 targeted checks across 16 suites**, and all four
+original harnesses pass. Scenario results:
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 96/96 | 935 |
+| Recorded-clip audio | 16/16 | 338 |
+
+The new suites add **402 targeted checks**, eight shell cases and a real-clip
+Ask → Repeat → Resume case. Original checks remain **4,127 conformance**, **8
+caught mutations and a green control**, **250 drawing** and **26 skip**. No root
+vectors were regenerated. All **26 coverage-gap findings** remain explicit: 12
+missing-video entries, two native-TTS waveform gaps and 12 case-level recognition/
+real-person warnings. There are no unexpected failures or speech review candidates.
+The export packages all **309 case rows** without invoking AI automatically.
+
+Swift passes **104 deterministic tests**, with three opt-in model tests skipped
+in its default 107-test run. The two new explicit real-model choice smokes pass
+on this Mac (7.316s explanation, 0.724s synthetic plan). Model availability and
+valid IDs are demonstrated, not semantic quality, microphone recognition or
+physical-phone performance. Native UI/session cores remain unported.
+
+The explicit native reviewer also passes on that final full report at
+`ai-review-g1NNFD/`: four batches and a final selection all used the actual local
+model. It selected one existing native-TTS waveform gap and preserved the other
+25 candidates, with `humanReviewRequired:true` and `accuracyVerdict:not-assessed`.
+This proves bounded transport/import, not correct prioritisation or resolved gaps.
+The final-build blank-video smoke separately passes **14/14** at
+`test-results/2026-09-14T15-32-39-212Z-56068/`, establishing wiring, not exercise accuracy.
+
+Tested HTML SHA-256:
+`2c36d8972395c71829a8c2e540b5b7b072d32c900f79440b6df5b448c1efdfcc`.
+These are working-tree tests based on `519dbae`; the HTML and every recorded JS
+test-source hash match the final files. Documentation is updated afterwards.
+The CI job includes all suites and has a bounded 30-minute allowance for browser,
+actual-audio, dependency setup and evidence upload. Remote CI was not run/pushed
+in this turn. Earlier incomplete and failed runs, including the action-timestamp
+measurement correction, are retained and explained in the session handover.
+
 **Evidence-backed summaries:** the browser now presents concise recorded-work
 highlights and explicit measurement limits. Unsupported fatigue/setup diagnoses,
 perfect-form/progress claims and automatic harder-tier advice are removed. Native
@@ -73,7 +130,7 @@ it cannot generate measurements or new coaching prose. The browser still uses
 templates, and SessionCore/CalibrationCore/native UI remain unported. See
 [the implementation and evidence](sessions/workout-summaries-2026-09-14.md).
 
-**Latest verification (14 September, summary checkpoint):** `npm test` exits **0**
+**Previous verification (14 September, summary checkpoint):** `npm test` exits **0**
 at `test-results/2026-09-14T13-36-38-583Z-35989/`. All **65 infrastructure tests**,
 **800 targeted regression checks across 11 suites**, all four original harnesses,
 **55 engine / 1,307 assertions**, **110 browser / 942**, **88 shell / 847**, and

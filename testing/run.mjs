@@ -9,6 +9,7 @@ import { report } from './report.mjs';
 import { librarySweep } from './library.mjs';
 import { audioSweep } from './audio-sweep.mjs';
 import { selectPack } from './packs.mjs';
+import {syntheticReviewSource,exportReview,canonicalReviewJSON} from './ai-review.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2), options = {};
@@ -36,6 +37,7 @@ const dir = resolve(root, 'test-results', started.replace(/[:.]/g, '-') + '-' + 
 await mkdir(dir, { recursive: true });
 const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
 const run = { started, build: basename(options.build), buildHash, commit: git.status === 0 ? git.stdout.trim() : null,
+  origin:options.recording || options.landmarks || options['scenario-file'] ? 'external' : 'synthetic',
   node: process.version, platform: `${process.platform}/${process.arch}`, results: [], limitations: [
     'Landmark browser mode bypasses webcam acquisition, model inference, animation scheduling and actual audio. It exercises original UI handlers, engine effects and debrief.',
     'Recorded-video mode uses real MediaPipe CPU inference and the original rendering loop, but replaces the webcam with a file and controls frame timing. It does not validate device GPU performance.',
@@ -50,11 +52,13 @@ run.fixtureHash = hash(await readFile(resolve(root, 'conformance-vectors.json'))
 run.lockfileHash = hash(await readFile(resolve(root, 'package-lock.json')));
 run.bridgeHash = hash(await readFile(resolve(root, 'testing/bridge.js')));
 run.summaryFixtureHash = hash(await readFile(resolve(root, 'testing/summary-selection-vectors.json')));
+run.coachChoiceFixtureHash = hash(await readFile(resolve(root,'testing/coach-choice-vectors.json')));
+run.coachCommandFixtureHash = hash(await readFile(resolve(root,'testing/coach-command-vectors.json')));
 run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary']) {
+  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'local-command-listener', 'ai-review', 'review-workflow']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });
@@ -166,6 +170,24 @@ const recognitionGap = run.results.some(r => r.coverageGaps?.length);
 run.status = failed ? 'failed' : blocked || audioGap || recognitionGap ? 'passed checks; ' +
   [blocked && 'video', audioGap && 'audio', recognitionGap && 'recognition'].filter(Boolean).join(' and ') + ' coverage incomplete' : 'passed checks';
 await report(dir, run);
+// Only the trusted runner can attest these input paths. Never backfill receipts
+// for old reports or export a private recording/landmark/external scenario run.
+let reviewFailed = false;
+if(!options.recording && !options.landmarks && !options['scenario-file'] && options.mode !== 'video'){
+  try {
+    const reportPath=resolve(dir,'report.json'),sourcePath=resolve(dir,'review-source.json');
+    const source=syntheticReviewSource(await readFile(reportPath),{inputKind:'synthetic',recording:false,landmarks:false,scenarioSource:'repository'});
+    await writeFile(sourcePath,JSON.stringify(source,null,2));
+    const evidence=await exportReview({reportPath,sourcePath});
+    await writeFile(resolve(dir,'review-evidence.json'),canonicalReviewJSON(evidence));
+    await writeFile(resolve(dir,'review-status.json'),JSON.stringify({status:'not-requested',humanReviewRequired:true,accuracyVerdict:'not-assessed',candidates:evidence.candidates.length},null,2));
+    console.log(`Local review evidence: ${evidence.candidates.length} candidates; AI not requested. Coverage gaps remain open.`);
+  } catch(error){
+    reviewFailed=true;
+    await writeFile(resolve(dir,'review-status.json'),JSON.stringify({status:'export-failed',message:error.message},null,2));
+    console.error(`Local review evidence export failed: ${error.message}`);
+  }
+}
 await writeFile(resolve(root, 'test-results/LATEST.txt'), relative(root, dir) + '\n');
 console.log(`Review: ${resolve(dir, 'index.html')}`);
-process.exitCode = failed ? 1 : blocked && (options.requireVideo || options.mode === 'video') ? 2 : 0;
+process.exitCode = failed || reviewFailed ? 1 : blocked && (options.requireVideo || options.mode === 'video') ? 2 : 0;

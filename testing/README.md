@@ -388,6 +388,11 @@ captures. Matching failed rule names indicates reproduction, not identical timin
 
 The engine runs at wall-clock speed with original `Coach.speaking()` gating and
 actual media completion events. No fast-forwarding while clips play. The test-only
+action clock is captured at actual DOM click dispatch, before the app's handler;
+Playwright's scrolling/actionability wait is not cancellation latency. A dedicated
+unit regression delays dispatch by 400 ms and verifies that boundary. Older runs
+marked click intent earlier; do not read that delay as a measured app response.
+The test-only
 Web Audio tap routes media elements into a recorder instead of the speakers.
 An always-running zero-signal source preserves silence before the first clip;
 otherwise some captures omit that wait and misalign the timeline. A permanent
@@ -438,6 +443,36 @@ Important limits:
 Implementation references: [media-element routing](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaElementSource),
 [recordable audio destination](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaStreamDestination)
 and [MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder).
+
+## Local coaching and optional AI review
+
+The default loop now also runs the `interaction`, `local-coach`,
+`local-command-listener`, `ai-review` and `review-workflow` regression suites.
+They cover evidence-backed explanations, exact typed/spoken command routing,
+destructive-action confirmations, authored-plan constraints, independent local
+memory consent, microphone lifecycle and stale/private review rejection. The
+shell sweep exercises the actual new controls on desktop and narrow viewports.
+Shared command and choice JSON vectors are consumed by JavaScript and Swift.
+
+Finalized repository-synthetic runs prepare `review-evidence.json` and
+`review-status.json` beside the existing report. Default tests, watch and CI
+never invoke AI or a real microphone. An explicit local review of a named run is:
+
+```sh
+npm run test:review -- --run test-results/<exact-run>
+```
+
+This calls the native on-device selector and validates its chosen existing
+candidate IDs against freshly rehashed evidence. It cannot create expected
+results, erase failures or pronounce unselected gaps solved. Unavailable models
+remain unavailable, not simulated passes. Private recordings, landmark imports
+and external scenarios are excluded; historical reports need a new synthetic
+run, not a manufactured provenance receipt. See [the review contract](ai-review.md)
+and [the product interaction contract](../docs/local-coach-contract.md).
+
+Microphone tests use substituted recognizers; they do not establish accent/noise
+accuracy, local-pack availability, physical permissions, echo handling on phone
+speakers or battery use. Native UI/session cores remain unported.
 
 ## Boundaries
 

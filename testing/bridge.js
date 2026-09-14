@@ -36,6 +36,8 @@ window.__testLab = {
   }; },
   audioAccess() { return { Coach, AudioBank, TTL, coach }; },
   diagnosticAccess() { return { diagnostics, DiagnosticBuffer }; },
+  coachAccess() { return {routeCoachAction,parseCoachCommand,coachMemory,listener:localListener,
+    context:coachContextToken,host:calib || sess,preferences:()=>({...coachPreferences})}; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;

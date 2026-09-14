@@ -2,6 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { auditAudio, audioReviewPage } from './audio-review.mjs';
 import { findings } from './report.mjs';
+import { clickAudioAction } from './audio-sweep.mjs';
+import { runInNewContext } from 'node:vm';
+test('Audio action clock starts at actual click dispatch, not delayed automation intent',async()=>{
+  let now=0;const events=[],element=new EventTarget();
+  const page={
+    evaluate:async(fn,input)=>runInNewContext(`(${fn.toString()})(input)`,{
+      input,document:{querySelector:()=>element},window:{__audioLab:{mark:action=>events.push({action,ms:now})}}}),
+    locator:selector=>({click:async()=>{
+      assert.equal(selector,'#coachResumeBtn');assert.equal(events.length,0);
+      now+=400;element.dispatchEvent(new Event('click'));
+      // Application work would start after this independently captured boundary.
+      assert.deepEqual(events,[{action:'coach-resume',ms:400}]);
+    }})
+  };
+  await clickAudioAction(page,'coach-resume');
+  now+=100;element.dispatchEvent(new Event('click'));
+  assert.equal(events.length,1,'A registered action marker fires only once');
+});
+test('Unknown and inherited audio actions fail before instrumenting a page',async()=>{
+  const page={evaluate:()=>{throw Error('Should not instrument');}};
+  for(const action of ['unknown','toString','constructor','__proto__'])await assert.rejects(()=>clickAudioAction(page,action),/Unknown audio action/);
+});
 const state = { phase: 0, movement: 'plank', observation: { pose: 'good', since: 0 } };
 const item = { id: 1, key: 'goodhold', text: 'Good.', requestedMs: 0, ttl: 2500, requestedState: state };
 const evidence = () => ({ events: [

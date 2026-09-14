@@ -208,6 +208,34 @@ and request-identity guards are mandatory. `swift test` covers the shared select
 vectors and stubbed lifecycle failures; real model selection is a separate opt-in
 smoke, not automatically validated by green CI. Read `docs/workout-summary-contract.md`.
 
+Local coaching interactions are additive consumers of observed evidence. Ask coach
+pauses and reuses the existing demo/teaching; unknown or expired rejection evidence
+must stay unknown. `coach-choice/1` allows only approved explanation/plan/review IDs,
+never prose, measurements, control execution or constraint relaxation. Browser
+selection stays deterministic; optional native selection is template-first with
+availability, ten-second deadline and stale-request guards.
+Speech requires explicit local-only opt-in, the exact "coach" grammar and final
+results except urgent Pause. Skip/Finish/End require a matching current ten-second
+confirmation. Sync invalidation on pause/resume as well as phase/tier changes;
+polling alone cannot guard an ABA transition. Mic Off must be reachable inside a
+modal, not only in the inert header. Coach playback suspends input, with 750ms
+quiet before renewal. Background return never opts back in. No transcripts persist.
+Authored-plan search must understand every substantive clause, recheck all hard
+constraints after tier resolution, clear edited requests and leave Start explicit.
+Minutes are estimates, not finish-time promises. Memory uses separate opt-ins,
+bounded allowlisted counts, visible failures and scoped export/erase. No score,
+raw trace, inferred fitness progress or automatic difficulty change is saved.
+Keep `interaction`, `local-coach`, `local-command-listener`, `ai-review` and
+`review-workflow` in the default loop, the `interaction-*` shell cases and the
+`ask-repeat-resume` actual-clip case. Commands/choices have shared JS/Swift vectors.
+Synthetic runs prepare AI-review evidence but never invoke a model automatically.
+Explicit `npm run test:review -- --run test-results/<exact-run>` selects existing
+candidate IDs only; fresh source/analyzer hashes and synthetic provenance are
+mandatory before/after generation. Private inputs and stale outputs fail visibly.
+Preserve coverage gaps, hard process deadlines and same-run concurrency protection;
+AI never rewrites an oracle or declares its own findings solved. Read
+`docs/local-coach-contract.md` and `testing/ai-review.md` before changing this boundary.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled
@@ -261,10 +289,11 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 ## Current state
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
-checks from the surviving vectors and exits 0. `swift test` passes 25 original engine
-tests and 22 deterministic summary tests; its real-model smoke is opt-in and skipped
-by default. They read the same root conformance JSON, 27 shared movement-evidence
-cases and 22 shared summary-selection cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
+checks from the surviving vectors and exits 0. `swift test` passes 104 deterministic
+tests (25 engine, 22 summary, 57 interaction); three real-model smoke tests are
+opt-in and skipped by default. They read the same root conformance JSON, 27 shared
+movement-evidence cases, 22 summary-selection, 22 choice-selection and 39 command
+cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise
@@ -284,7 +313,7 @@ proportions it was authored in, but not that it *reads* as the movement.
 
 ## Documentation
 
-`docs/` is an Obsidian vault — 19 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
+`docs/` is an Obsidian vault — 20 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
 `docs/README.md` for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
 Session notes from user testing go in `docs/sessions/`.

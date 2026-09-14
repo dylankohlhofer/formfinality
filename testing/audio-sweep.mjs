@@ -6,6 +6,23 @@ import { hash } from './lib.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';
 import { auditAudio, audioReviewPage } from './audio-review.mjs';
 
+export async function clickAudioAction(page,action){
+  const controls={skip:'#skipExBtn',stop:'#startBtn',pause:'#pauseBtn',resume:'#resumeBtn',
+    ask:'#askCoachBtn',repeat:'#coachRepeatBtn','coach-resume':'#coachResumeBtn','follow-along':'#followAlongBtn'};
+  if(!Object.hasOwn(controls,action))throw new Error(`Unknown audio action: ${action}`);
+  const selector=controls[action];
+  // Mark the actual DOM click, before the app's handler. Playwright can spend
+  // hundreds of ms scrolling/waiting for actionability before dispatching it.
+  // That automation delay is not application cancellation latency.
+  await page.evaluate(({selector,action})=>{
+    const element=document.querySelector(selector);
+    if(!element)throw new Error(`Missing audio action control: ${selector}`);
+    element.addEventListener('click',()=>window.__audioLab.mark(action),{capture:true,once:true});
+  },{selector,action});
+  await page.locator(selector).click();
+  if(action==='stop')await page.locator('#endSessionBtn').click();
+}
+
 export async function audioSweep({ root, html, dir, onResult = async () => {}, only, mutate, repeatFailures = true, verification }) {
   const declared = JSON.parse(await readFile(resolve(root, 'testing/audio-cases.json')));
   // Every persona/tier actually decodes its own shipped number clips. Full-length
@@ -55,11 +72,7 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         // active. Do not fast-forward the engine while MP3s play in real time.
         for (const [i, segment] of segments.entries()) {
           if (segment.action) {
-            await page.evaluate(action => window.__audioLab.mark(action), segment.action);
-            const selector = {skip:'#skipExBtn', stop:'#startBtn', pause:'#pauseBtn', resume:'#resumeBtn', 'follow-along':'#followAlongBtn'}[segment.action];
-            if(!selector) throw new Error(`Unknown audio action: ${segment.action}`);
-            await page.locator(selector).click();
-            if(segment.action === 'stop') await page.locator('#endSessionBtn').click();
+            await clickAudioAction(page,segment.action);
           } else {
             await page.evaluate(async s => {
               window.__audioLab.observe(s.pose);
@@ -142,6 +155,24 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         check('Teaching actually plays after choosing follow-along',evidence.events.some(e=>e.type==='clip-start' && e.ms>choice?.ms && e.item?.key==='teach.plank'),true);
         check('Unassessed mode has no started correction, praise or readiness speech',evidence.events.some(e=>
           e.type==='speech-start' && e.state.state==='follow-along' && e.item?.key!=='teach.plank'),false);
+      }
+      if(scenario.id === 'ask-repeat-resume'){
+        const ask = evidence.events.find(e=>e.type==='action' && e.action==='ask');
+        const repeat = evidence.events.find(e=>e.type==='action' && e.action==='repeat');
+        const resume = evidence.events.find(e=>e.type==='action' && e.action==='coach-resume');
+        const boundary = evidence.events.find(e=>e.ms>=ask?.ms && e.state.state==='paused');
+        const correction = new Set(evidence.events.filter(e=>e.type==='clip-start' && e.item?.key==='sag' && e.ms<ask?.ms).map(e=>e.playId));
+        const teaching = new Set(evidence.events.filter(e=>e.type==='clip-start' && e.item?.key==='teach.plank' && e.ms>=repeat?.ms && e.ms<resume?.ms).map(e=>e.playId));
+        check('Ask interrupts audible correction',evidence.levels.some(l=>correction.has(l.playId)&&l.ms>=ask?.ms-250&&l.ms<=ask?.ms&&l.rms>.001),true);
+        check('Ask pauses actual workout',!!boundary,true);
+        check('Ask silences old correction within 250ms',evidence.levels.some(l=>correction.has(l.playId)&&l.ms>boundary?.ms+250&&l.rms>.001),false);
+        check('Paused teaching cannot award held time',resume?.state.held,boundary?.state.held);
+        check('Explicit repeat starts real teaching while paused',evidence.events.some(e=>e.type==='clip-start'&&teaching.has(e.playId)&&e.state.state==='paused'),true);
+        check('Repeated teaching has measured audio signal',evidence.levels.some(l=>teaching.has(l.playId)&&l.rms>.001),true);
+        check('Resume cancels repeated teaching within 250ms',evidence.levels.some(l=>teaching.has(l.playId)&&l.ms>resume?.ms+250&&l.rms>.001),false);
+        check('Only explicitly requested teaching starts during help',evidence.events.some(e=>e.type==='speech-start'&&e.state.state==='paused'&&e.item?.key!=='teach.plank'),false);
+        check('Recovery does not restart obsolete correction',evidence.events.some(e=>e.type==='speech-start'&&e.ms>resume?.ms&&e.item?.key==='sag'),false);
+        check('Fresh observed hold resumes after help',evidence.events.some(e=>e.ms>resume?.ms&&e.state.held>resume?.state.held),true);
       }
       if(scenario.id === 'pause-cancels-correction'){
         const pause = evidence.events.find(e=>e.type==='action' && e.action==='pause');

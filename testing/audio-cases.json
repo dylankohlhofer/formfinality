@@ -1,5 +1,12 @@
 [
   {
+    "id":"ask-repeat-resume", "kind":"session", "tier":"building", "persona":"steady",
+    "description":"Ask coach interrupts a measured correction; explicitly repeated teaching plays while paused, then Resume cancels that teaching and counts only fresh observations.",
+    "oracle":"Measured sag audio must play just before Ask and stop within 250ms. Paused help cannot add held time. Repeat must start real teaching audio, and Resume must stop it within 250ms without restarting obsolete correction. Synthetic landmarks, actual recorded clips, not microphone or speaker validation.",
+    "steps":[{"ex":"plank","t":120}],
+    "segments":[{"pose":"good","seconds":18},{"pose":"sag","seconds":0.8},{"action":"ask"},{"pose":"lost","seconds":1},{"action":"repeat"},{"pose":"lost","seconds":2},{"action":"coach-resume"},{"pose":"good","seconds":6},{"action":"stop"},{"pose":"none","seconds":2}]
+  },
+  {
     "id":"pause-cancels-correction", "kind":"session", "tier":"building", "persona":"steady",
     "description":"Pause interrupts an audible form correction, stays silent, then explicitly resumes with fresh observations.",
     "oracle":"Actual sag audio must play immediately before Pause and stop within 250ms. No speech starts while paused, held time freezes, and no stale sag correction starts after recovery. Synthetic input, real recorded-clip output; not physical speaker validation.",

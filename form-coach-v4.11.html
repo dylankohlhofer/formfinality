@@ -525,6 +525,17 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   #cue,body.following #cue{ top:calc(var(--chrome-height) + 62px) }
 }
 
+.coachActions{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 }
+#coachClose,#memoryClose{ float:right; margin:0 0 12px 8px }
+#coachAnswer section{ border-left:2px solid var(--iris); padding:4px 12px; margin:12px 0 }
+#coachAnswer h3{ margin:4px 0 } #coachAnswer p{ margin:4px 0 }
+#coachCommandForm{ margin:16px 0 } #coachCommandForm label{ display:block }
+#coachCommandInput,#planRequestInput{ width:100%; box-sizing:border-box; margin:6px 0 }
+#coachConfirmation,#memoryEraseConfirm{ border:1px solid var(--line-2); border-radius:10px; padding:12px }
+#coachDemoDock #demo{ display:flex; position:relative; inset:auto; padding:8px; width:100%; box-sizing:border-box; background:none }
+#coachDemoDock #demoCanvas{ width:min(100%,380px); height:auto; max-height:250px }
+#planRequestResults{ text-align:left; overflow-wrap:anywhere } #planRequestResults button{ margin:6px 0 }
+#memoryHistory li{ padding:8px 0; border-bottom:1px solid var(--line) }
 @media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
 </style>
 </head>
@@ -544,6 +555,8 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
   <button class="ctl" id="startBtn">Workouts</button>
   <button class="ctl" id="helpBtn">Help</button>
+  <button class="ctl" id="askCoachBtn" hidden>Ask coach</button>
+  <button class="ctl" id="listenOffBtn" hidden>Mic off</button>
   <button class="ctl" id="diagQuickFlag" hidden>Flag moment</button>
   <details id="diagPanel">
     <summary class="ctl" id="diagToggle">Diagnostics</summary>
@@ -631,6 +644,50 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   <p>Device interruption pauses a workout. Return and choose Resume; time away is never exercise credit. Progress is kept in memory for this visit, not saved across reloads.</p>
 </dialog>
 
+<dialog id="coachDialog" aria-labelledby="coachTitle">
+  <button class="ctl" id="coachClose">Close coach</button>
+  <h2 id="coachTitle">Your coach</h2>
+  <p id="coachContextNote">The workout is paused while you read.</p>
+  <button class="ctl primary" id="coachResumeBtn">Resume workout</button>
+  <div id="coachAnswer" aria-live="polite" data-coach-source="template"></div>
+  <div class="coachActions">
+    <button class="ctl" id="coachWhyBtn">Why didn’t that count?</button>
+    <button class="ctl" id="coachDemoBtn">Show me</button>
+    <button class="ctl" id="coachRepeatBtn">Repeat teaching</button>
+  </div>
+  <div id="coachDemoDock" hidden></div>
+  <form id="coachCommandForm">
+    <label for="coachCommandInput">Or type a command</label>
+    <input id="coachCommandInput" maxlength="120" autocomplete="off" placeholder="Show me · repeat that · skip this set">
+    <button class="ctl" type="submit">Do this</button>
+  </form>
+  <div id="coachConfirmation" hidden>
+    <p id="coachConfirmText"></p>
+    <button class="ctl" id="coachConfirmBtn">Confirm</button>
+    <button class="ctl" id="coachCancelBtn">Cancel</button>
+  </div>
+  <p id="coachActionStatus" role="status"></p>
+  <details><summary>Hands-free controls · optional microphone</summary>
+    <p>Only enable this if you want the microphone to listen during this workout. Recognition must stay on this device; transcripts are not saved. Say “coach pause”, “coach show me” or “coach why”. Skip and finish need explicit confirmation. Listening pauses while the coach speaks and stops when you leave or finish.</p>
+    <button class="ctl" id="listenOnBtn">Enable local listening</button>
+    <p id="listenStatus" role="status">Off. No microphone requested.</p>
+    <p>Availability depends on browser support and an already-installed English language pack. No remote fallback or automatic pack download. Touch controls always remain available.</p>
+  </details>
+</dialog>
+<dialog id="memoryDialog" aria-labelledby="memoryTitle">
+  <button class="ctl" id="memoryClose">Close settings</button><h2 id="memoryTitle">Your coach &amp; history</h2>
+  <p>Optional local memory. This browser storage is not encrypted by the app, can be visible to others using this browser, and may be cleared by your browser. No account, sync or upload.</p>
+  <label><input type="checkbox" id="rememberPrefs"> Remember my coaching preferences</label>
+  <div class="field"><label for="explanationPref">Coaching amount</label><select id="explanationPref"><option value="standard">Standard coaching</option><option value="minimal">Less encouragement and breathing reminders</option></select></div>
+  <p>Counting, rejected-rep explanations, form corrections and readiness instructions are kept in both modes.</p>
+  <div class="field"><label for="demoPref">Demonstrations</label><select id="demoPref"><option value="on-request">When I ask</option><option value="always">Show at the start of each movement</option></select></div>
+  <label><input type="checkbox" id="rememberHistory"> Save future workout summaries on this device</label>
+  <p>Up to 100 compact entries / 128 KiB. No video, joints, name, diagnostic details or full coaching transcript. Turning saving off keeps existing history until you erase it. Sessions in progress cannot be restored after reloading.</p>
+  <p id="memoryStatus" role="status"></p><div id="memoryHistory"></div>
+  <button class="ctl" id="memoryExportBtn">Export saved history</button>
+  <button class="ctl" id="memoryEraseBtn">Erase coaching memory…</button>
+  <div id="memoryEraseConfirm" hidden><p>Erase all saved coaching preferences and history? This cannot be undone. Diagnostic details and demonstration recordings are separate and will not be changed.</p><button class="ctl" id="memoryEraseYes">Erase now</button><button class="ctl" id="memoryEraseNo">Keep it</button></div>
+</dialog>
 <div id="tel"></div>
 <p id="tip"></p>
 <p id="speechStatus" role="status" hidden></p>
@@ -927,6 +984,380 @@ function expandPlanSteps(steps, tierKey){
     }
   }
   return out;
+}
+
+/* LOCAL COACH PLANNING AND MEMORY */
+// Authored requirements, not camera judgements. Quiet means no authored jumping
+// or impact; it does not promise silence. A wall/chair counts as equipment. A mat
+// is optional comfort, never a required item. Standing excludes seated wall sits.
+const LOCAL_COACH_TAGS = Object.freeze(Object.fromEntries(Object.entries({
+  "knee-plank":    {floor:true, standing:false, quiet:true, equipment:[]},
+  "plank":         {floor:true, standing:false, quiet:true, equipment:[]},
+  "side-plank-knee":{floor:true, standing:false, quiet:true, equipment:[]},
+  "side-plank":    {floor:true, standing:false, quiet:true, equipment:[]},
+  "dead-bug":      {floor:true, standing:false, quiet:true, equipment:[]},
+  "bird-dog":      {floor:true, standing:false, quiet:true, equipment:[]},
+  "glute-bridge":  {floor:true, standing:false, quiet:true, equipment:[]},
+  "sit-to-stand":  {floor:false,standing:false, quiet:true, equipment:["chair"]},
+  "squat":         {floor:false,standing:true, quiet:true, equipment:[]},
+  "wall-sit":      {floor:false,standing:false,quiet:true, equipment:["wall"]},
+  "hollow-tuck":   {floor:true, standing:false, quiet:true, equipment:[]},
+  "hollow-hold":   {floor:true, standing:false, quiet:true, equipment:[]},
+  "crunch":        {floor:true, standing:false, quiet:true, equipment:[]},
+  "leg-raise-bent":{floor:true, standing:false, quiet:true, equipment:[]},
+  "leg-raise":     {floor:true, standing:false, quiet:true, equipment:[]},
+  "wall-push-up":  {floor:false,standing:true, quiet:true, equipment:["wall"]},
+  "knee-push-up":  {floor:true, standing:false, quiet:true, equipment:[]},
+  "push-up":       {floor:true, standing:false, quiet:true, equipment:[]},
+  "cat-cow":       {floor:true, standing:false, quiet:true, equipment:[]},
+  "downward-dog":  {floor:true, standing:false, quiet:true, equipment:[]},
+  "cobra":         {floor:true, standing:false, quiet:true, equipment:[]}
+}).map(([id,tags])=>[id,Object.freeze({...tags,equipment:Object.freeze(tags.equipment)})])));
+const LOCAL_COACH_DISCLOSURE = "Optional preferences and workout counts are saved in this browser's localStorage on this device. They are not encrypted by Form Coach, and other people using this browser profile may see them. This feature does not upload them. Browser clearing or private browsing may remove them. Preferences and history have separate consent. History keeps at most 100 entries and the feature store at most 128 KiB; saving stops visibly when full. Erase removes this feature's stored data and turns both options off.";
+const LOCAL_COACH_MEMORY_KEYS = Object.freeze(["formcoach.local-coach.v1"]);
+const LOCAL_COACH_PREFS = Object.freeze({explanation:"standard",demo:"on-request"});
+const LOCAL_COACH_MAX_BYTES = 128 * 1024;
+const localCoachObject = value => value !== null && typeof value === "object" &&
+  !Array.isArray(value) && [Object.prototype,null].includes(Object.getPrototypeOf(value));
+const localCoachKeys = (value,keys) => localCoachObject(value) &&
+  Reflect.ownKeys(value).length === keys.length && keys.every(key=>Object.hasOwn(value,key));
+const localCoachClone = value => JSON.parse(JSON.stringify(value));
+const localCoachBytes = value => new TextEncoder().encode(value).length;
+const localCoachPrefsValid = value => localCoachKeys(value,["explanation","demo"]) &&
+  ["minimal","standard"].includes(value.explanation) && ["always","on-request"].includes(value.demo);
+
+/** Bounded English grammar. Every non-filler token must be consumed; unsupported
+    clauses (including negations) cannot disappear into a broad keyword match.
+    Bare/about minutes are soft; explicit deadlines are hard and need clarification.
+    'Prefer' modifies only the next constraint. No request text is persisted. */
+function parseLocalPlanRequest(text){
+  const request = {planId:null,hard:{standingOnly:false,noFloor:false,quiet:false,noEquipment:false,maxMinutes:null},
+    soft:{standingOnly:false,noFloor:false,quiet:false,noEquipment:false,minutes:null}};
+  const clarify = (reason,message) => ({status:"clarify",reason,message,request});
+  if(typeof text !== "string" || text.length > 500 || !text.trim())
+    return clarify("input","Use 1–500 characters: a plan name, minutes, standing only, no floor, quiet, or no equipment.");
+  let rest = text.toLowerCase().replace(/[’]/g,"'").replace(/[–—]/g,"-");
+  if(/\b(pain\w*|injur\w*|medical\w*|rehab\w*|physio\w*|pregnan\w*|surgery|postpartum|arthritis|sciatica|hurt\w*|diagnos\w*|treat\w*|recover\w*)\b/.test(rest))
+    return clarify("health","This planner cannot adapt workouts for pain, injury or medical needs. Clarify the request without asking it to judge medical suitability.");
+  if(/[^a-z0-9\s.,!?'\-]/.test(rest) || /(?:^|\s)-\s*\d/.test(rest))
+    return clarify("unsupported","Some of this request is unsupported. Use a plan name or the listed constraints.");
+  rest = rest.replace(/-/g," ").trim();
+  const units = ["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+  const tens = ["twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+  const number = `(?:\\d+(?:\\.\\d+)?|(?:${tens.join("|")})(?: (?:${units.slice(1,10).join("|")}))?|${units.join("|")})`;
+  const minutesPattern = new RegExp(`^(?:(under|at most|no more than|up to|within|exactly|only|about|around|roughly) )?(${number}) ?(?:minutes?|mins?)\\b`);
+  let preferred = false, meaningful = false;
+  while(rest){
+    rest = rest.replace(/^[\s,.!?]+/,"");
+    if(!rest) break;
+    const plan = PLANS.find(p=>rest === p.name.toLowerCase() || rest.startsWith(p.name.toLowerCase()+" ") ||
+      new RegExp(`^${p.name.toLowerCase()}[,.!?]`).test(rest));
+    if(plan){
+      if(request.planId && request.planId !== plan.id || preferred)
+        return clarify("ambiguous","Choose one exact plan name; a plan name is an exact selection.");
+      request.planId = plan.id; meaningful = true; rest = rest.slice(plan.name.length); continue;
+    }
+    const duration = rest.match(minutesPattern);
+    if(duration){
+      if(request.soft.minutes !== null || request.hard.maxMinutes !== null)
+        return clarify("ambiguous","Give one duration in whole minutes.");
+      const words = duration[2].split(" ");
+      const minutes = /^\d/.test(words[0]) ? Number(words[0]) : tens.includes(words[0])
+        ? (tens.indexOf(words[0])+2)*10 + (words[1] ? units.indexOf(words[1]) : 0) : units.indexOf(words[0]);
+      if(!Number.isInteger(minutes) || minutes < 1 || minutes > 120)
+        return clarify("duration","Use a whole-number duration between 1 and 120 minutes.");
+      if(duration[1] && !["about","around","roughly"].includes(duration[1])){
+        if(preferred) return clarify("ambiguous","Clarify whether the duration is a preference or a fixed deadline.");
+        request.hard.maxMinutes = minutes;
+      } else request.soft.minutes = minutes;
+      preferred = false; meaningful = true; rest = rest.slice(duration[0].length); continue;
+    }
+    const constraint = rest.match(/^(standing only|only standing|no floor(?: work)?|without floor(?: work)?|quiet|no equipment|without equipment)\b/);
+    if(constraint){
+      const key = constraint[1].includes("standing") ? "standingOnly" : constraint[1].includes("floor") ? "noFloor"
+        : constraint[1] === "quiet" ? "quiet" : "noEquipment";
+      request[preferred ? "soft" : "hard"][key] = true;
+      preferred = false; meaningful = true; rest = rest.slice(constraint[0].length); continue;
+    }
+    const preference = rest.match(/^(?:i (?:would )?prefer|prefer|preferably)\b/);
+    if(preference && !preferred){ preferred = true; rest = rest.slice(preference[0].length); continue; }
+    // Filler phrases are deliberately narrow. Do not strip 'not', 'only', 'or',
+    // 'except', 'without', or arbitrary adjectives: they can change the request.
+    const filler = rest.match(/^(?:please|can you|could you|i would like|i'd like|i want|i have|i need|find me|find|show me|show|suggest|a|an|the|workout|session|plan|for|and|with|today)\b/);
+    if(filler){ rest = rest.slice(filler[0].length).trimStart(); continue; }
+    return clarify("unsupported","Some of this request is unsupported. Clarify using a plan name, whole minutes, standing only, no floor, quiet, or no equipment.");
+  }
+  if(preferred || !meaningful) return clarify("input","Add a plan name, minutes or one of the listed constraints.");
+  return {status:"ready",reason:"parsed",message:"Unqualified constraints and exact plan names are required; 'prefer' and bare/about minutes are soft preferences.",request};
+}
+
+function localPlanCandidate(plan,tierId){
+  if(!plan.tiers.includes(tierId)) return null;
+  const steps = [], movements = [];
+  let workLow = 0, workHigh = 0, restSeconds = 0;
+  for(const step of expandPlanSteps(plan.steps,tierId)){
+    if(step.rest != null){
+      const seconds = scaledCore(step.rest,true,tierId);
+      restSeconds += seconds; steps.push({kind:"rest",seconds}); continue;
+    }
+    const resolved = resolveMovementCore(step.ex,tierId);
+    if(!resolved || !resolved.mv.tiers.includes(tierId) || !Object.hasOwn(LOCAL_COACH_TAGS,resolved.id)) return null;
+    const target = scaledCore(step.t,false,tierId), tags = localCoachClone(LOCAL_COACH_TAGS[resolved.id]);
+    const row = {movementId:resolved.id,name:resolved.mv.name,kind:resolved.mv.kind,target,
+      setNo:step.setNo,setTotal:step.setTotal,otherSide:step.pre === "switchsides",tags};
+    steps.push(row); movements.push(row);
+    // Planning assumptions, NOT counter minimums or observed exercise speed.
+    workLow += target * (resolved.mv.kind === "reps" ? 3 : 1);
+    workHigh += target * (resolved.mv.kind === "reps" ? 6 : 1);
+  }
+  const equipment = [...new Set(movements.flatMap(row=>row.tags.equipment))].sort();
+  const minSeconds = workLow + restSeconds + movements.length*20;
+  const maxSeconds = workHigh + restSeconds + movements.length*60;
+  return {candidateId:plan.id,planId:plan.id,name:plan.name,tierId,steps,movements,
+    tags:{floor:movements.some(row=>row.tags.floor),standing:movements.every(row=>row.tags.standing),
+      quiet:movements.every(row=>row.tags.quiet),equipment},
+    estimate:{minSeconds,maxSeconds,restSeconds,workSeconds:[workLow,workHigh],
+      setupSeconds:[movements.length*20,movements.length*60],repSeconds:[3,6],setupPerSetSeconds:[20,60],
+      includesSetup:true,guaranteed:false,
+      disclosure:"Estimate assumes 3–6 seconds per rep, authored held/guided targets, all tier-scaled rests and 20–60 seconds of setup/teaching per set. Your pace, readiness, repeated attempts and pauses can take longer; this is not a finish-time guarantee."},
+    tagDisclosure:"Quiet means no authored jumping/impact, not guaranteed silence. Chairs and walls count as equipment. Floor work may benefit from an optional mat.",softMisses:[]};
+}
+
+function searchLocalPlans(text,tierId){
+  const parsed = parseLocalPlanRequest(text);
+  const base = {source:"deterministic",request:parsed.request,candidates:[],excludedPlanIds:[]};
+  if(!Object.hasOwn(TIERS,tierId)) return {...base,status:"clarify",reason:"tier",message:"Choose an existing tier before searching."};
+  if(parsed.status !== "ready") return {...base,status:"clarify",reason:parsed.reason,message:parsed.message};
+  const {hard,soft,planId} = parsed.request;
+  if(hard.maxMinutes !== null) return {...base,status:"clarify",reason:"deadline",
+    message:"A fixed finish time cannot be guaranteed because pace and setup vary. Use 'about' followed by minutes if an estimate is acceptable."};
+  const satisfies = (candidate,key) => key === "standingOnly" ? candidate.tags.standing
+    : key === "noFloor" ? !candidate.tags.floor : key === "quiet" ? candidate.tags.quiet : candidate.tags.equipment.length === 0;
+  const candidates = [];
+  for(const plan of PLANS){
+    if(planId && plan.id !== planId || !plan.tiers.includes(tierId)) continue;
+    const candidate = localPlanCandidate(plan,tierId);
+    if(!candidate){ base.excludedPlanIds.push(plan.id); continue; }
+    if(["standingOnly","noFloor","quiet","noEquipment"].some(key=>hard[key] && !satisfies(candidate,key))) continue;
+    candidate.softMisses = ["standingOnly","noFloor","quiet","noEquipment"].filter(key=>soft[key] && !satisfies(candidate,key));
+    candidate.timeDistanceSeconds = soft.minutes === null ? 0 : Math.max(
+      candidate.estimate.minSeconds-soft.minutes*60,soft.minutes*60-candidate.estimate.maxSeconds,0);
+    if(candidate.timeDistanceSeconds) candidate.softMisses.push("minutes");
+    candidates.push(candidate);
+  }
+  candidates.sort((a,b)=>a.softMisses.length-b.softMisses.length || a.timeDistanceSeconds-b.timeDistanceSeconds);
+  return {...base,status:candidates.length ? "matches" : "no-match",reason:candidates.length ? "matched" : "no-exact-match",candidates,
+    message:candidates.length
+      ? "These authored plans meet every required filter. Soft preferences can be unmet and are listed on each proposal. Duration is an estimate including setup, not a guarantee. Choose a proposal to preview it."
+      : "No existing plan meets all required constraints at this tier with supported resolved movements. Nothing was selected or relaxed. Revise the request to search again."};
+}
+
+/** Optional model output contains selections only. Rebuild the matching catalog at
+    acceptance time; callers cannot provide a relaxed or stale candidate catalog.
+    'validated-selection' describes validation, never claims browser inference. */
+function selectLocalPlanCandidates(text,tierId,selection=null){
+  const catalog = searchLocalPlans(text,tierId);
+  const fallback = reason => ({status:catalog.status,source:"deterministic",reason,candidateIds:catalog.candidates.map(c=>c.candidateId)});
+  if(selection === null) return fallback("not-requested");
+  // Objects only. Native wire validation owns parsing and duplicate-key rejection;
+  // this browser helper exposes no JSON import that could hide overwritten keys.
+  if(catalog.status !== "matches" || !localCoachKeys(selection,["candidateIds"]) || !Array.isArray(selection.candidateIds) ||
+    !selection.candidateIds.length || selection.candidateIds.length > catalog.candidates.length ||
+    new Set(selection.candidateIds).size !== selection.candidateIds.length || Array.from(selection.candidateIds).some(id=>
+      typeof id !== "string" || !catalog.candidates.some(candidate=>candidate.candidateId === id))) return fallback("invalid-selection");
+  return {status:"matches",source:"validated-selection",reason:"selected",candidateIds:selection.candidateIds.slice()};
+}
+
+const LOCAL_COACH_ENTRY_FIELDS = Object.freeze(["sessionId","planId","tierId","finishedAt","status","recordedSets",
+  "completedSets","skippedSets","endedSets","followAlongSets","guidedSets","reps","heldSeconds","guidedSeconds"]);
+const localCoachSessionId = value => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+function localCoachFinishedAt(value){
+  if(Number.isSafeInteger(value) && value >= 0 && value <= 8640000000000000) return value;
+  if(typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return null;
+  const milliseconds = Date.parse(value);
+  return Number.isSafeInteger(milliseconds) && milliseconds >= 0 && new Date(milliseconds).toISOString() === value ? milliseconds : null;
+}
+function localCoachEntryValid(entry){
+  if(!localCoachKeys(entry,LOCAL_COACH_ENTRY_FIELDS) || !localCoachSessionId(entry.sessionId) ||
+    !PLANS.some(plan=>plan.id === entry.planId && plan.tiers.includes(entry.tierId)) ||
+    !Number.isSafeInteger(entry.finishedAt) || entry.finishedAt < 0 || entry.finishedAt > 8640000000000000 ||
+    !["completed","completed-with-skips","completed-with-follow-along","skipped","ended","empty"].includes(entry.status)) return false;
+  if(LOCAL_COACH_ENTRY_FIELDS.slice(5).some(key=>!Number.isSafeInteger(entry[key]) || entry[key] < 0 || entry[key] > 1000000)) return false;
+  const plan = PLANS.find(plan=>plan.id === entry.planId);
+  const setCount = expandPlanSteps(plan.steps,entry.tierId).filter(step=>step.ex).length;
+  if(entry.recordedSets > setCount || entry.completedSets+entry.skippedSets+entry.endedSets !== entry.recordedSets ||
+    entry.endedSets > 1 || entry.followAlongSets > entry.recordedSets || entry.guidedSets > entry.recordedSets) return false;
+  if(!entry.recordedSets && (entry.reps || entry.heldSeconds || entry.guidedSeconds) ||
+    !entry.guidedSets && entry.guidedSeconds) return false;
+  if(entry.status === "ended") return true; // End during rest has no stopped set.
+  if(entry.endedSets || entry.recordedSets !== setCount && entry.status !== "empty") return false;
+  const status = !entry.recordedSets ? "empty" : entry.skippedSets === entry.recordedSets ? "skipped"
+    : entry.skippedSets ? "completed-with-skips" : entry.followAlongSets ? "completed-with-follow-along" : "completed";
+  return entry.status === status;
+}
+
+/** Finish payload boundary. Only allowlisted scalar counts cross it; no names,
+    logs, scores, reasons, joint data, model text or diagnoses are retained. Achieved
+    work before Skip/End/follow-along is preserved once; elapsed is never held time.
+    sessionId must be an opaque UUID generated by the shell once per session;
+    finishedAt is supplied UTC milliseconds or a canonical ISO UTC timestamp.
+    Calibration is not workout history. */
+function buildLocalHistoryEntry(sessionId,planId,payload,finishedAt){
+  const invalid = message => ({status:"invalid",reason:"invalid-session",message,entry:null});
+  const plan = PLANS.find(item=>item.id === planId);
+  finishedAt = localCoachFinishedAt(finishedAt);
+  if(!localCoachSessionId(sessionId) || !plan || !localCoachObject(payload) ||
+    !plan.tiers.includes(payload.tierId) || !Array.isArray(payload.out) || typeof payload.stopped !== "boolean" ||
+    !Number.isSafeInteger(finishedAt) || finishedAt < 0 || finishedAt > 8640000000000000)
+    return invalid("Workout history needs a valid session ID, authored plan, tier and finish payload.");
+  const expected = expandPlanSteps(plan.steps,payload.tierId).filter(step=>step.ex);
+  if(payload.out.length > expected.length || !payload.stopped && payload.out.length !== expected.length)
+    return invalid("The finished set count does not match the authored plan.");
+  const entry = {sessionId:sessionId.toLowerCase(),planId,tierId:payload.tierId,finishedAt,status:"completed",
+    recordedSets:payload.out.length,completedSets:0,skippedSets:0,endedSets:0,followAlongSets:0,guidedSets:0,
+    reps:0,heldSeconds:0,guidedSeconds:0};
+  let heldSeconds = 0, guidedSeconds = 0;
+  for(const [index,row] of payload.out.entries()){
+    if(!localCoachObject(row) || !Object.hasOwn(M,row.id) || row.kind !== M[row.id].kind ||
+      !Number.isFinite(row.achieved) || row.achieved < 0 || row.achieved > 100000 ||
+      row.kind === "reps" && !Number.isSafeInteger(row.achieved) ||
+      ["skipped","stopped","followAlong"].some(key=>Object.hasOwn(row,key) && typeof row[key] !== "boolean") ||
+      row.skipped && row.stopped || row.stopped && (!payload.stopped || index !== payload.out.length-1))
+      return invalid("A recorded set contains invalid counts or status.");
+    const resolved = resolveMovementCore(expected[index].ex,payload.tierId);
+    const regression = resolved?.mv.regression;
+    if(row.id !== resolved?.id && !(TIERS[payload.tierId].regress && row.id === regression && M[regression]?.tiers.includes(payload.tierId)))
+      return invalid("A recorded movement does not belong to this plan set.");
+    if((row.skipped || row.stopped || row.followAlong) && row.score !== null)
+      return invalid("Skipped, stopped and follow-along sets must retain null scores.");
+    if(row.skipped) entry.skippedSets++; else if(row.stopped) entry.endedSets++; else entry.completedSets++;
+    if(row.followAlong) entry.followAlongSets++;
+    if(row.kind === "reps") entry.reps += row.achieved;
+    if(row.kind === "hold") heldSeconds += row.achieved;
+    if(row.kind === "guided"){ entry.guidedSets++; guidedSeconds += row.achieved; }
+  }
+  entry.heldSeconds = Math.floor(heldSeconds); entry.guidedSeconds = Math.floor(guidedSeconds);
+  entry.status = payload.stopped ? "ended" : !entry.recordedSets ? "empty"
+    : entry.skippedSets === entry.recordedSets ? "skipped" : entry.skippedSets ? "completed-with-skips"
+    : entry.followAlongSets ? "completed-with-follow-along" : "completed";
+  if(!localCoachEntryValid(entry)) return invalid("Workout history counts exceed the supported bounds.");
+  return {status:"ready",reason:"validated",message:"Only recorded work and completion counts are included.",entry};
+}
+
+/** Inject a Storage-compatible object, never read a browser global here. One
+    versioned key permits atomic consent/data writes. Construction performs reads
+    only. Any malformed/failed read locks writes until explicit erase or a reload;
+    returned status must be displayed by the shell. No fallback overwrites data.
+    Disable takes effect in memory even if its one revocation write fails. */
+class LocalCoachMemory {
+  constructor(storage){
+    this.storage = storage; this.state = this.empty(); this.raw = null; this.error = null;
+    this.load();
+  }
+  empty(){ return {schema:"local-coach/1",consent:{preferences:false,history:false},preferences:{...LOCAL_COACH_PREFS},history:[]}; }
+  fail(reason,message){ this.error = {status:"error",reason,message}; return this.read(); }
+  load(){
+    try {
+      const raw = this.storage.getItem(LOCAL_COACH_MEMORY_KEYS[0]);
+      if(raw === null){ this.raw = null; return; }
+      if(typeof raw !== "string" || localCoachBytes(raw) > LOCAL_COACH_MAX_BYTES)
+        return this.fail("malformed","Local memory is oversized or malformed. It has not been overwritten; erase it explicitly to reset.");
+      const data = JSON.parse(raw);
+      if(!localCoachKeys(data,["schema","consent","preferences","history"]) || data.schema !== "local-coach/1" ||
+        !localCoachKeys(data.consent,["preferences","history"]) || typeof data.consent.preferences !== "boolean" ||
+        typeof data.consent.history !== "boolean" || !localCoachPrefsValid(data.preferences) ||
+        !Array.isArray(data.history) || data.history.length > 100 || !data.history.every(localCoachEntryValid) ||
+        new Set(data.history.map(entry=>entry.sessionId.toLowerCase())).size !== data.history.length)
+        return this.fail("malformed","Saved local memory is invalid. It has not been overwritten; erase it explicitly to reset.");
+      this.state = data; this.raw = raw;
+    } catch(error){
+      this.fail(error?.name === "SyntaxError" ? "malformed" : "unavailable",
+        "Local memory could not be read. Saving is blocked; existing data has not been overwritten.");
+    }
+  }
+  read(){
+    return {...(this.error || {status:"ready",reason:"loaded",message:"Local memory settings are available."}),
+      consent:{...this.state.consent},preferences:this.state.consent.preferences ? {...this.state.preferences} : {...LOCAL_COACH_PREFS},
+      history:localCoachClone(this.state.history),disclosure:LOCAL_COACH_DISCLOSURE};
+  }
+  write(next){
+    if(this.error) return this.read();
+    const raw = JSON.stringify(next);
+    if(localCoachBytes(raw) > LOCAL_COACH_MAX_BYTES) return {status:"full",reason:"byte-limit",message:"Local memory reached 128 KiB. Nothing was saved. Erase explicitly to reset."};
+    try {
+      // Refuse stale writes if another tab changed consent or history. localStorage
+      // has no multi-tab transaction; this detects sequential stale writers only.
+      if(this.storage.getItem(LOCAL_COACH_MEMORY_KEYS[0]) !== this.raw)
+        return this.fail("changed","Local memory changed in another window. Reload before saving; no data was overwritten.");
+      this.storage.setItem(LOCAL_COACH_MEMORY_KEYS[0],raw);
+      this.raw = raw; this.state = next;
+      return {...this.read(),reason:"saved",message:"Saved in this browser on this device."};
+    } catch(error){
+      return this.fail(error?.name === "QuotaExceededError" ? "quota" : "unavailable",
+        "Local memory could not be saved. Existing data is unchanged; check browser storage or erase explicitly.");
+    }
+  }
+  setConsent(kind,enabled){
+    if(!["preferences","history"].includes(kind) || typeof enabled !== "boolean")
+      return {status:"invalid",reason:"consent",message:"Choose preferences or history and an explicit on/off value."};
+    if(this.state.consent[kind] === enabled) return this.read();
+    const next = localCoachClone(this.state);
+    next.consent[kind] = enabled;
+    if(!enabled){
+      // Revocation stops subsequent writes even if persistence is unavailable.
+      this.state.consent[kind] = false;
+      if(kind === "preferences") next.preferences = {...LOCAL_COACH_PREFS};
+    }
+    const result = this.write(next);
+    if(!enabled && result.status === "error"){
+      this.error.message = "Saving is off in this window, but the consent change could not be saved. The previous setting may remain after reload; retry after reloading or erase this feature's memory.";
+      return this.read();
+    }
+    return result;
+  }
+  savePreferences(preferences){
+    if(this.error) return this.read();
+    if(!this.state.consent.preferences) return {status:"off",reason:"no-consent",message:"Preference saving is off."};
+    if(!localCoachPrefsValid(preferences)) return {status:"invalid",reason:"preferences",message:"Use minimal/standard explanations and always/on-request demos."};
+    // Minimal is a shell teaching preference. It never suppresses rep-event
+    // explanations, counting controls, required readiness or correction evidence.
+    const next = localCoachClone(this.state); next.preferences = {...preferences}; return this.write(next);
+  }
+  saveSession(sessionId,planId,payload,finishedAt){
+    if(this.error) return this.read();
+    if(!this.state.consent.history) return {status:"off",reason:"no-consent",message:"Workout history saving is off."};
+    const result = buildLocalHistoryEntry(sessionId,planId,payload,finishedAt);
+    if(result.status !== "ready") return result;
+    const existing = this.state.history.find(entry=>entry.sessionId.toLowerCase() === result.entry.sessionId);
+    if(existing) return {status:"duplicate",reason:"session-exists",message:"This session was already saved. It has not been counted again."};
+    if(this.state.history.length >= 100) return {status:"full",reason:"entry-limit",message:"History has 100 entries. Saving has stopped; erase explicitly to reset."};
+    const next = localCoachClone(this.state); next.history.push(result.entry); return this.write(next);
+  }
+  comparable(planId,tierId){
+    if(this.error) return this.read();
+    if(!PLANS.some(plan=>plan.id === planId && plan.tiers.includes(tierId)))
+      return {status:"invalid",reason:"plan-tier",message:"Choose an existing plan and its tier."};
+    const entries = this.state.history.filter(entry=>entry.planId === planId && entry.tierId === tierId);
+    const byStatus = {};
+    for(const entry of entries) byStatus[entry.status] = (byStatus[entry.status] || 0)+1;
+    return {status:"ready",planId,tierId,count:entries.length,byStatus,entries:localCoachClone(entries),
+      message:"Saved counts for the same authored plan and tier only. Skips, early ends, guided and follow-along sets stay identified. These counts do not establish fitness, ability or progress."};
+  }
+  export(){
+    if(this.error) return this.read();
+    return {status:"ready",reason:"exported",data:localCoachClone(this.state),disclosure:LOCAL_COACH_DISCLOSURE,
+      message:"Explicit export of local coach preferences and workout counts. This file is not encrypted and may contain personal workout history. No upload was made."};
+  }
+  erase(){
+    this.state = this.empty(); // Opt out immediately, even if removal fails.
+    try {
+      for(const key of LOCAL_COACH_MEMORY_KEYS) this.storage.removeItem(key);
+      this.raw = null; this.error = null;
+      return {...this.read(),reason:"erased",message:"Local coach memory erased; preference and history saving are off. Other app settings were kept."};
+    } catch {
+      return this.fail("erase-failed","Saving is off in this window, but local memory could not be erased. It may remain after reload; clear this site's browser storage or retry Erase.");
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2045,6 +2476,352 @@ const DRILL = {
   bridgehigh:"Pause for a full second at the top of every rep.",
   chestup:"Pick a spot at eye level and keep looking at it the whole way down."
 };
+
+// Optional microphone adapter. Only an explicit UI opt-in may call start().
+// context() must include session, phase and step identity; call sync() whenever
+// it changes or coach speech begins. No transcript leaves the result callback.
+// start() resolves on the first recognition start, or false if disabled first.
+// onStatus receives {state, enabled, listening, reason, message}; timers use ms.
+class LocalCommandListener {
+  constructor(env){
+    this.env = {
+      getRecognition: () => globalThis.window?.SpeechRecognition,
+      now: () => performance.now(), ...env
+    };
+    this.timers = env.timers || {setTimeout: (f,ms) => setTimeout(f,ms), clearTimeout: id => clearTimeout(id)};
+    this.enabled = false;
+    this._generation = 0;
+    this._attempt = null;
+    this._timer = null;
+    this._pending = null;
+    this._statusKey = null;
+    this._releaseFailed = false;
+  }
+  start(){
+    if(this._releaseFailed){
+      this._fail('abort-failed');
+      return Promise.resolve(false);
+    }
+    if(this.enabled){
+      this.sync();
+      return this._pending?.promise || Promise.resolve(this.enabled);
+    }
+    let resolve;
+    const promise = new Promise(done => { resolve = done; });
+    this._pending = {promise,resolve};
+    this.enabled = true;
+    this._restarts = 0;
+    this._quietSince = this.env.now() - 750;
+    this._retryAt = 0;
+    this.sync();
+    this._poll();
+    return promise;
+  }
+  stop(reason = 'disabled'){
+    this._disable('off', reason, 'Voice commands are off. Turn them on to listen again.');
+  }
+  sync(){
+    if(!this.enabled) return;
+    const now = this.env.now(), context = this.env.context();
+    if(!this.env.allowed() || typeof context !== 'string' || !context.length){
+      this.stop('inactive');
+      return;
+    }
+    if(this._attempt && this._attempt.context !== context){
+      if(!this._release()) return this._fail('abort-failed');
+      this._quietSince = now;
+    }
+    if(this.env.speaking()){
+      this._quietSince = null;
+      if(this._attempt && !this._release()) return this._fail('abort-failed');
+      this._status('speaking', 'coach-speaking', 'Voice commands are unavailable while the coach is speaking.');
+      return;
+    }
+    if(this._quietSince === null) this._quietSince = now;
+    if(now - this._quietSince < 750){
+      this._status('quiet', 'echo-guard', 'Waiting for quiet before listening for voice commands.');
+      return;
+    }
+    if(this._attempt){
+      if(this._attempt.phase !== 'listening' && now >= this._attempt.deadline) this._fail('start-timeout');
+      return;
+    }
+    if(now >= this._retryAt) void this._begin(context);
+  }
+  _poll(){
+    if(!this.enabled || this._timer !== null) return;
+    this._timer = this.timers.setTimeout(() => {
+      this._timer = null;
+      this.sync();
+      this._poll();
+    }, 100);
+  }
+  _status(state, reason, message){
+    const key = [state,reason,this.enabled].join(':');
+    if(key === this._statusKey) return;
+    this._statusKey = key;
+    this.env.onStatus({state,enabled:this.enabled,listening:state === 'listening',reason,message});
+  }
+  _settle(value){
+    const pending = this._pending;
+    this._pending = null;
+    pending?.resolve(value);
+  }
+  _current(attempt){
+    if(!this.enabled || this._attempt !== attempt || this._generation !== attempt.generation) return false;
+    this.sync();
+    return this.enabled && this._attempt === attempt && this._generation === attempt.generation;
+  }
+  _abort(recognition){
+    try { recognition.abort(); return true; }
+    catch { this._releaseFailed = true; return false; } // Never claim release or reopen input after this.
+  }
+  _lateStart(recognition){
+    recognition.onstart = null;
+    if(!this._abort(recognition)) this._fail('abort-failed');
+  }
+  _release(){
+    ++this._generation;
+    const attempt = this._attempt;
+    this._attempt = null;
+    if(!attempt) return true;
+    const recognition = attempt.recognition;
+    if(!recognition) return true;
+    recognition.onresult = recognition.onend = recognition.onerror = null;
+    // Permission may complete after abort(). A late start must abort again.
+    recognition.onstart = () => this._lateStart(recognition);
+    return this._abort(recognition);
+  }
+  _disable(state, reason, message){
+    this.enabled = false;
+    if(this._timer !== null) this.timers.clearTimeout(this._timer);
+    this._timer = null;
+    const released = this._release() && !this._releaseFailed;
+    this._settle(false);
+    this._status(released ? state : 'error', released ? reason : 'abort-failed', released ? message :
+      'Voice commands stopped, but microphone release failed. Close this page to release the microphone.');
+  }
+  _fail(reason){
+    const messages = {
+      'unsupported':'On-device voice commands are unavailable in this browser.',
+      'language-unavailable':'The installed on-device English speech pack is unavailable. Voice commands are off.',
+      'availability-error':'On-device speech availability could not be verified. Voice commands are off.',
+      'local-only-unverified':'On-device speech processing could not be verified. Voice commands are off.',
+      'start-timeout':'Voice commands timed out while starting. Turn them on to try again.',
+      'start-failed':'Voice commands could not start. Turn them on to try again.',
+      'not-allowed':'Microphone permission was denied. Voice commands are off.',
+      'service-not-allowed':'On-device speech is blocked. Voice commands are off.',
+      'audio-capture':'The microphone is unavailable. Voice commands are off.',
+      'language-not-supported':'The installed on-device English speech pack is unavailable. Voice commands are off.',
+      'network':'On-device speech reported a network error. Voice commands are off.',
+      'restart-limit':'Voice commands stopped after repeated interruptions. Turn them on to try again.',
+      'abort-failed':'Microphone release failed. Close this page to release the microphone.',
+      'recognition-error':'On-device speech failed. Voice commands are off.'
+    };
+    this._disable(['unsupported','language-unavailable','availability-error','local-only-unverified','language-not-supported'].includes(reason) ?
+      'unavailable' : 'error', reason, messages[reason] || messages['recognition-error']);
+  }
+  async _begin(context){
+    const attempt = {generation:++this._generation,context,recognition:null,handledThrough:-1,
+      phase:'checking',deadline:this.env.now() + 10000};
+    this._attempt = attempt;
+    this._status('checking', 'checking-local', 'Checking installed on-device English speech.');
+    if(!this._current(attempt)) return;
+    let Recognition, available;
+    try {
+      Recognition = this.env.getRecognition();
+      if(typeof Recognition !== 'function' || typeof Recognition.available !== 'function'){
+        this._fail('unsupported');
+        return;
+      }
+      available = await Recognition.available({langs:['en-US'],processLocally:true});
+    } catch {
+      if(this._current(attempt)) this._fail('availability-error');
+      return;
+    }
+    if(!this._current(attempt)) return;
+    if(available !== 'available') return this._fail('language-unavailable');
+    let recognition;
+    try {
+      recognition = new Recognition();
+      attempt.recognition = recognition;
+      // Creating an expando on an older API does not establish local processing.
+      if(!('processLocally' in recognition)) throw new Error('Local processing unsupported');
+      recognition.processLocally = true;
+      if(recognition.processLocally !== true) throw new Error('Local processing unverified');
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+    } catch {
+      if(this._current(attempt)) this._fail('local-only-unverified');
+      return;
+    }
+    if(!this._current(attempt)) return;
+    attempt.phase = 'starting';
+    attempt.deadline = this.env.now() + 10000;
+    recognition.onstart = () => {
+      if(!this._current(attempt)) return this._lateStart(recognition);
+      attempt.phase = 'listening';
+      this._settle(true);
+      this._status('listening', 'listening', 'Listening on-device. Begin each command with “coach”.');
+    };
+    recognition.onresult = event => {
+      if(!this._current(attempt) || attempt.phase !== 'listening') return;
+      if(!Number.isInteger(event.resultIndex) || event.resultIndex < 0 || !event.results) return;
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        if(!this._current(attempt)) return;
+        if(i <= attempt.handledThrough) continue;
+        const result = event.results[i];
+        if(!result || typeof result.isFinal !== 'boolean') continue;
+        const action = parseCoachCommand(result[0]?.transcript, {spoken:true,final:result.isFinal});
+        // Native result indices advance within this recognition session. A high
+        // watermark rejects replayed indices with constant memory, even through
+        // a long workout; a new recognition instance starts again at index zero.
+        if(action || result.isFinal) attempt.handledThrough = i;
+        if(action){
+          // Mark before dispatch: an interim pause and its final are one action.
+          try { this.env.onAction(action); }
+          finally { this.sync(); }
+        } else if(result.isFinal){
+          this._status('listening', 'unrecognized', 'Command not recognised. Begin with “coach” and use a command shown in the controls.');
+        }
+      }
+    };
+    recognition.onend = () => { if(this._current(attempt)) this._retry('ended'); };
+    recognition.onerror = event => {
+      if(!this._current(attempt)) return;
+      if(event.error === 'no-speech') return this._retry('no-speech');
+      this._fail(['not-allowed','service-not-allowed','audio-capture','language-not-supported','network'].includes(event.error) ?
+        event.error : 'recognition-error');
+    };
+    this._status('starting', 'starting-local', 'Starting on-device voice commands.');
+    if(!this._current(attempt)) return;
+    try { recognition.start(); }
+    catch { if(this._current(attempt)) this._fail('start-failed'); }
+  }
+  _retry(reason){
+    if(!this._release()) return this._fail('abort-failed');
+    // Three delayed automatic retries per explicit opt-in; callbacks cannot spin.
+    if(++this._restarts > 3) return this._fail('restart-limit');
+    this._retryAt = this.env.now() + 500 * 2 ** (this._restarts - 1);
+    this._status('retrying', reason, 'Voice commands were interrupted. Waiting before trying on-device speech again.');
+  }
+}
+
+/* LOCAL COACH INTERACTION — pure, additive contracts, outside judgement.
+   Model output is an ID selection, never prose, a measurement or an action. */
+function coachExactKeys(value, keys){
+  return value !== null && typeof value === "object" && !Array.isArray(value) &&
+    Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value,k));
+}
+function validateCoachChoiceRequest(q){
+  if(!coachExactKeys(q,["schema","requestId","purpose","query","options","defaultIds","limit"]) ||
+     q.schema !== "coach-choice/1" || typeof q.requestId !== "string" || !q.requestId.length || q.requestId.length > 80 || /[^a-zA-Z0-9-]/.test(q.requestId) ||
+     !["explanation","plan","review"].includes(q.purpose) || typeof q.query !== "string" || q.query.length > 500 ||
+     ![1,2].includes(q.limit) || !Array.isArray(q.options) || q.options.length > 24 || !Array.isArray(q.defaultIds)) return false;
+  const ids = new Set();
+  for(const o of q.options){
+    if(!coachExactKeys(o,["id","title","text"]) || typeof o.id !== "string" || !o.id.length || o.id.length > 80 || /[^a-zA-Z0-9-]/.test(o.id) || ids.has(o.id) ||
+       typeof o.title !== "string" || !o.title.trim() || o.title.length > 100 ||
+       typeof o.text !== "string" || !o.text.trim() || o.text.length > 600) return false;
+    ids.add(o.id);
+  }
+  if(q.defaultIds.length > q.limit || (q.options.length > 0) !== (q.defaultIds.length > 0) ||
+     new Set(q.defaultIds).size !== q.defaultIds.length || q.defaultIds.some(id => !ids.has(id))) return false;
+  return new TextEncoder().encode(JSON.stringify(q)).length <= 24 * 1024;
+}
+function selectCoachChoices(q, selection = null){
+  if(!validateCoachChoiceRequest(q)) return {choiceIds:[],source:"template",reason:"invalid-request"};
+  if(!q.options.length) return {choiceIds:[],source:"template",reason:"no-options"};
+  if(selection == null) return {choiceIds:[...q.defaultIds],source:"template",reason:"not-requested"};
+  const ids = selection?.choiceIds;
+  if(!coachExactKeys(selection,["choiceIds"]) || !Array.isArray(ids) || !ids.length || ids.length > q.limit ||
+     new Set(ids).size !== ids.length || ids.some(id => !q.options.some(o => o.id === id)))
+    return {choiceIds:[...q.defaultIds],source:"template",reason:"invalid-selection"};
+  return {choiceIds:[...ids],source:"on-device",reason:"selected"};
+}
+function parseCoachCommand(input, {spoken = false, final = true} = {}){
+  if(typeof input !== "string" || input.length > 120) return null;
+  let text = input.toLowerCase().trim().replace(/[.!?]+$/, "").trim().replace(/\s+/g," ");
+  if(spoken && !text.startsWith("coach ")) return null;
+  if(text.startsWith("coach ")) text = text.slice(6);
+  const commands = {
+    "pause":"pause", "stop":"pause", "resume":"resume", "continue":"resume",
+    "show me":"demo", "show me again":"demo", "show me how":"demo",
+    "repeat":"repeat", "repeat that":"repeat", "why":"explain",
+    "why didn't that count":"explain", "why did that not count":"explain",
+    "skip":"skip", "skip this set":"skip", "finish this set":"finish", "finish check":"finish",
+    "end workout":"end", "cancel":"cancel", "confirm skip":"confirm-skip",
+    "confirm finish":"confirm-finish", "confirm end":"confirm-end"
+  };
+  const action = Object.hasOwn(commands,text) ? commands[text] : null;
+  return final || action === "pause" ? action : null;
+}
+
+// A small ephemeral explanation cache, not a second recorder. No joints, video,
+// raw user questions or diagnostic consent changes. One event and one reading
+// summary, reset on evaluator/phase/tier changes, including same-movement sets.
+class CoachEvidence {
+  constructor(){ this.key = null; this.ev = null; this.current = null; this.event = null; }
+  update(c, effects){
+    const key = [c.i ?? "check",c.mvId ?? "plank",c.tierId ?? "building",!!c.following].join(":");
+    const changed = this.key !== key || this.ev !== c.ev;
+    if(changed){ this.key = key; this.ev = c.ev; this.current = null; this.event = null; }
+    // Finishing a set can emit its last reading followed by next-set effects.
+    // Never attribute that reading to the new evaluator.
+    if(changed || c.done || c.following || !c.ev) return;
+    const r = effects.findLast(e => e.t === "telem")?.r;
+    const at = c._now || 0;
+    if(effects.some(e => e.t === "log" && e.row.event === "tracking_lost")){
+      this.current = {at,reason:"tracking",keys:[]}; this.event = null; return;
+    }
+    if(!r) return;
+    const keys = (r.readings || []).filter(x => x.cue && !x.t.pos && x.t.id !== c.mv?.reps?.driver &&
+      !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168)).map(x=>x.cue);
+    const missing = r.evidence?.movement?.missing?.length > 0;
+    const reason = r.viewCue ? "view" : !r.framing?.ok ? "framing" : missing ? "tracking" :
+      !r.inPosition ? "position" : r.repPaused || r.observationPaused ? "tracking" :
+      (c.state === "setup" || c.armed === false) ? "setup" : c.mv?.kind !== "reps" && !r.inPose ? "hold" : null;
+    this.current = {at,reason,keys:reason ? [] : [...new Set(keys)].filter(k=>Object.hasOwn(FOCUS,k)).slice(0,3)};
+    if(r.rep) this.event = null;
+    else if(r.tooFast) this.event = {at,reason:"tempo"};
+    else if(r.short) this.event = {at,reason:"range"};
+    else if(reason) this.event = null;
+  }
+  explain(c){
+    const item = (id,title,text) => ({id,title,text});
+    const alternative = c instanceof CalibrationCore ? "finish the optional plank check" : "choose Follow along";
+    if(c.done) return [item("finished","Workout finished","This workout has ended. Its summary describes the observations that were collected.")];
+    if(c.following) return [item("unassessed","Following along","This set is unassessed by your choice. Its timer measures elapsed time, not a held position, and reps are not counted.")];
+    if(c.steps?.[c.i]?.rest != null) return [item("rest","Rest interval","This is planned rest. Exercise reps and held seconds are not counted here.")];
+    if((c.mv || c.ev?.mv)?.kind === "guided") return [item("guided","Guided movement","This movement is guided. The app does not judge its form or count reps.")];
+    const fresh = this.current && (c._now || 0) - this.current.at <= 15;
+    const reason = fresh ? this.current.reason : null;
+    const copy = {
+      tracking:["Required observation missing",`The camera did not supply all the measurements needed to confirm this movement. Counting paused; that is not a bad-form score. Check the picture or ${alternative}.`],
+      framing:["Movement outside the picture",`The movement did not fit the required camera view, so counting paused. Reposition if convenient, or ${alternative}.`],
+      view:["Camera angle","The required camera angle was not available. Review the demonstration and camera hint; this is a measurement limit, not a judgement of your ability."],
+      position:["Starting position","The observed starting-position requirements were not met. Counting paused. Review the demonstration, then begin a fresh rep."],
+      setup:["Getting ready","The set was still getting ready. Counting starts after the required starting shape is continuously observed and the introduction finishes."],
+      hold:["Hold counting paused","The measured hold requirements were not met in the latest observation. Review the demonstrated shape; I cannot tell why it happened."],
+      tempo:["Most recent rejected attempt","The most recent recorded attempt returned too quickly for this movement's counting rule. Try a slower complete cycle. This does not establish why you moved that way."],
+      range:["Most recent rejected attempt","The most recent recorded attempt returned before reaching the required range. Review the demonstration and try a comfortable full cycle. Hidden motion cannot be confirmed."]
+    };
+    const event = this.event && (c._now || 0) - this.event.at <= 15 ? this.event.reason : null;
+    const why = reason || event;
+    const unknown = c instanceof CalibrationCore
+      ? "I do not have a recent observation explaining why hold counting paused. A break cannot count as a continuous hold. Restart or finish the optional plank check."
+      : (c.mv || c.ev?.mv)?.kind === "hold"
+      ? "I do not have a recent observation explaining why hold counting paused. I cannot reconstruct a position the camera did not observe. Review the starting shape, or choose Follow along."
+      : "I do not have a recent rejected-attempt reason to explain that rep. I cannot reconstruct movement the camera did not observe. Watch the counter after a fresh complete cycle, or choose Follow along.";
+    const cards = why ? [item(why,...copy[why])] : [item("unknown","What I can establish",unknown)];
+    if(fresh && !reason) for(const key of this.current.keys){
+      cards.push(item("cue-"+key,"Recorded alignment hint",`The latest observation flagged ${FOCUS[key]}. ${DRILL[key] || "Review the position shown in this movement's demonstration."} This is not an explanation for an uncounted rep.`));
+    }
+    return cards;
+  }
+}
 
 /** Read one phase's history and say the most useful true thing about it. */
 function phaseInsight(o){
@@ -3665,6 +4442,7 @@ class Coach {
   }
 
   say(key, {vars={}, pri=1, cool=0, style="", ttl=null, topic=null} = {}){
+    if(coachPreferences.explanation === "minimal" && ["goodhold","goodrep","fixed","encourage","inhale","exhale","breathe"].includes(key)) return;
     const text = phrase(key, vars);
     if(!text) return;
     const now = performance.now();
@@ -3742,6 +4520,7 @@ class Coach {
   start(item){
     if(!this.relevant(item)){ diagnosticSpeech("dropped", item, "condition no longer present"); return; }
     this.cur = item;
+    localListener?.sync(); // stop microphone input before playing coach speech
     clearTimeout(this.watchdog);
 
     const finish = (result = {}) => {
@@ -3829,6 +4608,9 @@ class Coach {
     try{ speechSynthesis.cancel(); }catch(e){}
   }
 }
+let localListener = null;
+const coachMemory = new LocalCoachMemory({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
+let coachPreferences = {...coachMemory.read().preferences};
 const coach = new Coach();
 voiceChk.onchange = () => {
   if(voiceChk.checked) return;
@@ -4025,6 +4807,15 @@ const shellEnv = {
 };
 
 function applyFx(host, E){
+  if(!host.coachEvidence) host.coachEvidence = new CoachEvidence();
+  host.coachEvidence.update(host.core,E);
+  const previousContext = host.coachContext;
+  host.coachContext = [host.core.i,host.core.mvId,host.core.tierId,host.core.following].join(":");
+  const controlContext = coachContextToken();
+  if(host.coachControlContext !== controlContext){
+    host.coachControlContext = controlContext;
+    cancelCoachConfirmation(); localListener?.sync();
+  }
   for(const e of E){
     if(["say","num","reset","clearBanner","finish","calibFinish","regressShow","regressHide"].includes(e.t) || e.t === "log" && (e.force || e.row.event === "armed"))
       diagnosticEvent("effect", {type:e.t, key:e.key, text:e.text, number:e.n, event:e.row?.event, movement:e.row?.movement, state:e.row?.state});
@@ -4091,15 +4882,19 @@ function applyFx(host, E){
       case "regressHide": regBox.classList.remove("on"); break;
       case "pop": pop(); break;
       case "log": TelLog.log(e.row, !!e.force); break;
-      case "finish": renderFinish(e.payload); break;
+      case "finish":
+        host.historyResult = coachMemory.saveSession(host.sessionId,host.core.plan.id,e.payload,Date.now());
+        renderFinish(e.payload); break;
       case "calibFinish": renderCalibFinish(e.payload); break;
     }
   }
   updateWorkoutContext();
+  if(previousContext !== host.coachContext && coachPreferences.demo === "always" &&
+     !host.core.done && host.core.ev && host.core.state === "setup" && !host.core.following) startDemo();
 }
 
 class Session {
-  constructor(plan){ this.core = new SessionCore(plan, tier, shellEnv); }
+  constructor(plan){ this.core = new SessionCore(plan, tier, shellEnv); this.sessionId = crypto.randomUUID(); }
   get mvId(){ return this.core.mvId; }
   get mv(){ return this.core.mv; }
   get done(){ return this.core.done; }
@@ -4180,12 +4975,14 @@ function renderFinish(p){
       ${detail}
       <details class="summaryNote"><summary>What this summary can tell you</summary><p>${esc(summary.coverage)}</p></details>
       <div class="phases">${rows}</div>
+      <p id="historySaveStatus"></p>
       <button class="ctl primary" id="againBtn">Choose another workout</button>
       <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;
   msgEl.hidden = false;
   TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
   $("againBtn").onclick = () => showHome();
   $("csvDlBtn").onclick = downloadTelemetry;
+  $("historySaveStatus").textContent = sess?.historyResult?.message || "History saving is off.";
 
   const finishEpoch = ++screenEpoch;
   if(voiceChk.checked && !p.stopped){
@@ -4235,7 +5032,7 @@ let calib = null;
 let plankKnown = true;
 let calibMv = null;   // movement id during calibration, so demo/ghost can find its reference   // did the user say they can plank? drives auto-demo in calibration
 class Calibration {
-  constructor(){ this.core = new CalibrationCore(shellEnv); }
+  constructor(){ this.core = new CalibrationCore(shellEnv); this.sessionId = crypto.randomUUID(); }
   get ev(){ return this.core.ev; }
   get armed(){ return this.core.armed; }
   tick(frame, dt, now){ diagnosticTick(this, frame, dt, now); }
@@ -4274,6 +5071,7 @@ function renderCalibFinish(p){
    ═══════════════════════════════════════════════════════════════ */
 let screenEpoch = 0;
 function screenChanged(){
+  closeCoachPanel(false); localListener?.stop("screen changed");
   screenEpoch++; coach.reset(); clearBanner();
   tipEl.textContent = ""; msgEl.scrollTop = 0;
   queueMicrotask(() => {
@@ -4303,6 +5101,7 @@ function showPlanPreview(plan){
 function updateWorkoutContext(){
   const box = $("workoutContext"); box.hidden = !running || !!recMode;
   $("pauseBtn").hidden = !running || !sess || !!calib || !!recMode;
+  $("askCoachBtn").hidden = !running || !!recMode;
   if(box.hidden) return;
   const c = calib?.core || sess?.core;
   if(!c) return;
@@ -4333,14 +5132,131 @@ function pauseCurrent(reason = "user"){
   applyFx(host,host.core.pause(reason)); return true;
 }
 $("pauseBtn").onclick = () => pauseCurrent();
-$("resumeBtn").onclick = async () => {
+async function resumeCurrent(){
   if(document.hidden) return;
+  closeCoachPanel(false); cancelCoachConfirmation(); coach.reset();
   if(calib){ running = false; stopCam(); calib = null; $("sessionDialog").close(); await beginCalibration(); }
   else if(sess){ lastT = 0; lastVideoTime = -1; applyFx(sess,sess.core.resume()); await requestWakeLock(); }
-};
-$("endSessionBtn").onclick = () => {
+}
+$("resumeBtn").onclick = () => resumeCurrent();
+function endCurrent(){
+  closeCoachPanel(false); cancelCoachConfirmation();
   $("sessionDialog").close(); coach.reset();
   if(calib) calib.skip(); else if(sess) applyFx(sess,sess.core.stop());
+}
+$("endSessionBtn").onclick = () => endCurrent();
+let coachConfirmation = null, coachConfirmTimer = null;
+function coachContextToken(){
+  const host = calib || sess, c = host?.core;
+  return running && !recMode && c && !c.done ?
+    [host.sessionId,screenEpoch,c.i ?? "check",c.mvId ?? "plank",c.tierId ?? tier,c.following,c.paused].join(":") : null;
+}
+function cancelCoachConfirmation(){
+  coachConfirmation = null; clearTimeout(coachConfirmTimer); coachConfirmTimer = null;
+  $("coachConfirmation").hidden = true;
+}
+function closeCoachPanel(returnToPause = true){
+  cancelCoachConfirmation(); coach.reset();
+  if($("coachDemoDock").contains($("demo"))){
+    stopDemo(); $("stage").insertBefore($("demo"),$("setupBar"));
+  }
+  $("coachDemoDock").hidden = true;
+  $("coachDialog").close(); $("coachCommandInput").value = "";
+  if(returnToPause && running && (calib?.core.paused || sess?.core.paused)) showPauseDialog(!!calib);
+}
+function showCoachPanel(mode = "explain"){
+  const host = calib || sess;
+  if(!running || recMode || !host || host.core.done || document.hidden) return false;
+  pauseCurrent("coach help"); $("sessionDialog").close();
+  $("coachResumeBtn").textContent = calib ? "Restart plank check" : "Resume workout";
+  $("coachContextNote").textContent = calib
+    ? "The plank check is paused. A break cannot count as a continuous hold. Restart afterwards, or type ‘finish check’ to use what was observed."
+    : "Workout paused. These explanations describe the last available observations, not a new camera assessment.";
+  const cards = host.coachEvidence?.explain(host.core) || [];
+  const request = {schema:"coach-choice/1",requestId:crypto.randomUUID(),purpose:"explanation",query:"Why didn't that count?",
+    options:cards,defaultIds:cards.slice(0,1).map(c=>c.id),limit:2};
+  const selection = selectCoachChoices(request); // browser fallback, no model claim
+  $("coachAnswer").replaceChildren();
+  const render = card => {
+    const section = document.createElement("section"), title = document.createElement("h3"), p = document.createElement("p");
+    title.textContent = card.title; p.textContent = card.text; section.append(title,p); return section;
+  };
+  for(const id of selection.choiceIds) $("coachAnswer").append(render(cards.find(c=>c.id === id)));
+  const more = cards.filter(c=>!selection.choiceIds.includes(c.id));
+  if(more.length){
+    const detail = document.createElement("details"), summary = document.createElement("summary");
+    summary.textContent = "Explain the recorded alignment hints"; detail.append(summary,...more.map(render)); $("coachAnswer").append(detail);
+  }
+  $("coachAnswer").dataset.coachSource = selection.source;
+  $("coachActionStatus").textContent = "";
+  const mvId = calib ? "plank" : host.core.mvId;
+  const available = !!host.core.ev && !!refFor(mvId);
+  $("coachDemoBtn").disabled = !available; $("coachRepeatBtn").disabled = !host.core.ev;
+  if(!$("coachDialog").open) $("coachDialog").showModal();
+  if(mode === "demo" && available){
+    $("coachDemoDock").append($("demo")); $("coachDemoDock").hidden = false; startDemo(); drawDemo(0);
+  }
+  if(mode === "repeat" && host.core.ev){
+    coach.reset(); coach.say("teach."+mvId,{vars:{t:host.core.target ?? host.core.max},pri:3,style:"teach"});
+    const p = document.createElement("p"); p.textContent = $("cue").textContent; $("coachAnswer").replaceChildren(p);
+  }
+  return true;
+}
+function routeCoachAction(action){
+  const host = calib || sess, c = host?.core;
+  if(!running || recMode || document.hidden || !c || c.done) return false;
+  if(action === "pause"){ closeCoachPanel(false); if(c.paused) showPauseDialog(!!calib); else pauseCurrent("command"); return true; }
+  // Other dialogs retain ownership. Voice must not operate behind help/diagnostics.
+  if($("helpDialog").open || $("diagPanel").open || $("memoryDialog").open) return false;
+  if(action === "resume"){ resumeCurrent(); return true; }
+  if(["explain","demo","repeat"].includes(action)){ cancelCoachConfirmation(); return showCoachPanel(action); }
+  if(action === "cancel"){ cancelCoachConfirmation(); $("coachActionStatus").textContent = "Cancelled. Your workout remains paused."; return true; }
+  if(["skip","finish","end"].includes(action)){
+    showCoachPanel();
+    if(action === "finish" && !calib && !c.following){
+      $("coachActionStatus").textContent = "This set is camera-assessed. To abandon it without a form verdict, choose Skip. Manual Finish is available in Follow along."; return false;
+    }
+    const label = action === "end" ? "End this workout" : action === "finish" ? (calib ? "Finish the plank check" : "Finish this unassessed set") : (calib ? "Finish the plank check" : "Skip this step");
+    coachConfirmation = {action,token:coachContextToken(),expires:performance.now()+10000};
+    $("coachConfirmText").textContent = label+"? Confirm within 10 seconds, or say ‘coach confirm "+action+"’.";
+    $("coachConfirmBtn").textContent = "Confirm "+action; $("coachConfirmation").hidden = false;
+    coachConfirmTimer = setTimeout(()=>{
+      cancelCoachConfirmation(); $("coachActionStatus").textContent = "Confirmation expired. Nothing was skipped or finished; the workout remains paused.";
+    },10000);
+    return true;
+  }
+  if(action?.startsWith("confirm-")){
+    const requested = action.slice(8), pending = coachConfirmation;
+    cancelCoachConfirmation();
+    if(!pending || pending.action !== requested || pending.token !== coachContextToken() || performance.now() > pending.expires){
+      $("coachActionStatus").textContent = "No matching current confirmation. Nothing changed."; return false;
+    }
+    closeCoachPanel(false); $("sessionDialog").close();
+    if(requested === "end") endCurrent();
+    else if(calib) skipCurrent();
+    else {
+      // Resume is synchronous here: no observation tick or automatic work credit
+      // can occur between unpausing and the explicitly confirmed action.
+      applyFx(host,c.resume());
+      if(requested === "skip") skipCurrent(); else finishCurrentSet();
+    }
+    return true;
+  }
+  return false;
+}
+$("askCoachBtn").onclick = () => showCoachPanel();
+$("coachWhyBtn").onclick = () => routeCoachAction("explain");
+$("coachDemoBtn").onclick = () => routeCoachAction("demo");
+$("coachRepeatBtn").onclick = () => routeCoachAction("repeat");
+$("coachClose").onclick = () => closeCoachPanel();
+$("coachResumeBtn").onclick = () => resumeCurrent();
+$("coachConfirmBtn").onclick = () => routeCoachAction("confirm-"+coachConfirmation?.action);
+$("coachCancelBtn").onclick = () => routeCoachAction("cancel");
+$("coachDialog").addEventListener("cancel",e=>{e.preventDefault(); closeCoachPanel();});
+$("coachCommandForm").onsubmit = e => {
+  e.preventDefault(); const action = parseCoachCommand($("coachCommandInput").value); $("coachCommandInput").value = "";
+  if(!action) $("coachActionStatus").textContent = "Try ‘show me’, ‘repeat that’, ‘skip this set’ or ‘end workout’. I can only use these supported controls.";
+  else routeCoachAction(action);
 };
 $("sessionDialog").addEventListener("cancel", e => e.preventDefault());
 $("helpBtn").onclick = () => { pauseCurrent("help"); $("helpDialog").showModal(); };
@@ -4480,13 +5396,96 @@ function showHome(){
         <b>${p.name}</b><span class="disc">${p.disc}</span>
         <span class="blurb">${p.blurb}</span>
         <span class="seq">${seq}</span></button>`;
-    }).join("")}</div><button class="ctl" id="coachSettingsBtn">Coach style and setup</button>`;
+    }).join("")}</div>
+    <details><summary>Find a workout in your own words</summary>
+      <form id="planRequestForm"><label for="planRequestInput">What would suit you today?</label>
+      <input id="planRequestInput" maxlength="500" autocomplete="off" placeholder="About ten minutes, quiet, no equipment">
+      <button class="ctl" type="submit">Find authored workouts</button></form>
+      <p>Supported: a plan name, minutes, standing only, no floor, quiet, no equipment. No routine is invented. Fixed finish times or medical suitability cannot be promised.</p>
+      <div id="planRequestResults" aria-live="polite" data-plan-source="deterministic"></div>
+    </details>
+    <button class="ctl" id="coachSettingsBtn">Coach style and setup</button>
+    <button class="ctl" id="coachMemoryBtn">Your coach &amp; history</button>`;
   msgInner.querySelectorAll(".plancard").forEach(c => c.onclick = () => {
     const plan = PLANS.find(p => p.id === c.dataset.plan);
     showPlanPreview(plan);
   });
   $("coachSettingsBtn").onclick = showWelcome;
+  $("coachMemoryBtn").onclick = () => { renderCoachMemory(); $("memoryEraseConfirm").hidden = true; $("memoryDialog").showModal(); };
+  $("planRequestInput").oninput = () => $("planRequestResults").replaceChildren();
+  $("planRequestForm").onsubmit = e => {
+    e.preventDefault(); const result = searchLocalPlans($("planRequestInput").value,tier);
+    const box = $("planRequestResults"); box.replaceChildren();
+    const p = document.createElement("p"); p.textContent = result.message; box.append(p);
+    for(const candidate of result.candidates){
+      const card = document.createElement("section"), button = document.createElement("button"), detail = document.createElement("p");
+      button.className = "ctl"; button.textContent = "Preview "+candidate.name;
+      button.dataset.coachPlan = candidate.planId;
+      button.onclick = () => {
+        // Recheck request and tier at selection, not only when search completed.
+        if(!searchLocalPlans($("planRequestInput").value,tier).candidates.some(c=>c.candidateId === candidate.candidateId)){
+          detail.textContent = "This request or tier changed. Search again before selecting."; return;
+        }
+        const plan = PLANS.find(p=>p.id === candidate.planId); if(plan) showPlanPreview(plan);
+      };
+      detail.textContent = `Estimated ${Math.ceil(candidate.estimate.minSeconds/60)}–${Math.ceil(candidate.estimate.maxSeconds/60)} minutes. `+
+        candidate.estimate.disclosure+(candidate.softMisses.length ? " Unmet preferences: "+candidate.softMisses.join(", ")+"." : "")+" "+candidate.tagDisclosure;
+      card.append(button,detail); box.append(card);
+    }
+  };
 }
+
+function renderCoachMemory(result = null){
+  const saved = coachMemory.read();
+  $("rememberPrefs").checked = saved.consent.preferences; $("rememberHistory").checked = saved.consent.history;
+  $("explanationPref").value = coachPreferences.explanation; $("demoPref").value = coachPreferences.demo;
+  $("memoryStatus").textContent = result?.message || (saved.status === "error" ? saved.message : "Preferences and history stay on this device. Saving is optional.");
+  $("memoryHistory").replaceChildren();
+  const p = document.createElement("p"); p.textContent = saved.history.length
+    ? `${saved.history.length} saved workout entries. These are recorded activity counts, not evidence of improved fitness.`
+    : "No saved workouts. Turning history on saves future finishes only.";
+  $("memoryHistory").append(p);
+  if(saved.history.length){
+    const list = document.createElement("ul");
+    for(const entry of [...saved.history].reverse()){
+      const row = document.createElement("li"), plan = PLANS.find(p=>p.id === entry.planId);
+      row.textContent = `${new Date(entry.finishedAt).toLocaleDateString()} · ${plan?.name || entry.planId} · ${TIERS[entry.tierId].label} · ${entry.status.replaceAll("-"," ")} · `+
+        `${entry.reps} observed reps · ${entry.heldSeconds}s observed holds · ${entry.skippedSets} skipped sets · `+
+        `${entry.followAlongSets} follow-along sets (unassessed) · ${entry.guidedSets} guided sets / ${entry.guidedSeconds}s (unassessed)`;
+      list.append(row);
+    }
+    $("memoryHistory").append(list);
+  }
+  $("memoryExportBtn").disabled = saved.status === "error" || !saved.history.length;
+}
+$("memoryClose").onclick = () => $("memoryDialog").close();
+$("rememberPrefs").onchange = () => {
+  const result = coachMemory.setConsent("preferences",$("rememberPrefs").checked);
+  if(result.status === "ready" && $("rememberPrefs").checked) renderCoachMemory(coachMemory.savePreferences(coachPreferences));
+  else renderCoachMemory(result);
+};
+$("rememberHistory").onchange = () => renderCoachMemory(coachMemory.setConsent("history",$("rememberHistory").checked));
+function changeCoachPreferences(){
+  coachPreferences = {explanation:$("explanationPref").value,demo:$("demoPref").value};
+  coach.reset();
+  const result = coachMemory.savePreferences(coachPreferences);
+  renderCoachMemory(result.status === "off" ? {message:"Applied for this visit only. Enable preference saving to remember this."} : result);
+}
+$("explanationPref").onchange = changeCoachPreferences; $("demoPref").onchange = changeCoachPreferences;
+$("memoryEraseBtn").onclick = () => { $("memoryEraseConfirm").hidden = false; };
+$("memoryEraseNo").onclick = () => { $("memoryEraseConfirm").hidden = true; };
+$("memoryEraseYes").onclick = () => {
+  const result = coachMemory.erase(); coachPreferences = {...coachMemory.read().preferences};
+  $("memoryEraseConfirm").hidden = true; renderCoachMemory(result);
+};
+$("memoryExportBtn").onclick = () => {
+  const exported = coachMemory.export();
+  if(exported.status !== "ready"){ renderCoachMemory(exported); return; }
+  const history = exported.data.history; if(!history.length) return;
+  const blob = new Blob([JSON.stringify({schema:"local-coach-history/1",history},null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "formcoach-local-history.json"; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 
 /* ═══════════════════════════════════════════════════════════════
    12 · CAMERA + LOOP
@@ -4510,6 +5509,7 @@ let camFacing = "user", wakeLock = null, cameraStage = "permission";
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){
   flipBtn.hidden = !on; skipExBtn.hidden = !on;
+  $("askCoachBtn").hidden = !on;
   if(!on){ $("followAlongBtn").hidden = true; $("finishAlongBtn").hidden = true; $("pauseBtn").hidden = true;
     $("workoutContext").hidden = true; $("sessionDialog").close(); document.body.classList.remove("following"); }
 }
@@ -4561,6 +5561,7 @@ async function openCamera(){
   finally{ if(request === cameraRequest){ cameraStarting = false; startBtn.disabled = false; $("helpBtn").disabled = false; } }
 }
 function stopCam(){
+  localListener?.stop("workout stopped"); closeCoachPanel(false);
   cameraRequest++; cameraStarting = false; startBtn.disabled = false;
   $("helpBtn").disabled = false;
   flipBtn.disabled = false; $("resumeBtn").disabled = false;
@@ -4617,7 +5618,7 @@ $("flipBtn").onclick = async () => {
    it is a six-second capture with its own end, not a phase to abandon. */
 function skipCurrent(){
   if(!running || recMode) return false;
-  if($("sessionDialog").open || $("helpDialog").open || $("diagPanel").open) return false;
+  if($("sessionDialog").open || $("helpDialog").open || $("coachDialog").open || $("diagPanel").open) return false;
   if(!calib && (!sess || sess.done)) return false;
   /* Discard current AND pending speech before replaying the new phase's effects.
      Resetting afterwards would erase its teaching (or calibration verdict). */
@@ -4629,11 +5630,12 @@ skipExBtn.onclick = () => skipCurrent();
 $("followAlongBtn").onclick = () => {
   if(running && !calib && !recMode && sess && !sess.done) applyFx(sess, sess.core.followAlong());
 };
-$("finishAlongBtn").onclick = () => {
+function finishCurrentSet(){
   if(running && !calib && !recMode && sess && !sess.done && sess.core.following){
     coach.reset(); applyFx(sess, sess.core.finishAlong());
   }
-};
+}
+$("finishAlongBtn").onclick = () => finishCurrentSet();
 
 /* `S` is the one that matters: rapid testing happens from two metres away on the
    floor, where reaching the header button is the slow part of the loop. It stays
@@ -4649,7 +5651,7 @@ addEventListener("keydown", e => {
   else if(skipCurrent()) e.preventDefault();
 });
 document.addEventListener("visibilitychange", () => {
-  if(document.hidden){ pauseCurrent("background"); coach.reset(); }
+  if(document.hidden){ localListener?.stop("background"); cancelCoachConfirmation(); pauseCurrent("background"); coach.reset(); }
   else if(running && !calib?.core.paused && !sess?.core.paused) requestWakeLock();
 });
 
@@ -4873,6 +5875,7 @@ async function beginRefRecording(id){
   try{ if(await openCamera() === false) return; }catch(e){ camError(e); return; }
   calib = null; sess = null;
   recMode = { id, phase:"getready", t:0, lastAt:-1, frames:[] };
+  $("askCoachBtn").hidden = true; localListener?.stop("reference recording");
   bigLabel.textContent = "DEMO";
   setBig("● REC");
   scoreCol.classList.remove("on");
@@ -5087,6 +6090,25 @@ $("diagPlay").onclick = () => {
     if(i === entries.length - 1) diagnosticStopReplay();
   }, 33);
 };
+
+localListener = new LocalCommandListener({
+  getRecognition:()=>window.SpeechRecognition,
+  now:()=>performance.now(),context:coachContextToken,
+  allowed:()=>running && !document.hidden && !recMode,
+  speaking:()=>coach.speaking(),onAction:action=>routeCoachAction(action),
+  onStatus:status=>{
+    $("listenStatus").textContent = status.message;
+    $("listenOffBtn").title = status.message;
+    $("listenOffBtn").hidden = !status.enabled && status.reason !== "abort-failed";
+    $("listenOffBtn").textContent = status.listening ? "Listening · mic off" : "Mic off";
+    $("listenOnBtn").textContent = status.enabled || status.reason === "abort-failed" ? "Turn microphone off" : "Enable local listening";
+    $("listenOnBtn").dataset.listeningEnabled = String(status.enabled || status.reason === "abort-failed");
+  }
+});
+$("listenOnBtn").onclick = () => $("listenOnBtn").dataset.listeningEnabled === "true"
+  ? localListener.stop("user disabled") : localListener.start();
+$("listenOffBtn").onclick = () => localListener.stop("user disabled");
+addEventListener("pagehide",()=>localListener.stop("page hidden"));
 
 new ResizeObserver(() => {
   document.documentElement.style.setProperty("--chrome-height",`${document.querySelector("header").getBoundingClientRect().height}px`);
