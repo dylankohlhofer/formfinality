@@ -359,7 +359,7 @@ test('browser: Keep going dismisses once and cannot reoffer through recovery, ar
     await page.locator('#skipBtn').click();
     await page.locator('[data-t="learning"]').click();
     await page.locator('#goBtn').click();
-    await page.locator('[data-plan="setup-prompt"]').click();
+    await page.locator('[data-plan="setup-prompt"]').click(); await page.locator('#planStartBtn').click();
     await page.evaluate(frame => {
       const core = __setupPromptCore(), read = core.ev.read.bind(core.ev);
       window.__setupPromptBlocked = true;
@@ -418,7 +418,7 @@ for (const size of [
           await page.locator('#skipBtn').click();
           await page.locator('[data-t="learning"]').click();
           await page.locator('#goBtn').click();
-          await page.locator('[data-plan="demo-prompt"]').click();
+          await page.locator('[data-plan="demo-prompt"]').click(); await page.locator('#planStartBtn').click();
           if (size.name === 'portrait') {
             await page.locator('#diagToggle').click();
             await page.locator('#diagConsent').check();

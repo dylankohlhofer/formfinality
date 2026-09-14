@@ -17,7 +17,7 @@ openCamera = async () => {
   canvas.width = 1280; canvas.height = 720;
   running = true; lastT = 0; lastVideoTime = -1;
   msgEl.hidden = true;
-  startBtn.textContent = 'Stop'; startBtn.classList.add('live');
+  startBtn.textContent = 'End'; startBtn.classList.add('live');
   showCamChrome(true);
 };
 window.__testLab = {
@@ -56,6 +56,7 @@ window.__testLab = {
   landmarks: () => testLandmarks,
   videoDimensions() { canvas.width = video.videoWidth; canvas.height = video.videoHeight; },
   async prepareVideo(url) {
+    await loadVision();
     const vision = await FilesetResolver.forVisionTasks('/node_modules/@mediapipe/tasks-vision/wasm');
     landmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: { modelAssetPath: '/model.task', delegate: 'CPU' }, runningMode: 'VIDEO', numPoses: 1
@@ -89,14 +90,14 @@ window.__testLab = {
     lastVideoTime = -1;
     lastT = (testNow + 1) * 1000 - dt * 1000;
     const before = testLandmarks.length;
-    const unassessed = !!sess?.core.following && !calib && !recMode;
+    const disabled = sess?.core.paused || calib?.core.paused ? 'paused' : sess?.core.following && !calib && !recMode ? 'unassessed' : null;
     loopBody((testNow + 1) * 1000);
-    if (unassessed) {
-      if (testLandmarks.length !== before) throw new Error('Inference ran during unassessed video replay');
+    if (disabled) {
+      if (testLandmarks.length !== before) throw new Error(`Inference ran during ${disabled} video replay`);
       // Retain the tick for exact replay without claiming that a model looked
       // for a person and found none. The timeline supplies the mode actions.
       testLandmarks.push({ t: testNow, aspect: canvas.width / canvas.height,
-        landmarks: null, inference: 'disabled-unassessed' });
+        landmarks: null, inference: `disabled-${disabled}` });
     } else if (testLandmarks.length !== before + 1) {
       throw new Error('Expected one real inference for an assessed video frame');
     }

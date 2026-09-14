@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Form Coach v4 — tiered coaching</title>
+<title>Form Coach — workouts with coaching</title>
 <!--
   FORM COACH v4 — the coaching model, live.
   ==========================================
@@ -57,8 +57,10 @@
   --line:rgba(233,231,222,.13);
   --line-2:rgba(233,231,222,.26);
   --bone:#E9E7DE;
-  --bone-2:rgba(233,231,222,.60);
-  --bone-3:rgba(233,231,222,.34);
+  --bone-2:rgba(233,231,222,.78);
+  --bone-3:rgba(233,231,222,.60);
+  --chrome-height:76px;
+  --controls-height:44px;
   /* Two colour lanes, and they never cross.
      IRIS  = your choices and your progress (selection, focus, the dial).
      GOOD/WARN/BAD = your body, and nothing else may use them. */
@@ -129,7 +131,7 @@ header h1 small{
    the test protocol — so mobile drops the subtitle, never the number. */
 header h1 small b{ color:var(--bone-2); font-weight:600 }
 /* the app recedes while you're working */
-body.live header{ opacity:.34; transition:opacity .5s }
+body.live header{ opacity:1; transition:opacity .5s }
 body.live header:hover,body.live header:focus-within{ opacity:1 }
 
 #tierSeg{ display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden }
@@ -150,7 +152,7 @@ body.live header:hover,body.live header:focus-within{ opacity:1 }
 .ctl:hover{ border-color:var(--line-2); color:var(--bone) }
 .ctl.primary{ background:var(--bone); color:var(--void); border-color:var(--bone); font-weight:700 }
 .ctl.primary:hover{ opacity:.86 }
-.ctl.live{ border-color:var(--good); color:var(--good) }
+.ctl.live{ border-color:var(--iris); color:var(--bone) }
 .ctl input{ accent-color:var(--bone); margin:0 }
 button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{ outline:2px solid var(--iris); outline-offset:2px }
 
@@ -190,7 +192,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 /* the rep landed — a 130ms flash, the visual half of the "pop". The redesign
    dropped this rule while the JS kept adding the class: bug #17. */
 #big.pop{ animation:pop .13s ease-out }
-@keyframes pop{ 0%{ transform:scale(1) } 42%{ transform:scale(1.13); color:var(--good) } 100%{ transform:scale(1) } }
+@keyframes pop{ 0%{ transform:scale(1) } 42%{ transform:scale(1.13); color:var(--iris) } 100%{ transform:scale(1) } }
 
 /* form: a hairline that fills, not a chart */
 #scoreCol{ display:none; width:clamp(148px,26vh,232px) }
@@ -421,7 +423,7 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
     display:inline-flex; align-items:center }
   /* 16px or iOS zooms the whole page when a field takes focus */
   .field input,.field select{ font-size:16px }
-  #msg{ padding:calc(env(safe-area-inset-top) + 56px) 16px
+  #msg{ padding:calc(var(--chrome-height) + 12px) 16px
         calc(env(safe-area-inset-bottom) + 20px) }
   /* a 300px panel beside a phone camera covers the person — take the screen instead */
   #demo{ inset:0; right:auto; top:auto; width:100%; height:100%; padding:0;
@@ -448,7 +450,7 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
 @media(max-height:560px) and (orientation:landscape){
   header{ padding:6px 12px 16px }
   header h1{ font-size:11px }
-  .ctl,#tierSeg button{ min-height:38px; font-size:8.5px; padding-left:9px; padding-right:9px }
+  .ctl,#tierSeg button{ min-height:44px; font-size:10px; padding-left:9px; padding-right:9px }
   #hud{ bottom:calc(env(safe-area-inset-bottom) + 8px); left:calc(env(safe-area-inset-left) + 10px); gap:7px }
   #dial{ width:min(30vh,132px) }
   #big{ font-size:min(6.4vh,30px) }
@@ -471,7 +473,7 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
 }
 
 @media(hover:none){
-  body.live header{ opacity:.3 }
+  body.live header{ opacity:1 }
   body.live.chrome header{ opacity:1 }
 }
 
@@ -486,6 +488,43 @@ body.following #setupBar .ctl{ min-height:44px }
   body.following #cue{ top:76px }
 }
 
+/* Shared touch and keyboard grammar. Choices are iris; no status colour is
+   borrowed from the body. Native dialogs provide focus containment and Escape. */
+.ctl,.chip,#tierSeg button{ min-height:44px; min-width:44px; font-size:10.5px; letter-spacing:.09em }
+input,select,textarea,.field input,.field select{ font-size:16px; min-height:44px }
+input[type="checkbox"]{ min-height:0; width:18px; height:18px }
+.choiceLabel{ color:var(--iris) }
+.planSteps{ text-align:left; padding:0; margin:20px 0; list-style:none }
+.planSteps li{ padding:12px 14px; border:1px solid var(--line); border-radius:10px; margin-bottom:6px }
+.planSteps span{ display:block; color:var(--bone-2); font-size:13px; margin-top:4px }
+.planSteps .planRest{ border:0; padding:4px 14px; color:var(--bone-2); font-size:13px }
+dialog{ color:var(--bone); background:var(--ground); border:1px solid var(--line-2);
+  border-radius:18px; padding:24px; width:min(540px,calc(100% - 24px)); max-height:calc(100dvh - 32px);
+  overflow:auto; overscroll-behavior:contain; box-shadow:0 20px 80px #0008 }
+dialog::backdrop{ background:#000b; backdrop-filter:blur(5px) }
+dialog h2{ font-size:23px; margin:0 0 12px } dialog h3{ font-size:17px }
+dialog p,dialog li{ color:var(--bone-2); line-height:1.65 }
+dialog li{ margin-bottom:8px } #helpClose{ float:right; margin:0 0 16px 12px }
+#workoutContext{ position:absolute; z-index:5; top:12px; left:var(--pad); right:var(--pad);
+  pointer-events:none; color:var(--bone); text-shadow:0 2px 8px #000 }
+#workoutContext b{ display:block; font-size:18px } #workoutContext span{ display:block; font-size:12px; color:var(--bone-2) }
+@media(max-width:900px){
+  #workoutContext{ top:calc(var(--chrome-height) + 4px) }
+  #cue,body.following #cue{ top:calc(var(--chrome-height) + 80px) }
+  #regress{ top:calc(var(--chrome-height) + 84px) }
+}
+body.following #hud{ bottom:calc(98px + var(--controls-height)) }
+@media(max-width:900px) and (orientation:portrait){
+  #hud{ bottom:calc(98px + var(--controls-height)) }
+  #stage:has(#regress.on) #demo.on{ padding-top:calc(var(--chrome-height) + 200px); padding-bottom:calc(var(--controls-height) + 140px) }
+  #stage:has(#regress.on) #demoCanvas{ width:auto; max-width:92vw; max-height:max(80px,calc(100dvh - var(--chrome-height) - var(--controls-height) - 350px)) }
+}
+@media(max-height:560px) and (orientation:landscape){
+  #workoutContext{ left:160px; top:calc(var(--chrome-height) + 4px) }
+  #workoutContext b{ font-size:15px } #workoutContext span{ font-size:11px }
+  #cue,body.following #cue{ top:calc(var(--chrome-height) + 62px) }
+}
+
 @media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
 </style>
 </head>
@@ -493,19 +532,21 @@ body.following #setupBar .ctl{ min-height:44px }
 
 <header>
   <h1>Form Coach <small><b id="verTag">v4.11</b><span class="subtitle"> · tiered coaching model</span></small></h1>
-  <div class="seg" id="tierSeg" role="tablist" aria-label="Tier" hidden>
+  <div class="seg" id="tierSeg" role="group" aria-label="Workout level" hidden>
     <button data-tier="learning" aria-pressed="false">Learning</button>
     <button data-tier="building" aria-pressed="true">Building</button>
     <button data-tier="strong" aria-pressed="false">Strong</button>
   </div>
   <label class="ctl"><input type="checkbox" id="voice" checked> Voice</label>
-  <button class="ctl" id="flipBtn" title="Flip camera" hidden>&#10227;</button>
+  <button class="ctl" id="pauseBtn" hidden>Pause</button>
+  <button class="ctl" id="flipBtn" aria-label="Switch camera" title="Switch camera" hidden>&#10227;</button>
   <button class="ctl" id="skipExBtn" title="Skip this movement (S)" hidden>Skip &#8250;</button>
   <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
-  <button class="ctl" id="startBtn">Start camera</button>
+  <button class="ctl" id="startBtn">Workouts</button>
+  <button class="ctl" id="helpBtn">Help</button>
   <button class="ctl" id="diagQuickFlag" hidden>Flag moment</button>
   <details id="diagPanel">
-    <summary class="ctl" id="diagToggle">Private diagnostics</summary>
+    <summary class="ctl" id="diagToggle">Diagnostics</summary>
     <div id="diagBody" role="region" aria-label="Private diagnostics">
       <button class="ctl" id="diagClose">Close diagnostics</button>
       <h2>Private diagnostics</h2>
@@ -536,6 +577,7 @@ body.following #setupBar .ctl{ min-height:44px }
 <div id="stage">
   <video id="cam" playsinline muted></video>
   <canvas id="overlay" width="1280" height="720"></canvas>
+  <div id="workoutContext" hidden><b id="movementName"></b><span id="movementNext"></span></div>
 
   <div id="hud">
     <div id="dial">
@@ -563,13 +605,31 @@ body.following #setupBar .ctl{ min-height:44px }
     <div class="dlabel" id="demoLabel">Show me</div>
   </div>
   <div id="setupBar">
-    <button class="ctl" id="showBtn">&#9654; Show me how</button>
-    <label class="ctl"><input type="checkbox" id="ghostChk"> Ghost</label>
+    <button class="ctl" id="showBtn" aria-expanded="false" aria-controls="demo">&#9654; Show me how</button>
+    <label class="ctl" title="Show a reference outline; it is a guide, not a body-size target"><input type="checkbox" id="ghostChk"> Guide outline</label>
     <button class="ctl" id="followAlongBtn" hidden>Follow along (unassessed)</button>
     <button class="ctl" id="finishAlongBtn" hidden>Finish this set</button>
   </div>
-  <div id="msg" hidden><div class="inner" id="msgInner"></div></div>
+  <div id="msg"><div class="inner" id="msgInner"><h2>Opening Form Coach…</h2><p>If this stays on screen, reload the page. Camera access is only requested when you start a workout or plank check.</p><noscript>JavaScript is needed to run the on-device coach.</noscript></div></div>
 </div>
+
+<dialog id="sessionDialog" aria-labelledby="sessionDialogTitle">
+  <h2 id="sessionDialogTitle">Workout paused</h2><p id="sessionDialogCopy"></p>
+  <div class="row"><button class="ctl primary" id="resumeBtn">Resume workout</button>
+  <button class="ctl" id="endSessionBtn">End workout</button></div>
+</dialog>
+<dialog id="helpDialog" aria-labelledby="helpTitle">
+  <button class="ctl" id="helpClose">Close help</button><h2 id="helpTitle">Make yourself comfortable</h2>
+  <p>Prop the camera securely. Start with a view of the movement, then follow the framing hints. There is no single correct distance for every phone or body.</p>
+  <h3>What the controls mean</h3>
+  <ul><li><b>Show me how:</b> watch the movement demonstration.</li><li><b>Guide outline:</b> a reference drawing, not a size or shape you must match.</li>
+  <li><b>Pause:</b> take a break without losing observed work. P is the keyboard shortcut.</li>
+  <li><b>Skip:</b> move on without a form verdict for this set. S is the shortcut.</li>
+  <li><b>Follow along:</b> finish manually with teaching but no camera counting or form assessment.</li></ul>
+  <h3>When counting pauses</h3><p>A missing joint or unsuitable view is not a bad-form score. Read the on-screen explanation, reposition if convenient, or choose Follow along. Stop if a movement hurts.</p>
+  <h3>Private by design</h3><p>Camera video and speech processing stay on this device. The browser build downloads its model and recorded audio when needed; it is not a guaranteed offline installation. Diagnostics are optional, local and only exported by you.</p>
+  <p>Device interruption pauses a workout. Return and choose Resume; time away is never exercise credit. Progress is kept in memory for this visit, not saved across reloads.</p>
+</dialog>
 
 <div id="tel"></div>
 <p id="tip"></p>
@@ -578,8 +638,12 @@ body.following #setupBar .ctl{ min-height:44px }
 
 
 <script type="module">
-import { PoseLandmarker, FilesetResolver } from
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+// The interface must not depend on a camera-library download before it can open.
+let PoseLandmarker, FilesetResolver;
+async function loadVision(){
+  if(!PoseLandmarker) ({PoseLandmarker, FilesetResolver} = await import(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"));
+}
 
 /* ═══════════════════════════════════════════════════════════════
    1 · TIERS — the primary axis
@@ -820,7 +884,7 @@ const M = {
    ═══════════════════════════════════════════════════════════════ */
 const PLANS = [
   { id:"first-steps", name:"First Steps", disc:"CORE", tiers:["learning","building"],
-    blurb:"The four movements everything else is built on.",
+    blurb:"Five foundational movements, with time to learn each one.",
     steps:[ {ex:"plank",t:20},{rest:20},{ex:"glute-bridge",t:10},{rest:20},
             {ex:"dead-bug",t:8},{rest:20},{ex:"knee-push-up",t:8},{rest:20},{ex:"bird-dog",t:20} ]},
 
@@ -840,7 +904,7 @@ const PLANS = [
             {ex:"bird-dog",t:25},{rest:20},{ex:"wall-sit",t:30} ]},
 
   { id:"mobility", name:"Morning Mobility", disc:"MOBILITY", tiers:["learning","building","strong"],
-    blurb:"Slow, breath-led. The best two minutes you can give a stiff back.",
+    blurb:"Slow, breath-led movements at your own pace.",
     steps:[ {ex:"cat-cow",t:45},{rest:10},{ex:"downward-dog",t:30},{rest:10},
             {ex:"cobra",t:25},{rest:10},{ex:"cat-cow",t:30} ]}
 ];
@@ -2031,7 +2095,7 @@ function phaseInsight(o){
 function sessionInsights(out){
   const res = [];
   for(const o of out){
-    if(o.kind === "guided" || o.followAlong) continue;
+    if(o.kind === "guided" || o.followAlong || o.stopped) continue;
     const i = phaseInsight(o);
     if(i) res.push({ movement:o.name, ...i });
   }
@@ -2080,6 +2144,7 @@ class SessionCore {
     this.scoreSum = 0; this.scoreN = 0; this.corr = {};
     this.done = false;
     this.following = false; this.followElapsed = 0;
+    this.paused = false; this.stopped = false;
     this.lastSaid = {}; this._now = 0;
   }
 
@@ -2108,15 +2173,47 @@ class SessionCore {
   retier(tierId){ return this.cooled(this.retierRaw(tierId)); }
   swapToRegression(){ return this.cooled(this.swapToRegressionRaw()); }
   skip(reason){ return this.cooled(this.skipRaw(reason)); }
+  pause(reason = "user"){
+    if(this.done || this.paused || this.i < 0) return [];
+    this.paused = true; this.ev?.interrupt(); this.armT = 0; this.pendingFix = null;
+    this.regressT = 0; this.readinessActive = false;
+    const E = [{t:"reset"}, {t:"clearBanner"}, {t:"pauseState", on:true},
+      {t:"log", force:true, row:{phase:"set",movement:this.mvId || "",state:"paused",event:"paused",cue:reason,targets:{}}}];
+    this.hideRegression(E); return this.cooled(E);
+  }
+  resume(){
+    if(this.done || !this.paused) return [];
+    this.paused = false; this.ev?.interrupt(); this.armT = 0;
+    return this.cooled([{t:"pauseState",on:false}, {t:"clearBanner"},
+      {t:"log",force:true,row:{phase:"set",movement:this.mvId || "",state:this.state,event:"resumed",targets:{}}}]);
+  }
+  stop(){
+    if(this.done || this.i < 0) return [];
+    const E = [{t:"reset"}, {t:"clearBanner"}, {t:"pauseState",on:false}, {t:"followControls",on:false,active:false}];
+    this.stopped = true; this.paused = false; this.hideRegression(E);
+    const ev = this.ev, st = this.steps[this.i];
+    if(ev && this.mv && st?.rest == null){
+      const achieved = this.mv.kind === "reps" ? ev.rep?.display() ?? 0 : ev.hold;
+      this.out.push({id:this.mvId,name:this.mv.name + (st.setTotal > 1 ? ` (set ${st.setNo}/${st.setTotal})` : ""),
+        kind:this.mv.kind,target:this.target,achieved,score:null,stopped:true,
+        followAlong:this.following,elapsed:this.followElapsed,early:false,
+        log:ev.log.slice(),trace:ev.scoreTrace.slice(),repMs:ev.rep?.durations.slice() || []});
+      if(this.mv.kind === "reps") this.reps += achieved; else this.bestHold = Math.max(this.bestHold,ev.hold);
+      for(const [k,v] of Object.entries(ev.corrections)) this.corr[k] = (this.corr[k] || 0) + v;
+    }
+    this.following = false;
+    E.push({t:"log",force:true,row:{phase:"session",movement:this.mvId || "",state:"ended",event:"ended_by_user",targets:{}}});
+    this.finish(E); return this.cooled(E);
+  }
   followAlong(){ return this.cooled(this.followAlongRaw()); }
   finishAlong(){
     const E = [];
-    if(!this.done && this.following && this.mv && this.steps[this.i]?.rest == null) this.endPhase(E);
+    if(!this.done && !this.paused && this.following && this.mv && this.steps[this.i]?.rest == null) this.endPhase(E);
     return this.cooled(E);
   }
 
   followAlongRaw(){
-    if(this.done || this.following || !this.mv || this.steps[this.i]?.rest != null) return [];
+    if(this.done || this.paused || this.following || !this.mv || this.steps[this.i]?.rest != null) return [];
     this.following = true; this.followElapsed = 0;
     this.state = "follow-along"; this.ev.interrupt(); this.pendingFix = null;
     this.readinessActive = false;
@@ -2266,7 +2363,7 @@ class SessionCore {
 
   tickRaw(frame, dt, now){
     const E = [];
-    if(this.done) return E;
+    if(this.done || this.paused) return E;
     const st = this.steps[this.i];
     if(!st) return E;
 
@@ -2490,7 +2587,7 @@ class SessionCore {
 
   swapToRegressionRaw(){
     const E = [];
-    if(this.following) return E;
+    if(this.done || this.paused || this.following || !this.mv) return E;
     const id = this.mv.regression;
     if(!id || !M[id]) return E;
     this.mvId = id; this.mv = M[id];
@@ -2528,6 +2625,7 @@ class SessionCore {
      TWIN OF endPhase: the `out` row is built in both places. A field added to
      one belongs in the other. */
   skipRaw(reason){
+    if(this.paused) return [];
     const E = [];
     if(this.done) return E;
     const st = this.steps[this.i];
@@ -2606,8 +2704,9 @@ class SessionCore {
     const skipped = this.out.filter(o => o.skipped);
     const followed = this.out.filter(o => o.followAlong && !o.skipped);
     const names = skipped.map(o => o.name);
-    const nothingWrong = !lead && !skipped.length && !followed.length && avg != null;
-    const headline = followed.length
+    const nothingWrong = !this.stopped && !lead && !skipped.length && !followed.length && avg != null;
+    const headline = this.stopped ? "Workout ended early. This summary includes only camera-observed work, if any. Unassessed time is not counted; unstarted sets are not listed."
+      : followed.length
       ? `${followed.map(o => o.name).join(", ")} completed in follow-along mode — not camera-assessed. Totals and average include only camera-observed work, if any.${skipped.length ? " Skipped sets are listed below." : ""}`
       : lead ? lead.text
       : !skipped.length && avg == null
@@ -2622,7 +2721,7 @@ class SessionCore {
             names.length <= 2 ? names.join(" and ") : names.length + " movements"
           } — no score for those, and they'll be here next time.`;
     E.push({t:"finish", payload:{ avg, insights, headline, nothingWrong,
-      bestHold:this.bestHold, reps:this.reps, out:this.out, tierId:this.tierId }});
+      bestHold:this.bestHold, reps:this.reps, out:this.out, tierId:this.tierId, stopped:this.stopped }});
   }
 }
 
@@ -2630,7 +2729,7 @@ class CalibrationCore {
   constructor(env){
     this.env = env;
     this.ev = new Evaluator(M["plank"], "building");
-    this.t = 0; this.max = 30; this.done = false;
+    this.t = 0; this.max = 30; this.done = false; this.paused = false;
     this.armed = false; this.armT = 0;
     this.lastSaid = {}; this._now = 0;
   }
@@ -2668,6 +2767,15 @@ class CalibrationCore {
 
   tick(frame, dt, now){ this._now = now; return this.cooled(this.tickRaw(frame, dt, now)); }
 
+  pause(){
+    if(this.done || this.paused) return [];
+    this.paused = true; this.armT = 0; this.ev.interrupt();
+    // A deliberate break ends this calibration attempt. Do not join two bouts
+    // through a Resume control and call them one continuous hold.
+    return this.cooled([{t:"reset"},{t:"clearBanner"},{t:"pauseState",on:true,calibrating:true},
+      {t:"log",force:true,row:{phase:"calibration",movement:"plank",state:"paused",event:"interrupted",targets:{}}}]);
+  }
+
   /* ── SKIP ──
      The escape hatch for someone who starts the calibration plank and finds they
      cannot hold it. The welcome screen already offers "skip — pick my level"
@@ -2690,7 +2798,7 @@ class CalibrationCore {
 
   tickRaw(frame, dt, now){
     const E = [];
-    if(this.done) return E;
+    if(this.done || this.paused) return E;
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
     E.push(coachingFacts(r, M.plank));
     if(!r || !r.ok){
@@ -3319,7 +3427,7 @@ function diagnosticFrame(stamp, frame, dt, now, effects){
     phase:stamp.phase, movement:stamp.movement, tier:stamp.tier, target:stamp.target,
     stateBefore:stamp.state, after:stamp.after,
     reps:r?.reps ?? stamp.ev?.rep?.display() ?? 0, held:stamp.ev?.hold ?? 0, score:r?.score ?? null,
-    blocked:r?.blocking || (frame === null && stamp.state !== "follow-along" ? ["tracking"] : []), suppressed:r?.suppressed || [],
+    blocked:r?.blocking || (frame === null && !["follow-along","paused"].includes(stamp.state) ? ["tracking"] : []), suppressed:r?.suppressed || [],
     evidence:r?.evidence || null,
     readings:(r?.readings || []).map(x => ({id:x.t.id, value:x.v, score:x.s, cue:x.cue})),
     counter:stamp.ev?.rep ? {state:stamp.ev.rep.state, primed:stamp.ev.rep.primed, base:stamp.ev.rep.base,
@@ -3337,7 +3445,7 @@ function diagnosticControls(){
   $("diagFlag").disabled = !diagnostics.active || diagnostics.flags.length >= DiagnosticBuffer.maxFlags;
   $("diagQuickFlag").hidden = !diagnostics.active;
   $("diagQuickFlag").disabled = $("diagFlag").disabled;
-  $("diagToggle").textContent = diagnostics.active ? "Recording locally" : diagnostics.meta ? "Diagnostics · paused" : "Private diagnostics";
+  $("diagToggle").textContent = diagnostics.active ? "Recording locally" : diagnostics.meta ? "Diagnostics · paused" : "Diagnostics";
   $("diagNotice").hidden = !diagnostics.stopReason;
   $("diagNotice").textContent = diagnostics.stopReason ? "Diagnostic capture paused; saved details are safe. Open Diagnostics to export and clear." : "";
   $("diagExport").disabled = !diagnostics.items.length;
@@ -3439,9 +3547,9 @@ function diagnosticTick(host, frame, dt, now){
   const c = host.core;
   const stamp = {phase:c.i ?? "calibration", movement:c.mvId || (c instanceof CalibrationCore ? "plank" : "rest"),
     tier:c.tierId ?? "calibration", target:c.target ?? 30,
-    state:c.state || (c.armed ? "active" : "setup"), ev:c.ev};
+    state:c.paused ? "paused" : c.state || (c.armed ? "active" : "setup"), ev:c.ev};
   const effects = c.tick(frame, dt, now);
-  stamp.after = {phase:c.i ?? "calibration", state:c.state || (c.armed ? "active" : "setup"), done:c.done};
+  stamp.after = {phase:c.i ?? "calibration", state:c.paused ? "paused" : c.state || (c.armed ? "active" : "setup"), done:c.done};
   diagnosticFrame(stamp, frame, dt, now, effects); applyFx(host, effects);
 }
 
@@ -3912,6 +4020,10 @@ function applyFx(host, E){
       diagnosticEvent("effect", {type:e.t, key:e.key, text:e.text, number:e.n, event:e.row?.event, movement:e.row?.movement, state:e.row?.state});
     switch(e.t){
       case "reset": coach.reset(); break;
+      case "pauseState":
+        if(e.on) showPauseDialog(!!e.calibrating);
+        else $("sessionDialog").close();
+        break;
       case "say": coach.say(e.key, {vars:e.vars || {}, pri:e.pri, cool:e.cool ?? 0, style:e.style || "", topic:e.topic || null}); break;
       case "coachContext": coach.updateContext(e); break;
       /* coach.raw() already resolves a numeric string to its clip AND routes it
@@ -3963,7 +4075,7 @@ function applyFx(host, E){
         $("followAlongBtn").hidden = !e.on || e.active;
         $("finishAlongBtn").hidden = !e.on || !e.active;
         break;
-      case "demoOff": demoBox.classList.remove("on"); demoOn = false;
+      case "demoOff": stopDemo();
                       document.body.classList.add("live"); break;
       case "regressShow": regTxt.textContent = e.text; regBox.classList.add("on"); break;
       case "regressHide": regBox.classList.remove("on"); break;
@@ -3973,6 +4085,7 @@ function applyFx(host, E){
       case "calibFinish": renderCalibFinish(e.payload); break;
     }
   }
+  updateWorkoutContext();
 }
 
 class Session {
@@ -3989,13 +4102,13 @@ class Session {
 }
 
 function renderFinish(p){
+  screenChanged();
   running = false;
   tierSegEl.hidden = false;
   document.body.classList.remove("live");
   setupBar.classList.remove("on");
-  demoBox.classList.remove("on");
-  demoOn = false;
-  startBtn.textContent = "Start camera";
+  stopDemo();
+  startBtn.textContent = "Workouts";
   startBtn.classList.remove("live");
   stopCam();
   /* The stop button already did this; the two FINISH paths never did, so Flip has
@@ -4022,7 +4135,7 @@ function renderFinish(p){
       </div>`;
     return `
       <div class="prow">
-        <div class="pname">${o.name}${o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}${o.score == null ? ' <span class="tag">form not scored</span>' : ''}</div>
+        <div class="pname">${o.name}${o.stopped ? ' <span class="tag">ended early</span>' : o.early ? ' <span class="early">stopped early</span>' : ''} ${badge}${o.score == null ? ' <span class="tag">form not scored</span>' : ''}</div>
         <div class="pval">${o.kind === "reps" ? `${o.achieved}/${o.target}`
                                               : `${Math.round(o.achieved)}s`}${
           o.score != null && TIERS[p.tierId].showScore ? ` · ${o.score}` : ""}</div>
@@ -4039,7 +4152,8 @@ function renderFinish(p){
       </div>` : "";
 
   msgInner.innerHTML = `
-      <h2>Session complete</h2>
+      <h2>${p.stopped ? "Workout ended" : "Session complete"}</h2>
+      <p>Camera-observed totals · not a complete assessment of your form</p>
       <div class="stats">
         <div><b>${clock(p.bestHold)}</b><span>BEST HOLD</span></div>
         <div><b>${p.reps}</b><span>TOTAL REPS</span></div>
@@ -4048,19 +4162,20 @@ function renderFinish(p){
       <div class="headline">${p.headline}</div>
       ${detail}
       <div class="phases">${rows}</div>
-      <button class="ctl primary" id="againBtn">Done</button>
+      <button class="ctl primary" id="againBtn">Choose another workout</button>
       <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;
   msgEl.hidden = false;
   TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
   $("againBtn").onclick = () => showHome();
   $("csvDlBtn").onclick = downloadTelemetry;
 
-  if(voiceChk.checked){
-    setTimeout(() => coach.raw(
+  const finishEpoch = ++screenEpoch;
+  if(voiceChk.checked && !p.stopped){
+    setTimeout(() => { if(finishEpoch !== screenEpoch || running || !voiceChk.checked) return; coach.raw(
       `${p.tierId === "learning" ? "That's the session" : "Done"}${userName ? ", " + userName : ""}. ${p.headline}`,
-      3, 30000), 500);
+      3, 30000); }, 500);
   }
-  banner(p.headline, "good");
+  banner(p.headline);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4110,13 +4225,14 @@ class Calibration {
 }
 
 function renderCalibFinish(p){
+  screenChanged(); stopDemo();
   calibMv = null; setupBar.classList.remove("on");
   document.body.classList.remove("live");
   setTier(p.tierId);
   calib = null;
   running = false; stopCam(); showCamChrome(false);   /* see the note in renderFinish */
   TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
-  startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+  startBtn.textContent = "Workouts"; startBtn.classList.remove("live");
 
   msgInner.innerHTML = `
       <h2>${TIERS[p.tierId].label}</h2>
@@ -4138,6 +4254,79 @@ function renderCalibFinish(p){
 /* ═══════════════════════════════════════════════════════════════
    11 · SCREENS
    ═══════════════════════════════════════════════════════════════ */
+let screenEpoch = 0;
+function screenChanged(){
+  screenEpoch++; coach.reset(); clearBanner();
+  tipEl.textContent = ""; msgEl.scrollTop = 0;
+  queueMicrotask(() => {
+    const heading = msgInner.querySelector("h2");
+    if(heading && !msgEl.hidden){ heading.tabIndex = -1; heading.focus({preventScroll:true}); }
+  });
+}
+function showPlanPreview(plan){
+  screenChanged();
+  const steps = expandPlanSteps(plan.steps, tier);
+  const sets = steps.filter(s => s.ex).length;
+  const rest = steps.filter(s => s.rest != null).reduce((n,s) => n + scaledCore(s.rest,true,tier),0);
+  msgInner.innerHTML = `<h2>${esc(plan.name)}</h2><p>${esc(plan.blurb || "Your workout, one set at a time.")}</p>
+    <p><b class="choiceLabel">${TIERS[tier].label}</b> · ${sets} sets · ${clock(rest)} planned rest<br>
+    Your pace and camera setup determine total time.</p>
+    <ol class="planSteps">${steps.map(s => {
+      if(s.rest != null) return `<li class="planRest">Rest · ${scaledCore(s.rest,true,tier)} seconds</li>`;
+      const r = resolveMovementCore(s.ex,tier); if(!r) return "";
+      return `<li><b>${r.mv.name}</b><span>${s.setTotal > 1 ? `Set ${s.setNo} of ${s.setTotal} · ` : ""}${s.pre === "switchsides" ? "Other side · " : ""}${scaledCore(s.t,false,tier)} ${r.mv.kind === "reps" ? "reps" : "seconds"} · ${r.mv.view === "front" ? "face the camera" : "side view"}${r.mv.kind === "guided" ? " · guided, no form score" : ""}</span></li>`;
+    }).join("")}</ol>
+    <p>A demonstration is available for each movement. You can pause, skip or follow along without camera assessment.</p>
+    <button class="ctl primary" id="planStartBtn">Start workout</button>
+    <button class="ctl" id="planBackBtn">Back to workouts</button>`;
+  $("planStartBtn").onclick = () => beginSession(plan);
+  $("planBackBtn").onclick = showHome;
+}
+function updateWorkoutContext(){
+  const box = $("workoutContext"); box.hidden = !running || !!recMode;
+  $("pauseBtn").hidden = !running || !sess || !!calib || !!recMode;
+  if(box.hidden) return;
+  const c = calib?.core || sess?.core;
+  if(!c) return;
+  const st = c.steps?.[c.i];
+  const title = calib ? "Plank check · up to 30 seconds" : st?.rest != null ? "Rest" :
+    `${c.mv?.name || ""}${st?.setTotal > 1 ? ` · set ${st.setNo}/${st.setTotal}` : ""}`;
+  const next = c.steps?.slice(c.i + 1).find(s => s.ex);
+  const count = c.steps?.filter(s=>s.ex).length;
+  const at = c.steps?.slice(0,c.i+1).filter(s=>s.ex).length;
+  const detail = calib ? "Finish whenever you need to. This is optional." :
+    `Workout set ${at} of ${count} · ${next ? "Next: " + (resolveMovementCore(next.ex,c.tierId)?.mv.name || next.ex) : "Last set"}`;
+  if($("movementName").textContent !== title) $("movementName").textContent = title;
+  if($("movementNext").textContent !== detail) $("movementNext").textContent = detail;
+  skipExBtn.textContent = calib ? "Finish check" : st?.rest != null ? "Ready now" : "Skip ›";
+}
+function showPauseDialog(calibrating = false){
+  $("sessionDialogTitle").textContent = calibrating ? "Plank check interrupted" : "Workout paused";
+  $("sessionDialogCopy").textContent = calibrating
+    ? "A break is not a continuous hold. Use the observations already collected, or restart a fresh plank check."
+    : "Take your time. Reps, hold time and rest are paused. Observed work stays here until you end the workout or reload.";
+  $("resumeBtn").textContent = calibrating ? "Restart plank check" : "Resume workout";
+  $("endSessionBtn").textContent = calibrating ? "Use observed result" : "End workout";
+  if(!$("sessionDialog").open) $("sessionDialog").showModal();
+}
+function pauseCurrent(reason = "user"){
+  if(!running || recMode) return false;
+  const host = calib || sess; if(!host || host.core.done) return false;
+  applyFx(host,host.core.pause(reason)); return true;
+}
+$("pauseBtn").onclick = () => pauseCurrent();
+$("resumeBtn").onclick = async () => {
+  if(document.hidden) return;
+  if(calib){ running = false; stopCam(); calib = null; $("sessionDialog").close(); await beginCalibration(); }
+  else if(sess){ lastT = 0; lastVideoTime = -1; applyFx(sess,sess.core.resume()); await requestWakeLock(); }
+};
+$("endSessionBtn").onclick = () => {
+  $("sessionDialog").close(); coach.reset();
+  if(calib) calib.skip(); else if(sess) applyFx(sess,sess.core.stop());
+};
+$("sessionDialog").addEventListener("cancel", e => e.preventDefault());
+$("helpBtn").onclick = () => { pauseCurrent("help"); $("helpDialog").showModal(); };
+$("helpClose").onclick = () => $("helpDialog").close();
 function setTier(t){
   tier = t;
   document.querySelectorAll("#tierSeg button")
@@ -4158,31 +4347,31 @@ document.querySelectorAll("#tierSeg button").forEach(b => b.onclick = () => {
 });
 
 function showWelcome(){
+  screenChanged();
   tierSegEl.hidden = true;
   msgEl.hidden = false;
   msgInner.innerHTML = `
     <h2>A coach that actually watches</h2>
-    <p>Turn <b>sideways to the camera</b> so it sees your profile, and prop the phone low — about shin height, against a bottle
-       or a stack of books — a couple of metres back so it can see all of you. Standing
-       exercises want it higher and a little further; I'll tell you if I can't see you.<br>
+    <p>Work out at your own pace, with demonstrations and coaching from your camera.
+       Prop your phone securely. For the plank check, turn sideways; I'll help you adjust the view.<br>
        Nothing is uploaded — the video never leaves this browser.</p>
     <div class="lab pick">Do you know how to plank?</div>
     <div class="chips" id="plankKnow">
       <button class="chip" data-know="yes" aria-pressed="${plankKnown}">Yes, I've got it</button>
       <button class="chip" data-know="no" aria-pressed="${!plankKnown}">Show me first</button>
     </div>
-    <div class="field"><input id="nameIn" placeholder="What should I call you?" maxlength="20" value="${esc(userName)}"></div>
+    <div class="field"><label for="nameIn">What should I call you? <span>(optional)</span></label><input id="nameIn" placeholder="Your name" autocomplete="given-name" maxlength="20" value="${esc(userName)}"></div>
     <div class="lab pick">Coach style</div>
     <div class="chips">${Object.entries(PERSONAS).map(([k,p]) =>
       `<button class="chip" data-p="${k}" aria-pressed="${k===persona}">${p.label}</button>`).join("")}</div>
     <div class="row">
       <button class="chip" id="voicePrev">&#9654; Hear it</button>
-      <select id="voiceSel" style="max-width:210px" hidden></select>
+      <select id="voiceSel" aria-label="Local fallback voice" style="max-width:210px" hidden></select>
     </div>
     <div id="voiceNote" class="lab pick" style="margin:8px 0 16px;letter-spacing:.08em;text-transform:none"></div>
     <p style="font-size:13px">To find your level, I'll watch you hold a <b>plank</b> for up to 30 seconds.</p>
-    <button class="ctl primary" id="calBtn">Start calibration</button>
-    <button class="ctl" id="skipBtn">Skip — pick my level</button>`;
+    <button class="ctl primary" id="calBtn">Try the plank check</button>
+    <button class="ctl" id="skipBtn">Choose my level instead</button>`;
   msgInner.querySelectorAll("#plankKnow .chip, .chips:not(#plankKnow) .chip").forEach(() => {});
   /* two independent single-select chip groups on one screen — scope each toggle to
      its own container so choosing a coach doesn't clear the plank answer */
@@ -4226,13 +4415,14 @@ function showWelcome(){
       // Preview obeys the same privacy/queue rules as session speech.
       const text = line.replace(/\{n\}/g, ""); banner(text);
       coach.push({key:"preview", text, clips:null, pri:3, at:performance.now(), ttl:1500});
-    }catch(e){}
+    }catch(e){ setSpeechStatus("Voice preview could not start. Instructions remain on screen."); }
   };
   $("calBtn").onclick = () => beginCalibration();   // uses plankKnown, set above
   $("skipBtn").onclick = () => showTierPicker();
 }
 
 function showTierPicker(){
+  screenChanged();
   tierSegEl.hidden = false;
   msgEl.hidden = false;
   msgInner.innerHTML = `
@@ -4241,26 +4431,26 @@ function showTierPicker(){
       <button class="tiercard" data-t="${k}" aria-pressed="${k===tier}">
         <b>${t.label}</b><span>${t.blurb}</span>
       </button>`).join("")}</div>
-    <button class="ctl primary" id="goBtn">Continue</button>`;
+    <button class="ctl primary" id="goBtn">Continue</button>
+    <button class="ctl" id="welcomeBackBtn">Back to welcome</button>`;
   msgInner.querySelectorAll(".tiercard").forEach(c => c.onclick = () => {
     setTier(c.dataset.t);
     msgInner.querySelectorAll(".tiercard").forEach(x =>
       x.setAttribute("aria-pressed", String(x === c)));
   });
   $("goBtn").onclick = () => showHome();
+  $("welcomeBackBtn").onclick = showWelcome;
 }
 
 function showHome(){
+  screenChanged();
   tierSegEl.hidden = false;
   msgEl.hidden = false;
   const avail = PLANS.filter(p => p.tiers.includes(tier));
   msgInner.innerHTML = `
     <h2>${userName ? `Hi, ${esc(userName)}` : "Choose a session"}</h2>
-    <p><b style="color:var(--good)">${TIERS[tier].label}</b> — ${TIERS[tier].blurb.toLowerCase()}<br>
-       <span style="font-size:12px">${TIERS[tier].cueBudget === 99 ? "Full running commentary" :
-         `Max ${TIERS[tier].cueBudget} correction${TIERS[tier].cueBudget>1?"s":""} per set`} ·
-         ${TIERS[tier].showScore ? "form score shown" : "no score shown — just a bar"} ·
-         effort ×${TIERS[tier].effort}</span></p>
+    <p><b class="choiceLabel">${TIERS[tier].label}</b> — ${TIERS[tier].blurb.toLowerCase()}<br>
+       Preview a workout to see its sets, rest and camera setup before starting.</p>
     <div class="plans">${avail.map(p => {
       const seq = p.steps.filter(s => s.ex).map(s => {
         const r = resolveMovementCore(s.ex, tier);
@@ -4268,15 +4458,16 @@ function showHome(){
         const t = scaledCore(s.t, false, tier);
         return `${r.mv.name.toUpperCase()} ${r.mv.kind === "reps" ? "×"+t : t+"s"}`;
       }).filter(Boolean).join(" · ");
-      return `<button class="plancard" data-plan="${p.id}">
+      return `<button class="plancard" data-plan="${p.id}" aria-label="Preview ${p.name}">
         <b>${p.name}</b><span class="disc">${p.disc}</span>
         <span class="blurb">${p.blurb}</span>
         <span class="seq">${seq}</span></button>`;
-    }).join("")}</div>`;
+    }).join("")}</div><button class="ctl" id="coachSettingsBtn">Coach style and setup</button>`;
   msgInner.querySelectorAll(".plancard").forEach(c => c.onclick = () => {
     const plan = PLANS.find(p => p.id === c.dataset.plan);
-    beginSession(plan);
+    showPlanPreview(plan);
   });
+  $("coachSettingsBtn").onclick = showWelcome;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4287,6 +4478,7 @@ const video=$("cam"), canvas=$("overlay"), ctx=canvas.getContext("2d"), startBtn
 let landmarker=null, running=false, lastVideoTime=-1, lastT=0, pending=null;
 
 async function initModel(){
+  await loadVision();
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
   return PoseLandmarker.createFromOptions(vision, {
@@ -4300,51 +4492,103 @@ let camFacing = "user", wakeLock = null, cameraStage = "permission";
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){
   flipBtn.hidden = !on; skipExBtn.hidden = !on;
-  if(!on){ $("followAlongBtn").hidden = true; $("finishAlongBtn").hidden = true; document.body.classList.remove("following"); }
+  if(!on){ $("followAlongBtn").hidden = true; $("finishAlongBtn").hidden = true; $("pauseBtn").hidden = true;
+    $("workoutContext").hidden = true; $("sessionDialog").close(); document.body.classList.remove("following"); }
+}
+async function requestWakeLock(){
+  if(!running || document.hidden || calib?.core.paused || sess?.core.paused || wakeLock && !wakeLock.released) return;
+  try{
+    const lock = await navigator.wakeLock?.request("screen");
+    if(!running || document.hidden || calib?.core.paused || sess?.core.paused) await lock?.release();
+    else wakeLock = lock;
+  }
+  catch(e){ /* Optional platform feature: the workout still works without it. */ }
+}
+let cameraRequest = 0, cameraStarting = false;
+function cameraProgress(title, copy){
+  msgInner.innerHTML = `<h2>${title}</h2><p>${copy}</p><button class="ctl" id="cancelCameraBtn">Cancel</button>`;
+  msgEl.hidden = false;
+  $("cancelCameraBtn").onclick = () => { stopCam(); showHome(); };
 }
 async function openCamera(){
+  if(cameraStarting) return false;
+  const request = ++cameraRequest;
+  cameraStarting = true; startBtn.disabled = true; $("helpBtn").disabled = true;
+  try{
   cameraStage = "permission";
-  msgInner.innerHTML = "<h2>Requesting camera…</h2>";
-  msgEl.hidden = false;
+  cameraProgress("Requesting camera…", "Allow camera access in your browser. No microphone is requested.");
   const stream = await navigator.mediaDevices.getUserMedia({
     video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+  if(request !== cameraRequest){ stream.getTracks().forEach(t=>t.stop()); return false; }
   video.srcObject = stream;
   cameraStage = "playback";
   await video.play();
+  if(request !== cameraRequest) return false;
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
-  try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){}   // phones sleep mid-plank otherwise
   if(!landmarker){
     cameraStage = "model";
-    msgInner.innerHTML = "<h2>Loading pose model…</h2><p>First run takes a few seconds.</p>";
-    landmarker = await initModel();
+    cameraProgress("Loading pose model…", "The first model download may take a moment. You can cancel and try again.");
+    const model = await initModel();
+    if(request !== cameraRequest){ model.close?.(); return false; }
+    landmarker = model;
   }
   msgEl.hidden = true;
   running = true; lastT = 0; lastVideoTime = -1;
-  startBtn.textContent = "Stop"; startBtn.classList.add("live"); showCamChrome(true);
+  requestWakeLock(); // optional capability must not hold startup hostage
+  startBtn.textContent = "End"; startBtn.classList.add("live"); showCamChrome(true);
   requestAnimationFrame(loop);
+  }catch(e){ if(request !== cameraRequest) return false; throw e; }
+  finally{ if(request === cameraRequest){ cameraStarting = false; startBtn.disabled = false; $("helpBtn").disabled = false; } }
 }
 function stopCam(){
+  cameraRequest++; cameraStarting = false; startBtn.disabled = false;
+  $("helpBtn").disabled = false;
+  flipBtn.disabled = false; $("resumeBtn").disabled = false;
   if(video.srcObject){ video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
   try{ wakeLock?.release(); }catch(e){} wakeLock = null;
   coach.reset();
 }
 
 $("flipBtn").onclick = async () => {
-  camFacing = camFacing === "user" ? "environment" : "user";
-  $("flipBtn").style.color = camFacing === "environment" ? "var(--good)" : "";
-  if(!video.srcObject) return;                    // takes effect next start
+  if(!running || !video.srcObject || flipBtn.disabled) return;
+  const original = video.srcObject, request = cameraRequest;
+  const facing = camFacing === "user" ? "environment" : "user";
+  let stream;
+  flipBtn.disabled = true;
+  // A new view must not finish an unfinished rep from the old camera.
+  pauseCurrent("camera switch");
+  $("resumeBtn").disabled = true;
   try{
-    video.srcObject.getTracks().forEach(t => t.stop());
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+    if(request !== cameraRequest || !running){ stream.getTracks().forEach(t=>t.stop()); return; }
     video.srcObject = stream;
     await video.play();
+    if(request !== cameraRequest || !running){ original.getTracks().forEach(t=>t.stop()); return; }
+    original.getTracks().forEach(t=>t.stop());
+    camFacing = facing; flipBtn.style.color = facing === "environment" ? "var(--iris)" : "";
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
     document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
-  }catch(e){ camFacing = camFacing === "user" ? "environment" : "user"; }
+  }catch(e){
+    stream?.getTracks().forEach(t=>t.stop());
+    if(request !== cameraRequest || !running){ original.getTracks().forEach(t=>t.stop()); return; }
+    video.srcObject = original;
+    try{
+      await video.play();
+      $("sessionDialogCopy").textContent = calib
+        ? "Couldn’t switch cameras. Your original camera and observations are kept. Use the observed result, or restart the plank check."
+        : "Couldn’t switch cameras. Your original camera and observed work are kept. Resume with this camera, or end the workout.";
+    }catch(recoveryError){
+      $("sessionDialogCopy").textContent = "Neither camera could resume playback. Your observed work is kept. End this workout to review it, then try starting again.";
+      diagnosticEvent("camera-recovery-failed", {name:recoveryError.name});
+    }
+    diagnosticEvent("camera-switch-failed", {name:e.name});
+  }finally{
+    if(request === cameraRequest){ flipBtn.disabled = false; $("resumeBtn").disabled = false; }
+  }
 };
 
 /* ── SKIP — one handler, both cores ──
@@ -4355,6 +4599,7 @@ $("flipBtn").onclick = async () => {
    it is a six-second capture with its own end, not a phase to abandon. */
 function skipCurrent(){
   if(!running || recMode) return false;
+  if($("sessionDialog").open || $("helpDialog").open || $("diagPanel").open) return false;
   if(!calib && (!sess || sess.done)) return false;
   /* Discard current AND pending speech before replaying the new phase's effects.
      Resetting afterwards would erase its teaching (or calibration verdict). */
@@ -4377,18 +4622,23 @@ $("finishAlongBtn").onclick = () => {
    out of the way of typing — the welcome screen has a name field, and a beginner
    typing "Chris" must not skip three movements. */
 addEventListener("keydown", e => {
-  if(e.key !== "s" && e.key !== "S") return;
+  if(!["s","p"].includes(e.key.toLowerCase()) || e.repeat) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;      /* ⌘S is Save, not Skip */
   const el = document.activeElement;
   const tag = el ? el.tagName : "";
   if(tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || el?.isContentEditable) return;
-  if(skipCurrent()) e.preventDefault();
+  if(e.key.toLowerCase() === "p") { if(pauseCurrent()) e.preventDefault(); }
+  else if(skipCurrent()) e.preventDefault();
+});
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){ pauseCurrent("background"); coach.reset(); }
+  else if(running && !calib?.core.paused && !sess?.core.paused) requestWakeLock();
 });
 
 async function beginCalibration(){
   tierSegEl.hidden = true;
   pending = "calibrate";
-  try{ await openCamera(); }catch(e){ camError(e); return; }
+  try{ if(await openCamera() === false) return; }catch(e){ camError(e); return; }
   calib = new Calibration(); sess = null;
   TelLog.start(); $("csvBtn").hidden = true;
   bigLabel.textContent = "HOLD";
@@ -4406,22 +4656,25 @@ async function beginCalibration(){
   /* If they told us they don't know the movement, don't make them hunt for the
      button — play the demonstration straight away. */
   if(!plankKnown) startDemo();
+  updateWorkoutContext();
+  if(document.hidden) pauseCurrent("background startup");
 }
 async function beginSession(plan){
   tierSegEl.hidden = true;   /* changing difficulty mid-set isn't a real choice — it
                                 returns at the debrief, where it is */
   pending = "session";
-  try{ await openCamera(); }catch(e){ camError(e); return; }
+  try{ if(await openCamera() === false) return; }catch(e){ camError(e); return; }
   calib = null;
   TelLog.start(); $("csvBtn").hidden = true;
   sess = new Session(plan);
   sess.start();
+  if(document.hidden) pauseCurrent("background startup");
 }
 function camError(error){
   running = false;
   stopCam(); sess = null; calib = null; calibMv = null; recMode = null;
-  showCamChrome(false); setupBar.classList.remove("on"); demoBox.classList.remove("on"); demoOn = false;
-  startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+  showCamChrome(false); setupBar.classList.remove("on"); stopDemo();
+  startBtn.textContent = "Workouts"; startBtn.classList.remove("live");
   document.body.classList.remove("live");
   const reasons = {
     NotAllowedError:"Camera permission was not granted. Allow camera access in your browser and device privacy settings, then try again.",
@@ -4444,10 +4697,13 @@ function camError(error){
 }
 
 startBtn.onclick = () => {
-  if(running){
+  if(running && !recMode){
+    pauseCurrent("end request");
+    if(!calib) $("sessionDialogTitle").textContent = "End this workout?";
+  } else if(running){
     running = false; stopCam(); sess = null; calib = null; calibMv = null; recMode = null;
     TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
-    startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+    startBtn.textContent = "Workouts"; startBtn.classList.remove("live");
     document.body.classList.remove("live");     /* else the header stays dimmed */
     showCamChrome(false);
     showHome();
@@ -4497,11 +4753,18 @@ function startDemo(){
   if(!mvId || !refFor(mvId)) return;
   demoOn = true; demoBox.classList.add("on"); demoT = 0;
   demoLabel.textContent = "Show me how";
+  showBtn.textContent = "✕ Hide demo";
+  showBtn.setAttribute("aria-expanded","true");
+}
+function stopDemo(){
+  demoOn = false; demoBox.classList.remove("on");
+  showBtn.textContent = "Show me how"; showBtn.setAttribute("aria-expanded","false");
 }
 showBtn.onclick = () => {
   demoOn = !demoOn;
   demoBox.classList.toggle("on", demoOn);
   showBtn.textContent = demoOn ? "✕ Hide demo" : "▶ Show me how";
+  showBtn.setAttribute("aria-expanded",String(demoOn));
   demoT = 0;
 };
 
@@ -4575,7 +4838,7 @@ function recTick(frame, dt){
     const id = recMode.id;
     recMode = null;
     running = false; stopCam();
-    startBtn.textContent = "Start camera"; startBtn.classList.remove("live");
+    startBtn.textContent = "Workouts"; startBtn.classList.remove("live");
     msgEl.hidden = false;
     msgInner.innerHTML = `
       <h2>Saved</h2>
@@ -4589,7 +4852,7 @@ function recTick(frame, dt){
 }
 
 async function beginRefRecording(id){
-  try{ await openCamera(); }catch(e){ camError(e); return; }
+  try{ if(await openCamera() === false) return; }catch(e){ camError(e); return; }
   calib = null; sess = null;
   recMode = { id, phase:"getready", t:0, lastAt:-1, frames:[] };
   bigLabel.textContent = "DEMO";
@@ -4665,7 +4928,8 @@ function loopBody(t){
   lastT = t;
   const now = performance.now()/1000;
 
-  const res = sess?.core.following && !calib && !recMode ? {landmarks:[]} : landmarker.detectForVideo(video, performance.now());
+  const suspended = sess?.core.paused || calib?.core.paused || sess?.core.following && !calib && !recMode;
+  const res = suspended ? {landmarks:[]} : landmarker.detectForVideo(video, performance.now());
   const lms = res.landmarks && res.landmarks[0];
   /* Tracking lost: the evaluator early-returns before computing a tint AND the session
      stops emitting telemetry, so lastTint would keep its final value and repaint one
@@ -4806,6 +5070,12 @@ $("diagPlay").onclick = () => {
   }, 33);
 };
 
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--chrome-height",`${document.querySelector("header").getBoundingClientRect().height}px`);
+}).observe(document.querySelector("header"));
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty("--controls-height",`${setupBar.getBoundingClientRect().height}px`);
+}).observe(setupBar);
 setTier("building");
 showWelcome();
 </script>

@@ -6,6 +6,7 @@ import { privacyCases } from './privacy-cases.mjs';
 import { diagnosticCases } from './diagnostic-cases.mjs';
 import { coachingCases } from './coaching-cases.mjs';
 import { followAlongCases } from './follow-along-cases.mjs';
+import { interfaceCases } from './interface-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -45,6 +46,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await diagnosticCases(runCase);
     await coachingCases(runCase);
     await followAlongCases(runCase);
+    await interfaceCases(runCase);
     await runCase('calibration-demo', 'A beginner choosing Show me first sees a rendered calibration demonstration.', async (page, check) => {
       await page.locator('[data-know="no"]').click(); await page.locator('#calBtn').click();
       await page.locator('#demo').waitFor({ state: 'visible' });
@@ -95,7 +97,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await runCase('tracking-warning-recovery', 'The paused-counting warning disappears on recovery, not seven seconds later.', async (page, check) => {
       await page.evaluate(() => window.__testLab.installPlan({ id: 'pause-recovery', name: 'Core Strength', tiers: ['building'], steps: [{ ex: 'push-up', t: 100 }] }));
       await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="pause-recovery"]').click();
+      await page.locator('[data-plan="pause-recovery"]').click(); await page.locator('#planStartBtn').click();
       const frame = exerciseInputs(JSON.parse(await readFile(resolve(root, 'conformance-vectors.json'))).poses).frame('push-up');
       await page.evaluate(frame => { for (let i = 0; i < 90; i++) window.__testLab.feed(frame, 1 / 30); window.__testLab.feed(null, 1 / 30); }, frame);
       check('Tracking loss has a visible explanation', await page.locator('#cue').evaluate(el =>
@@ -106,7 +108,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await runCase('bridge-unscored-ui', 'Bridge setup/active/debrief show counted reps without an invented FORM grade.', async (page, check) => {
       await page.evaluate(() => window.__testLab.installPlan({ id: 'bridge-score', name: 'Core Strength', tiers: ['building'], steps: [{ ex: 'glute-bridge', t: 5 }] }));
       await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="bridge-score"]').click();
+      await page.locator('[data-plan="bridge-score"]').click(); await page.locator('#planStartBtn').click();
       check('Unscorable exercise hides FORM immediately', await page.locator('#scoreCol').evaluate(el => el.classList.contains('on')), false);
       const inputs = exerciseInputs(JSON.parse(await readFile(resolve(root, 'conformance-vectors.json'))).poses);
       const frames = [...Array.from({ length: 90 }, () => inputs.frame('glute-bridge')),
@@ -133,9 +135,12 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         };
       });
       await page.locator('#skipBtn').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="first-steps"]').click(); await page.locator('#flipBtn').waitFor({ state: 'visible' });
+      await page.locator('[data-plan="first-steps"]').click(); await page.locator('#planStartBtn').click(); await page.locator('#flipBtn').waitFor({ state: 'visible' });
       await page.locator('#flipBtn').click(); await page.waitForFunction(() => window.testMedia.opened === 2);
-      await page.locator('#startBtn').click();
+      await page.waitForFunction(() => !document.getElementById('flipBtn').disabled);
+      check('Switching view pauses assessment', await page.locator('#sessionDialog').isVisible(), true);
+      await page.locator('#resumeBtn').click();
+      await page.locator('#startBtn').click(); await page.locator('#endSessionBtn').click();
       check('Both opened camera tracks are stopped', await page.evaluate(() => window.testMedia), { opened: 2, stopped: 2 });
       check('Stopped camera hides flip', await page.locator('#flipBtn').isVisible(), false);
       check('Stopped camera hides skip', await page.locator('#skipExBtn').isVisible(), false);
@@ -145,7 +150,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         await page.locator('#skipBtn').click(); await page.locator(`[data-t="${tier}"]`).click(); await page.locator('#goBtn').click();
         check('Only plans declared for this tier are offered', await page.locator('.plancard').evaluateAll(xs => xs.map(x => x.dataset.plan).sort()),
           engine.PLANS.filter(p => p.tiers.includes(tier)).map(p => p.id).sort());
-        await page.locator(`[data-plan="${plan.id}"]`).click();
+        await page.locator(`[data-plan="${plan.id}"]`).click(); await page.locator('#planStartBtn').click();
         for (let i = 0; i < 60 && !(await page.evaluate(() => window.__testLab.snapshot().done)); i++) await page.locator('#skipExBtn').click();
         check('Plan reaches the debrief', await page.locator('#msgInner h2').innerText(), 'Session complete');
         const result = await page.evaluate(() => window.__testLab.snapshot().finish);
@@ -251,7 +256,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
       await page.evaluate(() => window.__testLab.installPlan({ id: 'skip-voice', name: 'First Steps', tiers: ['learning'],
         steps: [{ ex: 'plank', t: 30 }, { rest: 12 }, { ex: 'glute-bridge', t: 8 }] }));
       await page.locator('#skipBtn').click(); await page.locator('[data-t="learning"]').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="skip-voice"]').click();
+      await page.locator('[data-plan="skip-voice"]').click(); await page.locator('#planStartBtn').click();
       await page.evaluate(() => {
         window.seedOldSpeech(); const input = document.createElement('input'); input.id = 'skip-focus'; document.body.append(input); input.focus();
       });

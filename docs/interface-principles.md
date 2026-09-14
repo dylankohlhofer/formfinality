@@ -22,8 +22,10 @@ neither, it's monochrome.
 
 The phone is propped across the room; the user is on the floor, mid-effort, often
 sideways. So: one huge tabular numeral, one short label, one line of speech made
-visible. Everything else is chrome, and **chrome recedes while a set is live** —
-returning on hover (desktop) or tap (touch, which has no hover).
+visible. Secondary instruments recede; critical Pause, Skip and End controls stay
+legible. The 14 September review removed the live header's low-opacity treatment:
+an available escape should not look disabled. Current/next movement gives context
+without requiring the person to remember a spoken instruction.
 
 ## 3 · Controls appear when their question exists
 
@@ -79,6 +81,18 @@ geometry.
 The score bar's colour bands are the tint's bands. The dial's segments are the rep
 target. A channel that disagrees with another channel — a red limb beside a 77 score
 — is treated as a bug even when each channel is individually "correct".
+
+## 10 · Interruptions belong to the workout, not just the camera
+
+Preview before starting. Pause before leaving, changing cameras or confirming End.
+Background return requires explicit Resume; a hidden tab earns no exercise credit.
+An unfinished rep cannot bridge a pause. Ending early retains observed work and
+names the incomplete set without grading it or pretending future sets happened.
+Calibration interruption offers a fresh check or the observed result, not a resumed
+continuous hold. These are core policies that the native shell must preserve.
+
+The current feature inventory, tests and remaining device checks are in
+[[sessions/interface-review-2026-09-14]].
 
 ---
 

@@ -77,7 +77,7 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
             await page.locator(`.tiercard[data-t="${scenario.tier}"]`).click();
             await page.locator('#goBtn').click();
           }
-          await page.locator(`.plancard[data-plan="${scenario.plan}"]`).click();
+          await page.locator(`.plancard[data-plan="${scenario.plan}"]`).click(); await page.locator('#planStartBtn').click();
         }
         await page.locator('#skipExBtn').waitFor({ state: 'visible' }); started = true;
         if (recording && !videoReady) {

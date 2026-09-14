@@ -13,7 +13,7 @@ export async function followAlongCases(runCase) {
       };
     });
     await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
-    await page.locator('[data-plan="lab-follow-loop"]').click();
+    await page.locator('[data-plan="lab-follow-loop"]').click(); await page.locator('#planStartBtn').click();
     await page.waitForFunction(()=>window.__testModelCalls>2);
     await page.locator('#followAlongBtn').click();
     const calls=await page.evaluate(()=>window.__testModelCalls);
@@ -26,7 +26,7 @@ export async function followAlongCases(runCase) {
     await page.locator('#finishAlongBtn').click();
     await page.waitForFunction(n=>window.__testModelCalls>n+2,calls);
     check('Next movement is assessed setup',await page.evaluate(()=>__testLab.snapshot().state),'setup');
-    await page.locator('#startBtn').click();
+    await page.locator('#startBtn').click(); await page.locator('#endSessionBtn').click();
     check('Stop releases the preview',await page.locator('#cam').evaluate(v=>v.srcObject===null),true);
     check('Stop clears mode styling',await page.locator('body').evaluate(el=>el.classList.contains('following')),false);
   });
@@ -35,8 +35,13 @@ export async function followAlongCases(runCase) {
       await page.setViewportSize(viewport);
       await page.evaluate(()=>__testLab.installPlan({id:'lab-follow-ui',name:'Unassessed controls',tiers:['building'],steps:[{ex:'plank',t:10}]}));
       await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="lab-follow-ui"]').click();
+      await page.locator('[data-plan="lab-follow-ui"]').click(); await page.locator('#planStartBtn').click();
       await page.evaluate(()=>{for(let i=0;i<90;i++)__testLab.feed(null,1/30);});
+      // The accelerated feed does not advance the rendering clock. ResizeObserver
+      // runs before paint, after rAF; inspect the layout on the following frame,
+      // not between a DOM change and that first layout callback. Never retry the
+      // geometry assertion until green. A deliberate overlap mutation protects it.
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
       if(name !== 'desktop') {
         check('Phone tracking warning, counter and fallback choice do not overlap',await page.evaluate(()=>{
           const ids=['cue','dial','setupBar','tip'];
@@ -47,6 +52,7 @@ export async function followAlongCases(runCase) {
       }
       await page.locator('#followAlongBtn').click();
       await page.evaluate(()=>{for(let i=0;i<90;i++)__testLab.feed(null,1/30);});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
       check('Explicit mode is active',await page.evaluate(()=>__testLab.snapshot().state),'follow-along');
       const geometry = await page.evaluate(()=>{
         const rect = id => { const r = document.getElementById(id).getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}; };

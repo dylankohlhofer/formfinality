@@ -53,7 +53,7 @@ run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance']) {
+  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });

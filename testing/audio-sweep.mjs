@@ -42,7 +42,7 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         const plan = { id: 'audio-' + scenario.id, name: scenario.tier === 'learning' ? 'First Steps' : 'Core Strength', tiers: [scenario.tier], steps: scenario.steps };
         await page.evaluate(plan => window.__testLab.installPlan(plan), plan);
         await page.locator('#skipBtn').click(); await page.locator(`[data-t="${scenario.tier}"]`).click(); await page.locator('#goBtn').click();
-        await page.locator(`[data-plan="${plan.id}"]`).click();
+        await page.locator(`[data-plan="${plan.id}"]`).click(); await page.locator('#planStartBtn').click();
         const segments = scenario.segments.map(s => {
           let frame = s.pose === 'lost' || s.pose === 'none' ? null : inputs.frame('plank');
           if (s.pose === 'sag') for (const side of ['left', 'right']) frame[side].hip.y += .07;
@@ -56,9 +56,10 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         for (const [i, segment] of segments.entries()) {
           if (segment.action) {
             await page.evaluate(action => window.__audioLab.mark(action), segment.action);
-            const selector = {skip:'#skipExBtn', stop:'#startBtn', 'follow-along':'#followAlongBtn'}[segment.action];
+            const selector = {skip:'#skipExBtn', stop:'#startBtn', pause:'#pauseBtn', resume:'#resumeBtn', 'follow-along':'#followAlongBtn'}[segment.action];
             if(!selector) throw new Error(`Unknown audio action: ${segment.action}`);
             await page.locator(selector).click();
+            if(segment.action === 'stop') await page.locator('#endSessionBtn').click();
           } else {
             await page.evaluate(async s => {
               window.__audioLab.observe(s.pose);
@@ -141,6 +142,19 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         check('Teaching actually plays after choosing follow-along',evidence.events.some(e=>e.type==='clip-start' && e.ms>choice?.ms && e.item?.key==='teach.plank'),true);
         check('Unassessed mode has no started correction, praise or readiness speech',evidence.events.some(e=>
           e.type==='speech-start' && e.state.state==='follow-along' && e.item?.key!=='teach.plank'),false);
+      }
+      if(scenario.id === 'pause-cancels-correction'){
+        const pause = evidence.events.find(e=>e.type==='action' && e.action==='pause');
+        const resume = evidence.events.find(e=>e.type==='action' && e.action==='resume');
+        const boundary = evidence.events.find(e=>e.ms>=pause?.ms && e.state.state==='paused');
+        const clips = new Set(evidence.events.filter(e=>e.type==='clip-start' && e.item?.key==='sag' && e.ms<pause?.ms).map(e=>e.playId));
+        check('Pause interrupts an audibly active correction',evidence.levels.some(l=>clips.has(l.playId)&&l.ms>=pause?.ms-250&&l.ms<=pause?.ms&&l.rms>.001),true);
+        check('Paused state is present',!!boundary,true);
+        check('Old correction silent within 250ms',evidence.levels.some(l=>clips.has(l.playId)&&l.ms>boundary?.ms+250&&l.rms>.001),false);
+        check('No speech starts while paused',evidence.events.some(e=>e.type==='speech-start'&&e.state.state==='paused'),false);
+        check('Paused held time does not advance',resume?.state.held,boundary?.state.held);
+        check('Recovery cannot restart obsolete sag',evidence.events.some(e=>e.type==='speech-start'&&e.ms>resume?.ms&&e.item?.key==='sag'),false);
+        check('Fresh observed hold resumes',evidence.events.some(e=>e.ms>resume?.ms&&e.state.held>resume?.state.held),true);
       }
       if (scenario.kind === 'queue') {
         check('An expired correction is actually discarded', evidence.events.some(e => e.type === 'dropped' && e.reason === 'expired' && e.item.key === 'sag'), true);

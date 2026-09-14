@@ -179,6 +179,19 @@ cancellation case in the default loop.
 These test software policy, not body-size/clothing recognition accuracy; the model
 and movement thresholds remain unchanged. See the 14 September session note.
 
+The interface now previews workouts before camera startup. `SessionCore.pause()`,
+`resume()` and `stop()` preserve observed work without credit during interruption;
+paused unfinished reps cannot finish on return. End yields a partial summary, with
+the current phase `stopped:true, score:null` and no records for future sets. Do not
+accumulate score again at End. `CalibrationCore.pause()` has no Resume: restart or
+finish the observed check. Background return and camera switching require explicit
+resume; optional wake lock must not block startup. Cancelled/late camera requests
+must release tracks, never reopen a finished screen. Keep `interface.test.mjs`,
+the `ui-*` shell cases and `pause-cancels-correction` audio case in default test/CI.
+SessionCore/CalibrationCore are not yet in Swift; port their interruption contracts
+together. See `docs/sessions/interface-review-2026-09-14.md` for the feature inventory
+and physical-device/accessibility checks still needed.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled

@@ -121,7 +121,7 @@ export async function coachingCases(runCase){
       const good = input.frame(exercise), limited = input.frame(exercise, 0, { view: exercise === 'plank' ? 35 : 55 });
       await page.evaluate(exercise => __testLab.installPlan({ id: 'view-audit', name: 'Core Strength', tiers: ['building'], steps: [{ ex: exercise, t: 100 }] }), exercise);
       await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click();
-      await page.locator('#goBtn').click(); await page.locator('[data-plan="view-audit"]').click();
+      await page.locator('#goBtn').click(); await page.locator('[data-plan="view-audit"]').click(); await page.locator('#planStartBtn').click();
       await page.evaluate(good => { for (let i = 0; i < 90; i++) __testLab.feed(good, 1 / 30); }, good);
       await page.locator('#voice').check();
       const result = await page.evaluate(({ good, limited, pending, key, exercise }) => {

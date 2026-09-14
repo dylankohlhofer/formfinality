@@ -1,10 +1,11 @@
 # Form Coach — project status report
 
-**Every figure below was computed against the shipped build.** Where any other document
-disagrees, this file wins.
+**Each verification entry names the build checkpoint it measured.** Older entries
+are history, not current counts. Where any other document disagrees, this file wins.
 
-**Last updated:** 14 September 2026 — body/clothing robustness and explicit
-unassessed follow-along, using the existing test infrastructure. The 9 September
+**Last updated:** 14 September 2026 — full interface review, workout previews,
+pause/resume, partial debriefs and camera interruption handling, following the
+body/clothing robustness work. Both use the existing test infrastructure. The 9 September
 recording adds real-room evidence but is not a completed independent beginner
 protocol; that release gate remains open.
 
@@ -64,6 +65,53 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Interface review:** clearer onboarding/navigation, actual expanded-set workout
+previews, current/next movement context, explicit pause/resume, background pause,
+early-end summaries and local in-app help. Startup no longer waits for the pose
+library to show onboarding. Camera requests can be cancelled; late requests release
+their streams, and failed camera switches preserve the existing workout. Critical
+controls stay legible, mobile layout spacing follows actual control/header size,
+and stale exercise instructions no longer cover debrief exits. Pausing cancels
+speech; returning cannot resume an old correction or finish a partial rep across
+an unobserved gap. No new service, dependency or persistent personal-data store.
+See [the feature-by-feature audit](sessions/interface-review-2026-09-14.md), including
+the explicit physical-device, accessibility and human-usability limits.
+
+**Latest verification (14 September, interface checkpoint):** `npm test` exits
+**0** at `test-results/2026-09-14T05-52-19-649Z-29535/`. All **65 infrastructure
+tests**, **750 targeted regression checks across ten suites**, and all four
+original harnesses pass. The scenario results are:
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 78/78 | 777 |
+| Recorded-clip audio | 15/15 | 301 |
+
+The original harnesses retain **4,127 conformance checks**, **8 caught mutations
+and a green control**, **250 drawing checks** and **26 skip checks**. The new
+interface suite has **56 checks**, including all supported exercise/tier pauses
+and a deliberate portrait-layout mutation. No recorded vectors were regenerated.
+There are zero unexpected failures and zero speech review candidates, but **12
+missing-video entries, two native-TTS waveform gaps and 12 case-level recognition/
+real-person warnings remain** (some repeated across modes). Passing software checks
+do not validate human body/clothing recognition or beginner intuitiveness.
+
+The separate real-inference blank-video smoke passes **14/14**, with 90 CPU
+inference frames, at `test-results/2026-09-14T05-41-12-690Z-26770/`. It is wiring
+coverage, not exercise accuracy. Swift was unchanged and not rerun for this UI
+pass: SessionCore and CalibrationCore are not present in that package yet.
+
+These are working-tree runs based on `375798a`. The final full report's app and
+all recorded test-source hashes match the final code; documentation alone was
+updated afterwards. Tested HTML SHA-256:
+`d69c49ba3c2ac473e2f7b869e25c01f630d5908923a2d14f7c5ef39cc73ccee7`.
+The failed run at `2026-09-14T05-41-57-906Z-27043` is retained: an accelerated
+geometry assertion ran before ResizeObserver delivered layout. The trace diagnosis,
+paint-aligned timing correction and permanent real-overlap negative control are
+documented in the interface review; the original overlap assertions remain intact.
+
 **Body/clothing tolerance:** keep a complete observed movement side through
 confidence flicker; change sides only for missing required observations, never for
 a better form score. A real source change still breaks unfinished reps. The explicit
@@ -80,7 +128,7 @@ case. These prove software invariants, not accuracy across larger bodies or clot
 Both-side missing required geometry, legacy image-relative line quality metrics,
 and calibration's interrupted-bout aggregation remain explicit limitations.
 
-**Latest verification (14 September):** `npm test` exits **0** at
+**Previous verification (14 September, body/clothing checkpoint):** `npm test` exits **0** at
 `test-results/2026-09-14T04-42-17-567Z-17587/`: **65 infrastructure tests**, all nine
 regression suites and four original harnesses; **55 engine cases / 1,307 checks,
 110 browser cases / 942 checks, 65 shell cases / 673 checks, and 14 audio cases /
@@ -92,8 +140,8 @@ blank-video smoke passes **14/14**, with 90 real CPU inference frames, not a hum
 recognition trial. See the implementation note for its artifact directory.
 
 This was a working-tree run based on `7edc6ac`, not a claim that the old commit
-contains these changes. The report's app and test-source hashes match the final
-code; only documentation changed after the run. Tested HTML SHA-256:
+contains those changes. The report's app and test-source hashes matched the final
+code at that checkpoint; only documentation changed after that run. Tested HTML SHA-256:
 `698b5821364326a64d1e123c996869764fdf28d94b0bb0ae950e3d155baae579`.
 The earlier full run at `test-results/2026-09-14T04-30-11-959Z-15344/` also passed;
 the final run additionally includes the recorded-video interval accounting regression.

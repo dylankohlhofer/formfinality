@@ -267,7 +267,7 @@ export async function diagnosticCases(runCase) {
       await page.locator('#diagConsent').check(); await startRecorder(page, check);
       await page.evaluate(f => __testLab.feed(f, 1 / 30), frame);
       await page.locator('#diagQuickFlag').click();
-      await page.locator('#startBtn').click();
+      await page.locator('#startBtn').click(); await page.locator('#endSessionBtn').click();
       await page.locator('#skipExBtn').waitFor({ state: 'hidden' });
       await openRecorder(page); await page.locator('#diagStop').click();
       await page.locator('#diagReview').click(); await page.locator('#diagViewer').waitFor({ state: 'visible' });

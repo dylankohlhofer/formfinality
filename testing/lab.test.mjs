@@ -103,6 +103,12 @@ test('video replay retains explicit unassessed ticks without weakening assessed 
   vm.runInContext(`loopBody = () => { ${infer} };`, sandbox);
   await tick();
   assert.equal(saved.at(-1).inference, undefined);
+  sandbox.sess.core.paused = true;
+  await assert.rejects(tick(), /Inference ran during paused/);
+  vm.runInContext('loopBody = () => {};', sandbox); await tick();
+  assert.equal(saved.at(-1).inference, 'disabled-paused');
+  sandbox.sess.core.paused = false;
+  await assert.rejects(tick(), /Expected one real inference/);
 });
 test('empty assertion coverage rejected', () => assert.throws(() => validate({ ...base, steps: [base.steps[0]] }), /independent/));
 test('null interval rejected', () => assert.throws(() => validate({ ...base, steps: [base.steps[0], { do: 'check', label: 'bad', path: 'held', between: null }] }), /interval/));

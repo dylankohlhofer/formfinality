@@ -1,5 +1,12 @@
 [
   {
+    "id":"pause-cancels-correction", "kind":"session", "tier":"building", "persona":"steady",
+    "description":"Pause interrupts an audible form correction, stays silent, then explicitly resumes with fresh observations.",
+    "oracle":"Actual sag audio must play immediately before Pause and stop within 250ms. No speech starts while paused, held time freezes, and no stale sag correction starts after recovery. Synthetic input, real recorded-clip output; not physical speaker validation.",
+    "steps":[{"ex":"plank","t":120}],
+    "segments":[{"pose":"good","seconds":18},{"pose":"sag","seconds":0.8},{"action":"pause"},{"pose":"lost","seconds":4},{"action":"resume"},{"pose":"good","seconds":6},{"action":"stop"},{"pose":"none","seconds":2}]
+  },
+  {
     "id":"follow-along-cancels-correction", "kind":"session", "tier":"building", "persona":"steady",
     "description":"A user selects unassessed follow-along during a measured hip correction. Old correction stops, teaching plays, absent observations create no further corrections.",
     "oracle":"Actual recorded sag audio must start before the choice and be silent within 250ms after it. Only new teaching may start in follow-along; no form, praise or readiness speech. This is synthetic playback, not human exercise/clothing validation.",

@@ -57,6 +57,30 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Interface review (14 September):** `interface.test.mjs` adds 56 core/structural
+checks; `interface-cases.mjs` adds 13 shell cases in the same runner. Workout
+selection now opens a preview; tests explicitly choose Start workout. End opens a
+paused confirmation and preserves an honest partial debrief. Pause/background,
+calibration interruption, four viewport layouts, navigation and camera-cancellation
+races have durable coverage. A fifteenth real-time audio case requires actual
+correction playback before Pause, prompt silence, no speech while paused and fresh
+observed work after Resume. Video replay marks deliberately paused inference
+intervals explicitly without weakening the assessed-frame checks.
+Geometry checks wait for rendering (the accelerated pose feed is not a paint
+clock); a deliberate portrait-overlap mutation must still fail both original
+overlap assertions. They are not retried until green.
+
+```sh
+node --test testing/interface.test.mjs
+node testing/check-shell.mjs form-coach-v4.11.html 'ui-*'
+node testing/run.mjs --build form-coach-v4.11.html --mode audio --scenario pause-cancels-correction
+```
+
+See [the feature-by-feature review](../docs/sessions/interface-review-2026-09-14.md).
+These are browser/software contracts, not physical-phone, accessibility or beginner
+usability certification. The full `npm test` still runs all original harnesses and
+existing recognition, privacy, diagnostics and audio checks.
+
 **Body/clothing robustness (14 September):** `body-tolerance.test.mjs` runs 235
 software checks in default test/watch/CI. Stable required-observation side selection
 and all-tier scale/mirror/follow-along checks are not real-body accuracy validation.

@@ -10,10 +10,10 @@ window.__audioLab = (() => {
   const state = () => {
     const c = calib?.core || sess?.core;
     return { phase: c?.i ?? null, movement: c?.mvId ?? null, done: c?.done ?? false,
-      state: c?.steps?.[c.i]?.rest != null ? 'rest' : c?.state ?? null,
+      state: c?.paused ? 'paused' : c?.steps?.[c.i]?.rest != null ? 'rest' : c?.state ?? null,
       reps: c?.ev?.rep?.display() ?? null, held: c?.ev?.hold ?? 0,
-      observation: { ...observation }, score: c?.following ? null : latest?.score ?? null,
-      cue: c?.following ? null : latest?.cue ?? null };
+      observation: { ...observation }, score: c?.following || c?.paused ? null : latest?.score ?? null,
+      cue: c?.following || c?.paused ? null : latest?.cue ?? null };
   };
   const log = (type, data = {}) => {
     const e = { type, ms: now(), state: state(), ...data }; events.push(e); return e;

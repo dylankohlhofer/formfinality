@@ -40,6 +40,7 @@ thing standing between here and the Swift port.
 | Document | Question it answers |
 |---|---|
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
+| `sessions/interface-review-2026-09-14.md` | Feature-by-feature UI audit, implemented workout controls, mobile contracts and remaining human/device checks |
 | `sessions/body-clothing-tolerance-2026-09-14.md` | Larger bodies and everyday clothing: implemented evidence selection, unassessed fallback, tests and real-person validation still needed |
 | `camera-placement-analysis.md` | How far back, how high — and why "3 metres" was wrong |
 | `voice-kit-audit.md` | Every dialogue key, clip and splice, verified both directions |
