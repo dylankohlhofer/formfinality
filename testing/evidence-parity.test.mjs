@@ -17,13 +17,21 @@ for(const row of suite.cases) test(`shared Swift/browser evidence: ${row.id}`, (
     const mix = !row.cycle ? 0 : p < 1.5 ? p / 1.5 : p < 2 ? 1 : p < 3.5 ? 1 - (p - 2) / 1.5 : 0;
     const side = Object.fromEntries(Object.entries(rest).map(([j, a]) => [j,
       {x:a[0] + (peak[j][0] - a[0]) * mix, y:a[1] + (peak[j][1] - a[1]) * mix, c:.95}]));
-    if(row.loss) for(const j of row.loss.all ? Object.keys(side) : row.loss.joints){
-      if(row.loss.mode === 'missing') delete side[j];
-      else if(row.loss.mode === 'outside') side[j].x = 1.05;
-      else if(row.loss.mode === 'low') side[j].c = .1;
-      else assert.fail('Unknown loss mode');
+    const f = {left:side, right:structuredClone(side)};
+    for(const name of ['left','right']) {
+      for(const p of Object.values(f[name])) {
+        p.x = .5 + (p.x - .5) * (row.scale ?? 1) * (row.mirror ? -1 : 1);
+        p.y = .5 + (p.y - .5) * (row.scale ?? 1);
+      }
+      if(row.loss && (!row.loss.side || row.loss.side === name) && i / row.fps >= (row.loss.after ?? 0))
+        for(const j of row.loss.all ? Object.keys(f[name]) : row.loss.joints){
+          if(row.loss.mode === 'missing') delete f[name][j];
+          else if(row.loss.mode === 'outside') f[name][j].x = 1.05;
+          else if(row.loss.mode === 'low') f[name][j].c = .1;
+          else assert.fail('Unknown loss mode');
+        }
     }
-    r = ev.evaluate({left:side,right:structuredClone(side),cam:'left',conf:.95,aspect:1,
+    r = ev.evaluate({...f,cam:row.alternatingCam && i % 2 ? 'right' : 'left',conf:.95,aspect:1,
       sideness:row.movement === 'side-plank' ? 0 : 90}, 1 / row.fps, (i + 1) / row.fps);
     assert.equal(r.evidence.schema, 'movement-evidence/1');
     if(row.unscored) assert.equal(r.score, null, `frame ${i} must remain unscored`);
@@ -32,4 +40,5 @@ for(const row of suite.cases) test(`shared Swift/browser evidence: ${row.id}`, (
   assert.ok(Math.abs(ev.hold - row.held) < 1e-8);
   assert.equal(r.evidence.movement.eligible, row.eligible);
   if(row.form) assert.equal(r.evidence.form.status, row.form);
+  if(row.selected) assert.equal(r.evidence.camera.selected, row.selected);
 });

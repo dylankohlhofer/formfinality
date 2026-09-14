@@ -53,6 +53,13 @@ export function exerciseInputs(poses) {
     resolve(key, t = 0) {
       const [, id, mode] = key.split(':');
       if (!definitions[id]) throw new Error(`Unknown exercise input ${key}`);
+      if(['one-side-rest','one-side-cycle','both-hidden-cycle'].includes(mode)) {
+        if(id !== 'push-up') throw new Error('Clothing-side inputs are authored for Push-Up');
+        const f = frame(id, mode.endsWith('cycle') ? cycle(t) : 0);
+        f.left.wrist.c = .1;
+        if(mode === 'both-hidden-cycle') f.right.wrist.c = .1;
+        return f;
+      }
       // Historical screen recordings suggested counting during repositioning.
       // These are independent synthetic inputs, NOT landmarks recovered from video.
       if (mode === 'clipped-cycle') return frame(id, cycle(t), { clipped: true });

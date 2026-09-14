@@ -3,9 +3,10 @@
 **Every figure below was computed against the shipped build.** Where any other document
 disagrees, this file wins.
 
-**Last updated:** 8 September 2026 — four-exercise partial-visibility pack on the existing test infrastructure. The
-product verdict still rests on beginner test 01 (Max, 26 July); no second beginner session
-has happened yet.
+**Last updated:** 14 September 2026 — body/clothing robustness and explicit
+unassessed follow-along, using the existing test infrastructure. The 9 September
+recording adds real-room evidence but is not a completed independent beginner
+protocol; that release gate remains open.
 
 **5 September 2026 — automated test lab added.** `testing/README.md` describes a
 shared engine/browser/recorded-video test → reproduce → report loop. The original
@@ -63,6 +64,40 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Body/clothing tolerance:** keep a complete observed movement side through
+confidence flicker; change sides only for missing required observations, never for
+a better form score. A real source change still breaks unfinished reps. The explicit
+**Follow along (unassessed)** option keeps current-set teaching and a manual finish,
+without invented camera reps/hold time/form. Next movement returns to assessed setup.
+Low camera scores no longer automatically shorten hold targets. No model, range,
+tempo, confidence or weight/BMI-based thresholds changed. Browser evaluator behavior
+was mirrored in Swift. See [the implementation and validation plan](sessions/body-clothing-tolerance-2026-09-14.md).
+
+New coverage uses the same default runner/watch/CI: **235 body-tolerance checks**,
+**27 shared browser/Swift evidence cases** (ten appended, original 17 unchanged),
+two engine/browser timelines, four shell cases and a fourteenth real-clip audio
+case. These prove software invariants, not accuracy across larger bodies or clothing.
+Both-side missing required geometry, legacy image-relative line quality metrics,
+and calibration's interrupted-bout aggregation remain explicit limitations.
+
+**Latest verification (14 September):** `npm test` exits **0** at
+`test-results/2026-09-14T04-42-17-567Z-17587/`: **65 infrastructure tests**, all nine
+regression suites and four original harnesses; **55 engine cases / 1,307 checks,
+110 browser cases / 942 checks, 65 shell cases / 673 checks, and 14 audio cases /
+270 checks**. Zero failures or speech review candidates. Twelve missing-video
+entries, two native-TTS waveform gaps and twelve case-level recognition/real-person
+warnings remain (repeated across execution modes); these are not accuracy passes.
+Swift passes **25/25**, including the 27 shared evidence rows. The separate existing
+blank-video smoke passes **14/14**, with 90 real CPU inference frames, not a human
+recognition trial. See the implementation note for its artifact directory.
+
+This was a working-tree run based on `7edc6ac`, not a claim that the old commit
+contains these changes. The report's app and test-source hashes match the final
+code; only documentation changed after the run. Tested HTML SHA-256:
+`698b5821364326a64d1e123c996869764fdf28d94b0bb0ae950e3d155baae579`.
+The earlier full run at `test-results/2026-09-14T04-30-11-959Z-15344/` also passed;
+the final run additionally includes the recorded-video interval accounting regression.
+
 **Four-exercise test pack, existing infrastructure:** `npm run test:partial` selects
 Squat, Crunch, Leg Raise and Plank through the same engine/browser/video runner,
 reports, screenshots/traces and failure reproduction. Four new timelines are also
@@ -75,10 +110,11 @@ The focused run passes **4 engine cases / 77 checks** and **8 desktop/narrow bro
 cases / 180 checks**. Requiring missing video correctly exits 2. Leg Raise/Plank
 ankle-loss safety checks remain labelled recognition gaps, not a claimed fix.
 Screenshot review additionally flagged a narrow-screen warning/control overlap;
-it is a manual review candidate, not a passing layout test or a fixed app defect.
+the 14 September layout pass fixes it with dedicated phone geometry and interaction
+checks. Physical-device and enlarged-text layout validation remain open.
 See `testing/findings/partial-view-mobile-warning.md` for the retained evidence.
 
-**Latest verification:** `npm test` exits **0** at
+**Previous verification (8 September):** `npm test` exits **0** at
 `test-results/2026-09-08T08-11-50-039Z-80412/`: 64 infrastructure tests, all eight
 regression suites (including the 30 new pack tests), the original four harnesses,
 **53 engine cases / 1,291 checks, 106 browser cases / 894 checks, 61 shell cases /
@@ -86,7 +122,7 @@ regression suites (including the 30 new pack tests), the original four harnesses
 TTS waveform gaps and six case-level recognition warnings (two unresolved problems
 repeated across engine/desktop/narrow modes) remain. Zero speech review candidates
 does not certify coaching quality; the separate manually reviewed layout candidate
-above remains open. Swift is unchanged and was not rerun for this infrastructure-only
+above was still open at that run. Swift was unchanged and not rerun for that infrastructure-only
 change. See `sessions/partial-visibility-pack-2026-09-08.md` for artifact identity.
 
 **Latest user recording — software fixes are not release validation.** All five
@@ -99,8 +135,9 @@ cycles, while completed work remains. See `movement-evidence-contract.md` and
 
 The Leg Raise ankle driver and required Plank geometry are still necessary under
 the current declarations. No alternative thigh driver or hidden-joint reconstruction
-has been validated. Native speech startup and side-plank target shortening also
-remain open; synthetic green checks do not disprove the recording's issues.
+has been validated. Native speech startup and calibration continuity still need
+validation/work; automatic target shortening was removed on 14 September. Synthetic
+green checks do not disprove the recording's recognition issues.
 
 **Native experiment:** the final read-only check finds an iPhone 16 Plus **available
 (paired)**, first-launch setup passes, and the installed CoreDevice version matches
@@ -260,7 +297,7 @@ before the Swift port is justified.
 | | |
 |---|---|
 | **Build** | `form-coach-v4.11.html` — single file, 267,922 bytes (262 KiB); existing external runtime, model and font assets remain; not yet an offline package |
-| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 25/25 including 17 additional shared evidence cases |
+| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 25/25 including 27 additional shared evidence cases |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |
 | **Swift package** | 13 source/manifest files (10 library, two test files and Package.swift); root conformance and movement-evidence fixtures current |

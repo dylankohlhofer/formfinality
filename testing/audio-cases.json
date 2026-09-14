@@ -1,5 +1,12 @@
 [
   {
+    "id":"follow-along-cancels-correction", "kind":"session", "tier":"building", "persona":"steady",
+    "description":"A user selects unassessed follow-along during a measured hip correction. Old correction stops, teaching plays, absent observations create no further corrections.",
+    "oracle":"Actual recorded sag audio must start before the choice and be silent within 250ms after it. Only new teaching may start in follow-along; no form, praise or readiness speech. This is synthetic playback, not human exercise/clothing validation.",
+    "steps":[{"ex":"plank","t":120}],
+    "segments":[{"pose":"good","seconds":18},{"pose":"sag","seconds":0.8},{"action":"follow-along"},{"pose":"lost","seconds":8},{"action":"stop"},{"pose":"none","seconds":2}]
+  },
+  {
     "id": "plank-feedback", "kind": "session", "tier": "building", "persona": "steady",
     "description": "Actual coach playback during a stable plank, sustained synthetic hip sag, recovery and tracking loss.",
     "oracle": "The authored hip translation is a controlled fault, not human ground truth. Speech must belong to the current phase, fit its TTL and never overlap another clip. Repetition and unsupported praise are review candidates.",

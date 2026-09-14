@@ -30,9 +30,14 @@ the isotropic authored demos are not camera observations and must not be clipped
 this policy. Confidence is evidence of visibility, not a calibrated probability
 that an exercise was performed correctly.
 
-Camera-side metrics require their named side. Bilateral metrics aggregate complete,
-observed sides only; a hidden side contributes neither a good nor a bad value. The
-result records contributing sides. It makes no claim about an unseen opposite limb.
+Camera-side metrics use a single, set-local observed side. Keep that side while all
+required camera metrics are readable, even if shoulder/hip confidence changes the
+adapter's preference. Otherwise select the opposite side only if it supplies every
+required camera metric. Choose on availability, never on which side scores better;
+do not assemble a movement from complementary incomplete sides. `evidence.camera`
+records requested/selected sides, and tint names its actual side. `arm()` clears the
+preference. Bilateral metrics retain their declared complete-side aggregation. A
+hidden side contributes neither a good nor a bad value; no opposite-limb claim is made.
 
 Missing targets lose their smoothing/tint history. Changing the form-score pool
 must not carry a hidden target's old contribution into the new score. A rep driver
@@ -66,3 +71,19 @@ body-line evidence is not automatically a measured hold.
 
 Synthetic geometry tests establish these software rules, not real-person recognition
 accuracy. Consented camera input and a physical-phone session remain necessary.
+
+## User-chosen unassessed completion (14 September)
+
+`SessionCore.followAlong()` is separate from evaluator eligibility and the authored
+`kind:"guided"` movements. It makes no pose/position/range/tempo judgement at all.
+The current set has an elapsed timer and explicit `finishAlong()`; it never finishes
+automatically at a nominal hold/rep target. `score:null, followAlong:true` identifies
+the phase. `achieved` and session totals retain only observations made before the
+choice, if any; `elapsed` is separate and never added to hold time. Prior frame scores
+remain accumulated exactly once. No phase insight is inferred from an unassessed set.
+Skip remains skip, and the next movement returns to assessed setup. Calibration does
+not offer this option, since unobserved exercise must not determine a skill tier.
+
+A low camera score no longer shortens a planned hold automatically. Measured gates
+still pause its counted hold, and the user retains easier/Skip/Stop choices. See
+[body/clothing implementation](sessions/body-clothing-tolerance-2026-09-14.md).

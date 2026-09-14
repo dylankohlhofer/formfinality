@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import vm from 'node:vm';
 import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError } from './lib.mjs';
 import { findings, escape, hasScreenshot, suiteLog } from './report.mjs';
 import { serve } from './browser.mjs';
@@ -76,6 +77,33 @@ test('nonmonotonic recorded frames rejected', () => assert.throws(() => validate
 test('valid no-detection recording is replayable', () => assert.equal(validateRecording({ schema: 1, frames: [
   { t: 1 / 30, aspect: 16 / 9, landmarks: null }
 ] }, { steps: [{ do: 'frames', seconds: 1 / 30 }] }).length, 1));
+test('video replay retains explicit unassessed ticks without weakening assessed inference checks', async () => {
+  const bridge = await readFile(new URL('./bridge.js', import.meta.url), 'utf8');
+  const sandbox = vm.createContext({voiceChk:{}, openCamera(){}, applyFx(){}, window:{},
+    sess:{core:{following:false}}, calib:null, recMode:false,
+    video:{duration:10,currentTime:0}, canvas:{width:640,height:360}, lastT:0,lastVideoTime:-1});
+  vm.runInContext(bridge, sandbox);
+  const tick = () => sandbox.window.__testLab.videoFrame(0, 1 / 30);
+  const infer = 'testLandmarks.push({t:testNow,aspect:canvas.width/canvas.height,landmarks:null});';
+  vm.runInContext(`function loopBody(){ ${infer} }`, sandbox);
+  await tick();
+  sandbox.sess.core.following = true;
+  await assert.rejects(tick(), /Inference ran during unassessed/);
+  vm.runInContext('loopBody = () => {};', sandbox);
+  await tick();
+  const saved = sandbox.window.__testLab.landmarks();
+  assert.equal(saved.at(-1).inference, 'disabled-unassessed');
+  assert.equal(saved.at(-1).landmarks, null);
+  assert.equal(saved.at(-1).t, 3 / 30);
+  // Even zero detections require a real detector call outside follow-along.
+  sandbox.sess.core.following = false;
+  await assert.rejects(tick(), /Expected one real inference/);
+  vm.runInContext(`loopBody = () => { ${infer} ${infer} };`, sandbox);
+  await assert.rejects(tick(), /Expected one real inference/);
+  vm.runInContext(`loopBody = () => { ${infer} };`, sandbox);
+  await tick();
+  assert.equal(saved.at(-1).inference, undefined);
+});
 test('empty assertion coverage rejected', () => assert.throws(() => validate({ ...base, steps: [base.steps[0]] }), /independent/));
 test('null interval rejected', () => assert.throws(() => validate({ ...base, steps: [base.steps[0], { do: 'check', label: 'bad', path: 'held', between: null }] }), /interval/));
 test('local server exposes only declared assets, not repository files', async () => {

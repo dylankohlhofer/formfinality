@@ -1,0 +1,25 @@
+{
+  "schema":1,
+  "id":"clothing-side-recovery",
+  "description":"Complete visible wrist chain on the other side keeps Push-Up usable without inventing hidden cycles.",
+  "oracle":"Three visible complete cycles on the right count despite a low-confidence left wrist. Both wrists unavailable produces no additional credit. Recovery requires a fresh whole cycle. Synthetic visibility is not a clothing model benchmark.",
+  "coverageGaps":["No consented clean-camera clothing/body-size clip accompanies this synthetic case; model accuracy remains unvalidated."],
+  "tier":"building",
+  "plan":"lab-clothing-side",
+  "planSpec":{"id":"lab-clothing-side","name":"Visible-side contract","tiers":["building"],"disc":"TEST","steps":[{"ex":"push-up","t":100}]},
+  "steps":[
+    {"do":"start","core":"session"},
+    {"do":"frames","pose":"exercise:push-up:one-side-rest","seconds":3},
+    {"do":"check","label":"Observed alternate side can arm","path":"state","equals":"active"},
+    {"do":"frames","pose":"exercise:push-up:one-side-cycle","seconds":12},
+    {"do":"check","label":"Three observed cycles count","path":"reps","equals":3},
+    {"do":"check","label":"Source is recorded explicitly","path":"observation.evidence.camera.selected","equals":"right"},
+    {"do":"ui","label":"Visible counter uses the actual reps","selector":"#big","text":"3/100"},
+    {"do":"frames","pose":"exercise:push-up:both-hidden-cycle","seconds":8},
+    {"do":"check","label":"Neither wrist observed: no invented reps","path":"reps","equals":3},
+    {"do":"frames","pose":"exercise:push-up:one-side-rest","seconds":2},
+    {"do":"frames","pose":"exercise:push-up:one-side-cycle","seconds":4},
+    {"do":"check","label":"Fresh cycle after recovery counts once","path":"reps","equals":4},
+    {"do":"finishBySkipping"}
+  ]
+}

@@ -394,13 +394,14 @@ test('audit bilateral: two incomplete sides cannot be stitched into a complete t
   assert.equal(reading(r, 'kneesBent'), undefined);
 });
 
-test('audit bilateral: camera metrics cannot silently borrow the opposite complete side', () => {
+test('audit bilateral: complete alternate camera side is selected with explicit provenance', () => {
   const f = input.frame('push-up');
   delete f.left.wrist;
   const r = evaluator('push-up').feed(1 / 30, f)[0];
-  missingEvidence(r, 'movement', 'elbowAngle', 'tracking');
-  assert.equal(r.evidence.movement.eligible, false);
-  assert.equal(r.repPaused, true);
+  assert.deepEqual(r.evidence.camera, {requested:'left', selected:'right'});
+  assert.equal(r.evidence.movement.source, 'right');
+  assert.equal(r.evidence.movement.eligible, true);
+  assert.equal(r.rep, null, 'Changing the observed side is not a repetition');
 });
 
 for (const id of ['crunch', 'push-up']) {
@@ -410,7 +411,13 @@ for (const id of ['crunch', 'push-up']) {
     run.feed(2, input.frame(id, 1));
     assert.equal(run.ev.rep.display(), 1);
     assert.equal(run.ev.rep.state, 'up');
-    const other = phase => ({ ...input.frame(id, phase), cam: 'right' });
+    // A confidence-only camera preference no longer changes the measured side.
+    // Make the old driver genuinely unavailable to exercise a real source switch.
+    const other = phase => {
+      const f = {...input.frame(id, phase), cam:'right'};
+      delete f.left[id === 'crunch' ? 'knee' : 'wrist'];
+      return f;
+    };
     const changed = run.feed(1 / 30, other(1))[0];
     assert.equal(changed.evidence.movement.source, 'right');
     assert.equal(changed.rep, null);

@@ -236,7 +236,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,.ctl:focus-within{
 .dlabel{ font-size:8px; color:var(--bone-3); text-align:center; margin-top:8px }
 
 /* the cue owns the bottom-centre; the setup bar sits one shelf above it */
-#setupBar{ display:none; left:50%; transform:translateX(-50%); bottom:calc(var(--pad) + 86px); gap:8px }
+#setupBar{ display:none; left:50%; transform:translateX(-50%); bottom:calc(var(--pad) + 86px); gap:8px;
+  flex-wrap:wrap; justify-content:center; width:max-content; max-width:calc(100% - 24px) }
 #setupBar.on{ display:flex }
 #setupBar .ctl{ background:rgba(12,13,12,.84); backdrop-filter:blur(12px) }
 
@@ -429,13 +430,14 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
   #demo.on{ display:flex }
   #demoCanvas{ width:min(92vw,520px) }
   #setupBar{ bottom:calc(env(safe-area-inset-bottom) + 78px); z-index:22 }
+  #cue{ top:130px; bottom:auto; width:calc(100% - 24px); box-sizing:border-box }
   #regress{ top:calc(env(safe-area-inset-top) + 112px) }
 }
 
 /* PORTRAIT — the camera letterboxes, so the black bar below it is free real
    estate. Put the readout there rather than over the body. */
 @media(max-width:900px) and (orientation:portrait){
-  #hud{ left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 64px);
+  #hud{ left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 188px);
         flex-direction:row; align-items:center; justify-content:center; gap:18px }
   #dial{ width:min(34vw,190px) }
   #scoreCol{ width:min(38vw,190px) }
@@ -453,9 +455,9 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
   #bigLabel{ font-size:7px }
   #scoreCol{ width:min(30vh,132px) }
   /* the dial owns the bottom-left in landscape, so the cue moves out of its way */
-  #cue{ bottom:calc(env(safe-area-inset-bottom) + 8px); padding:9px 16px; font-size:15px;
+  #cue{ top:76px; bottom:auto; padding:9px 16px; font-size:15px;
         left:auto; right:calc(env(safe-area-inset-right) + 12px); transform:none; max-width:54% }
-  #tip{ font-size:12px; padding:8px 12px }
+  #tip{ left:calc(env(safe-area-inset-left) + 160px); font-size:12px; padding:8px 12px }
   .stats b{ font-size:20px }
   #msg h2{ font-size:18px }
 }
@@ -471,6 +473,17 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
 @media(hover:none){
   body.live header{ opacity:.3 }
   body.live.chrome header{ opacity:1 }
+}
+
+/* Unassessed mode has no skeleton to fit around. Reserve separate shelves for
+   its timer, teaching text and controls, including the narrow phone layout. */
+body.following #hud{ bottom:calc(env(safe-area-inset-bottom) + 154px) }
+body.following #dial{ width:132px; height:132px; flex:none }
+body.following #cue{ top:130px; bottom:auto; width:calc(100% - 24px); box-sizing:border-box }
+body.following #tip{ opacity:1 }
+body.following #setupBar .ctl{ min-height:44px }
+@media(max-height:560px) and (orientation:landscape){
+  body.following #cue{ top:76px }
 }
 
 @media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
@@ -552,6 +565,8 @@ body.live header:has(#diagPanel[open]),body.live header:has(#diagNotice:not([hid
   <div id="setupBar">
     <button class="ctl" id="showBtn">&#9654; Show me how</button>
     <label class="ctl"><input type="checkbox" id="ghostChk"> Ghost</label>
+    <button class="ctl" id="followAlongBtn" hidden>Follow along (unassessed)</button>
+    <button class="ctl" id="finishAlongBtn" hidden>Finish this set</button>
   </div>
   <div id="msg" hidden><div class="inner" id="msgInner"></div></div>
 </div>
@@ -1470,6 +1485,7 @@ class Evaluator {
     this.sev = {};                 // per-target tint severity, hysteresis-latched
     this.movementNeed = new Set(movementTargets(mv).flatMap(t => metricJoints(t.m)));
     this.scorePool = null; this.driverSource = null; this.targetSources = {};
+    this.cameraSide = null;
     this.armedAt = null;
     this.rep = mv.reps ? new Rep(mv.reps) : null;
   }
@@ -1499,10 +1515,29 @@ class Evaluator {
     this.ema = {}; this.sev = {}; this.targetSources = {}; this.scorePool = "";
   }
 
+  observationFrame(frame){
+    // Choose a WHOLE side from required movement observations, never from form
+    // scores or a guess at someone's body type. Shoulder/hip confidence alone
+    // can pick the side whose wrist/knee is hidden by clothing or the other limb.
+    // Keep a usable source through confidence flicker. If it becomes unreadable,
+    // only a complete alternative can replace it; never stitch two half-limbs.
+    const required = movementTargets(this.mv).filter(t => (t.m.agg || "camera") === "camera");
+    const usable = side => required.length > 0 && required.every(t =>
+      targetObservation(t, {...frame, cam:side}).sides.length > 0);
+    const preferred = this.cameraSide || frame.cam;
+    const other = preferred === "left" ? "right" : "left";
+    const selected = usable(preferred) ? preferred : usable(other) ? other : preferred;
+    this.cameraSide = selected;
+    return {...frame, cam:selected};
+  }
+
   evaluate(frame, dt, now){
     const out = { readings:[], cue:null, inPose:false, inPosition:false, blocking:[],
                   score:null, rep:null, reps:this.rep ? this.rep.display() : 0,
                   ok:true, regress:false, suppressed:[] };
+
+    const requestedSide = frame.cam;
+    frame = this.observationFrame(frame);
 
     const observations = new Map(this.mv.targets.map(t => {
       const o = targetObservation(t, frame);
@@ -1517,6 +1552,7 @@ class Evaluator {
     const formTargets = this.mv.kind === "guided" ? [] : this.mv.targets.filter(t =>
       (!this.rep || !t.pos && t.id !== this.mv.reps.driver) && ((t.w ?? 1) > 0 || t.gate));
     out.evidence = {schema:"movement-evidence/1",
+      camera:{requested:requestedSide, selected:frame.cam},
       movement:{status:missing.length ? "unavailable" : "observed", eligible:false, missing},
       form:{status:"unavailable", observed:[], missing:[]}};
     const form = out.evidence.form;
@@ -1782,7 +1818,7 @@ class Evaluator {
         else segs.push({ a, b, sev });
       }
     }
-    out.tint = { segs, focus: worst ? tintSegs(worst.t.m).focus : null };
+    out.tint = { segs, focus: worst ? tintSegs(worst.t.m).focus : null, side:frame.cam };
 
     if(offenders.length){
       const key = offenders[0].cue;
@@ -1818,6 +1854,7 @@ class Evaluator {
                                       it, so the first frames of every set were judged on
                                       the posture someone had while getting into position. */
     this.scorePool = null; this.driverSource = null; this.targetSources = {};
+    this.cameraSide = null;
     if(this.rep){
       this.rep.reps = 0; this.rep.state = "down"; this.rep.last = null;
       this.rep.base = null; this.rep.primed = false; this.rep.pMax = 0;
@@ -1994,7 +2031,7 @@ function phaseInsight(o){
 function sessionInsights(out){
   const res = [];
   for(const o of out){
-    if(o.kind === "guided") continue;
+    if(o.kind === "guided" || o.followAlong) continue;
     const i = phaseInsight(o);
     if(i) res.push({ movement:o.name, ...i });
   }
@@ -2042,6 +2079,7 @@ class SessionCore {
     this.out = []; this.bestHold = 0; this.reps = 0;
     this.scoreSum = 0; this.scoreN = 0; this.corr = {};
     this.done = false;
+    this.following = false; this.followElapsed = 0;
     this.lastSaid = {}; this._now = 0;
   }
 
@@ -2070,6 +2108,31 @@ class SessionCore {
   retier(tierId){ return this.cooled(this.retierRaw(tierId)); }
   swapToRegression(){ return this.cooled(this.swapToRegressionRaw()); }
   skip(reason){ return this.cooled(this.skipRaw(reason)); }
+  followAlong(){ return this.cooled(this.followAlongRaw()); }
+  finishAlong(){
+    const E = [];
+    if(!this.done && this.following && this.mv && this.steps[this.i]?.rest == null) this.endPhase(E);
+    return this.cooled(E);
+  }
+
+  followAlongRaw(){
+    if(this.done || this.following || !this.mv || this.steps[this.i]?.rest != null) return [];
+    this.following = true; this.followElapsed = 0;
+    this.state = "follow-along"; this.ev.interrupt(); this.pendingFix = null;
+    this.readinessActive = false;
+    const E = [{t:"reset"}, {t:"clearBanner"},
+      {t:"say", key:`teach.${this.mvId}`, vars:{t:this.target}, pri:3, style:"teach"},
+      {t:"scoreCol", on:false},
+      {t:"telText", s:"Follow along — no camera counting or form assessment"},
+      {t:"bigLabel", s:"TIMER · UNASSESSED"}, {t:"bigTime", secs:0},
+      {t:"setupBar", on:true}, {t:"followControls", on:true, active:true},
+      {t:"tip", html:"Finish this set when ready. Elapsed time is not a measured hold."},
+      {t:"banner", text:"Follow along — no counting or form checks", style:"teach"},
+      {t:"log", force:true, row:{phase:"set", movement:this.mvId, state:"follow-along",
+        event:"follow_along_start", reps:"", form_score:"", in_position:"", in_pose:"", targets:{}}}];
+    this.hideRegression(E);
+    return E;
+  }
 
   startRaw(){
     const E = [];
@@ -2081,6 +2144,8 @@ class SessionCore {
 
   next(E){
     this.i++;
+    this.following = false; this.followElapsed = 0;
+    E.push({t:"followControls", on:false, active:false});
     this.marks = new Set(); this.degraded = false; this.pendingFix = null;
     this.lastSaid = {};   /* a new movement is a new context: "get into position"
                              shouldn't be muted because the last one just said it */
@@ -2094,6 +2159,7 @@ class SessionCore {
 
     if(st.rest != null){
       this.mv = null; this.ev = null;
+      E.push({t:"setupBar", on:false});
       this.restLeft = scaledCore(st.rest, true, this.tierId);
       E.push({t:"bigLabel", s:"REST"});
       E.push({t:"bigTime", secs:this.restLeft});
@@ -2107,6 +2173,8 @@ class SessionCore {
     this.mvId = res.id; this.mv = res.mv;
     this.ev = new Evaluator(this.mv, this.tierId);
     this.target = scaledCore(st.t, false, this.tierId);
+    E.push({t:"followControls", on:true, active:false});
+    E.push({t:"setupBar", on:true});
 
     this.state = "setup"; this.armT = 0;
     E.push({t:"bigLabel", s:"GET SET"});
@@ -2146,7 +2214,7 @@ class SessionCore {
     const grace = this.state === "setup" ? Math.min(this.setupGraceLeft, elapsed) : 0;
     this.setupGraceLeft -= grace;
     const visibleGate = x => {
-      const sides = (x.t.m.agg || "camera") === "camera" ? [frame.cam] : ["left","right"];
+      const sides = (x.t.m.agg || "camera") === "camera" ? [r.evidence?.camera?.selected || frame.cam] : ["left","right"];
       return sides.every(side => [...neededJoints({targets:[x.t]})].every(j => {
         const p = frame[side]?.[j];
         return p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.c >= .5 &&
@@ -2232,6 +2300,13 @@ class SessionCore {
       return E;
     }
 
+    if(this.following){
+      // Elapsed time is explicitly NOT a measured hold. No inferred reps, form,
+      // ability verdict, or auto-completion; the user ends this set themselves.
+      if(Number.isFinite(dt) && dt > 0 && dt <= .25) this.followElapsed += dt;
+      E.push({t:"bigTime", secs:this.followElapsed}, {t:"scoreCol", on:false});
+      return E;
+    }
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
     E.push(coachingFacts(r, this.mv));
     this.updateRegression(r, frame, dt, E);
@@ -2353,10 +2428,10 @@ class SessionCore {
         if(!this.marks.has("cd"+n) && h >= t - n - 0.4){
           this.marks.add("cd"+n); E.push({t:"num", n, pri:3});
         }
-      if(!this.degraded && r.score < 55 && h > 6 && h < t-6){
-        this.degraded = true; this.target = Math.round(h + 5);
-        E.push({t:"say", key:"degrade", pri:3});
-      }
+      // A camera score is not an effort/fatigue measurement. In particular,
+      // clothing/occlusion or a changed form pool must not silently shorten the
+      // workout. Keep the chosen target; observed gates still pause the hold,
+      // and the user can choose an easier movement, Skip or Stop.
       /* endPhase → next() may enter a REST step (mv = null). Legacy fell through
          into the reps check below and threw ONCE PER COMPLETED HOLD — invisible
          live only because the rAF handle was already scheduled. Bug ledger #14,
@@ -2409,12 +2484,13 @@ class SessionCore {
     if(this.ev) this.ev.tier = tierId;
     const st = this.steps[this.i];
     if(st?.ex && this.mv) this.target = scaledCore(st.t, false, tierId);
-    E.push({t:"scoreCol", on:!!this.mv && hasFormScore(this.mv)});
+    E.push({t:"scoreCol", on:!this.following && !!this.mv && hasFormScore(this.mv)});
     return E;
   }
 
   swapToRegressionRaw(){
     const E = [];
+    if(this.following) return E;
     const id = this.mv.regression;
     if(!id || !M[id]) return E;
     this.mvId = id; this.mv = M[id];
@@ -2471,6 +2547,7 @@ class SessionCore {
       const setLabel = st.setTotal > 1 ? ` (set ${st.setNo}/${st.setTotal})` : "";
       this.out.push({ id:this.mvId, name:this.mv.name + setLabel, kind:this.mv.kind,
                       target:this.target, achieved, score:null, skipped:true,
+                      followAlong:this.following, elapsed:this.followElapsed,
                       reason: reason || null, early:this.degraded,
                       log: ev.log.slice(), trace: ev.scoreTrace.slice(),
                       repMs: ev.rep ? ev.rep.durations.slice() : [] });
@@ -2493,13 +2570,17 @@ class SessionCore {
       const st = this.steps[this.i];
       const setLabel = st && st.setTotal > 1 ? ` (set ${st.setNo}/${st.setTotal})` : "";
       this.out.push({ id:this.mvId, name:this.mv.name + setLabel, kind:this.mv.kind,
-                      target:this.target, achieved, score:ev.avg(), early:this.degraded,
+                      target:this.target, achieved, score:this.following ? null : ev.avg(), early:this.degraded,
+                      followAlong:this.following, elapsed:this.followElapsed,
                       log: ev.log.slice(), trace: ev.scoreTrace.slice(),
                       repMs: ev.rep ? ev.rep.durations.slice() : [] });
       if(this.mv.kind === "hold" || this.mv.kind === "guided") this.bestHold = Math.max(this.bestHold, ev.hold);
       else this.reps += achieved;
       for(const [k,v] of Object.entries(ev.corrections)) this.corr[k] = (this.corr[k]||0) + v;
     }
+    if(this.following) E.push({t:"log", force:true, row:{phase:"set", movement:this.mvId,
+      state:"follow-along", event:"follow_along_finish", reps:"", form_score:"",
+      in_position:"", in_pose:"", targets:{}, elapsed_seconds:+this.followElapsed.toFixed(1)}});
     E.push({t:"say", key:"done", pri:3});
     this.next(E);
   }
@@ -2523,9 +2604,12 @@ class SessionCore {
        we watched nothing, so we cannot praise it. Unreachable until something has
        actually been skipped; with no skips both lines below are the originals. */
     const skipped = this.out.filter(o => o.skipped);
+    const followed = this.out.filter(o => o.followAlong && !o.skipped);
     const names = skipped.map(o => o.name);
-    const nothingWrong = !lead && !skipped.length && avg != null;
-    const headline = lead ? lead.text
+    const nothingWrong = !lead && !skipped.length && !followed.length && avg != null;
+    const headline = followed.length
+      ? `${followed.map(o => o.name).join(", ")} completed in follow-along mode — not camera-assessed. Totals and average include only camera-observed work, if any.${skipped.length ? " Skipped sets are listed below." : ""}`
+      : lead ? lead.text
       : !skipped.length && avg == null
         ? "Your completed movement is recorded. No form score was measured; range and tempo checks are not a full form assessment."
       : nothingWrong
@@ -3235,7 +3319,7 @@ function diagnosticFrame(stamp, frame, dt, now, effects){
     phase:stamp.phase, movement:stamp.movement, tier:stamp.tier, target:stamp.target,
     stateBefore:stamp.state, after:stamp.after,
     reps:r?.reps ?? stamp.ev?.rep?.display() ?? 0, held:stamp.ev?.hold ?? 0, score:r?.score ?? null,
-    blocked:r?.blocking || (frame === null ? ["tracking"] : []), suppressed:r?.suppressed || [],
+    blocked:r?.blocking || (frame === null && stamp.state !== "follow-along" ? ["tracking"] : []), suppressed:r?.suppressed || [],
     evidence:r?.evidence || null,
     readings:(r?.readings || []).map(x => ({id:x.t.id, value:x.v, score:x.s, cue:x.cue})),
     counter:stamp.ev?.rep ? {state:stamp.ev.rep.state, primed:stamp.ev.rep.primed, base:stamp.ev.rep.base,
@@ -3849,7 +3933,8 @@ function applyFx(host, E){
       case "bigTime": {
         setBig(clock(e.secs));
         const tgt = host.core && (host.core.target ?? host.core.max);
-        if(ringMode === "REST"){ ringPeak = Math.max(ringPeak, e.secs);
+        if(ringMode === "TIMER · UNASSESSED") setRing(0, 1);
+        else if(ringMode === "REST"){ ringPeak = Math.max(ringPeak, e.secs);
           setRing(ringPeak ? e.secs/ringPeak : 0, 1); }        /* drains as it counts down */
         else setRing(tgt ? e.secs/tgt : 0, 1);
         break; }
@@ -3873,6 +3958,11 @@ function applyFx(host, E){
         telEl.innerHTML = clockTag() + `<span class="meta">resting · next: ${e.next}</span>`;
         break;
       case "setupBar": setupBar.classList.toggle("on", e.on); break;
+      case "followControls":
+        document.body.classList.toggle("following", !!e.on && !!e.active);
+        $("followAlongBtn").hidden = !e.on || e.active;
+        $("finishAlongBtn").hidden = !e.on || !e.active;
+        break;
       case "demoOff": demoBox.classList.remove("on"); demoOn = false;
                       document.body.classList.add("live"); break;
       case "regressShow": regTxt.textContent = e.text; regBox.classList.add("on"); break;
@@ -3923,6 +4013,11 @@ function renderFinish(p){
     if(o.skipped) return `
       <div class="prow skipped">
         <div class="pname">${o.name} <span class="tag skipped">skipped</span>${badge}</div>
+        <div class="pval">&mdash;</div>
+      </div>`;
+    if(o.followAlong) return `
+      <div class="prow skipped">
+        <div class="pname">${o.name} <span class="tag">follow along · unassessed</span></div>
         <div class="pval">&mdash;</div>
       </div>`;
     return `
@@ -4203,7 +4298,10 @@ async function initModel(){
 let camFacing = "user", wakeLock = null, cameraStage = "permission";
 /* Flip and Skip only mean anything with a live feed, and they appear and vanish
    together — one call, so neither can be left stranded on the home screen. */
-function showCamChrome(on){ flipBtn.hidden = !on; skipExBtn.hidden = !on; }
+function showCamChrome(on){
+  flipBtn.hidden = !on; skipExBtn.hidden = !on;
+  if(!on){ $("followAlongBtn").hidden = true; $("finishAlongBtn").hidden = true; document.body.classList.remove("following"); }
+}
 async function openCamera(){
   cameraStage = "permission";
   msgInner.innerHTML = "<h2>Requesting camera…</h2>";
@@ -4265,6 +4363,14 @@ function skipCurrent(){
   return true;
 }
 skipExBtn.onclick = () => skipCurrent();
+$("followAlongBtn").onclick = () => {
+  if(running && !calib && !recMode && sess && !sess.done) applyFx(sess, sess.core.followAlong());
+};
+$("finishAlongBtn").onclick = () => {
+  if(running && !calib && !recMode && sess && !sess.done && sess.core.following){
+    coach.reset(); applyFx(sess, sess.core.finishAlong());
+  }
+};
 
 /* `S` is the one that matters: rapid testing happens from two metres away on the
    floor, where reaching the header button is the slow part of the loop. It stays
@@ -4559,7 +4665,7 @@ function loopBody(t){
   lastT = t;
   const now = performance.now()/1000;
 
-  const res = landmarker.detectForVideo(video, performance.now());
+  const res = sess?.core.following && !calib && !recMode ? {landmarks:[]} : landmarker.detectForVideo(video, performance.now());
   const lms = res.landmarks && res.landmarks[0];
   /* Tracking lost: the evaluator early-returns before computing a tint AND the session
      stops emitting telemetry, so lastTint would keep its final value and repaint one
@@ -4584,7 +4690,7 @@ function loopBody(t){
     };
     const TINT = [null, {c:"#F0B429", w:7,  p:1400}, {c:"#E5484D", w:10, p:700}];
     for(const s of ["left","right"]){
-      const on = s === f.cam;
+      const on = s === (tint?.side || f.cam);
       for(const [a,b] of BONES){
         const pa = f[s][a], pb = f[s][b];
         if(!pa || !pb) continue;

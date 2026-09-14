@@ -44,7 +44,7 @@ export function validate(s) {
   if (s.schema !== 1 || !/^[a-z0-9-]+$/.test(s.id ?? '') || !s.oracle ||
       !['learning', 'building', 'strong'].includes(s.tier) || !s.plan || !s.steps?.length)
     throw new Error('Invalid scenario header');
-  const kinds = ['start', 'frames', 'check', 'skip', 'finishBySkipping', 'ui', 'focusGuard', 'demo', 'csv'];
+  const kinds = ['start', 'frames', 'check', 'skip', 'followAlong', 'finishAlong', 'finishBySkipping', 'ui', 'focusGuard', 'demo', 'csv'];
   if (s.planSpec && (s.planSpec.id !== s.plan || !s.planSpec.steps?.length || !s.planSpec.steps.every(x => typeof x.ex === 'string' && Number.isFinite(x.t))))
     throw new Error('Invalid test-only plan');
   if (s.coverageGaps !== undefined && (!Array.isArray(s.coverageGaps) ||
@@ -143,6 +143,8 @@ export function engineAdapter(engine, scenario, frameFor, recordedFrames) {
       }
     },
     async skip() { add(core.skip('user')); },
+    async followAlong() { add(core.followAlong()); },
+    async finishAlong() { add(core.finishAlong()); },
     async snapshot() { return snapshot(core, effects); }
   };
 }

@@ -164,6 +164,20 @@ the distinction between observed movement, missing form measurements and hidden 
 Historical screen recordings have now been reviewed, but are not
 clean camera inputs or recovered-landmark replay coverage; see the dated review
 in `docs/sessions/` and `testing/findings/active-rep-position-loss.md`.
+Body/clothing tolerance now selects one complete required-observation camera side
+and retains it through confidence flicker. Never select on the higher form score
+or stitch incomplete sides; actual driver changes still break unfinished reps.
+`evidence.camera` and tint identify the selected side. Reset `cameraSide` in `arm()`.
+The low-score automatic target-shortening rule is removed: score is not fatigue.
+`SessionCore.followAlong()` is a user-chosen, current-set escape hatch, not relaxed
+judging: elapsed time is not held time, Finish this set is manual, score is null,
+and no unobserved reps/form/ability claims enter totals or debrief. Previously watched
+frames count once. The next movement returns to camera assessment; calibration has
+no follow-along verdict. Keep the 235 body-tolerance checks, 27 shared evidence rows,
+two new action timelines, four follow-along shell cases and its real-clip audio
+cancellation case in the default loop.
+These test software policy, not body-size/clothing recognition accuracy; the model
+and movement thresholds remain unchanged. See the 14 September session note.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 
@@ -219,7 +233,7 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
 checks from the surviving vectors and exits 0. `swift test` passes 25/25, including the
-same root conformance JSON and 17 additional shared movement-evidence cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
+same root conformance JSON and 27 additional shared movement-evidence cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived
 invariants. `testing/` adds action-timeline engine/browser coverage, a 21-exercise

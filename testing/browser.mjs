@@ -103,6 +103,8 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
         if (via === 'button') await page.locator('#skipExBtn').click();
         else { await page.locator('body').click({ position: { x: 1, y: 1 } }); await page.keyboard.press('s'); }
       },
+      async followAlong() { await page.locator('#followAlongBtn').click(); },
+      async finishAlong() { await page.locator('#finishAlongBtn').click(); },
       async ui(step, index) {
         if (step.do === 'demo') {
           await page.locator('#showBtn').click();
@@ -162,7 +164,7 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
     if (recording) {
       const landmarks = await page.evaluate(() => window.__testLab.landmarks());
       await writeFile(resolve(dir, 'landmarks.json'), JSON.stringify({ schema: 1, frames: landmarks }));
-      result.checks.push({ label: 'Real inference ran for every requested video frame', actual: landmarks.length,
+      result.checks.push({ label: 'Every video tick retained real inference or an explicit unassessed interval', actual: landmarks.length,
         expected: Math.round(videoTime * 30), pass: landmarks.length === Math.round(videoTime * 30) });
     }
     result.checks.push({ label: 'No browser or console errors', actual: errors, expected: [], pass: errors.length === 0 });

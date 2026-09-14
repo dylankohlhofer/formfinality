@@ -25,6 +25,16 @@
     {"id":"plank-optional-form-loss-15fps", "movement":"plank", "fps":15, "loss":{"joints":["ear","elbow"],"mode":"outside"}, "reps":0, "held":12, "eligible":true, "form":"partial"},
     {"id":"plank-optional-form-loss-60fps", "movement":"plank", "fps":60, "loss":{"joints":["ear","elbow"],"mode":"low"}, "reps":0, "held":12, "eligible":true, "form":"partial"},
     {"id":"plank-no-required-ankle", "movement":"plank", "fps":30, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true},
-    {"id":"sideplank-no-shape-gate", "movement":"side-plank", "fps":30, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true}
+    {"id":"sideplank-no-shape-gate", "movement":"side-plank", "fps":30, "loss":{"joints":["ankle"],"mode":"missing"}, "reps":0, "held":0, "eligible":false, "unscored":true},
+    {"id":"clothing-pushup-visible-other-wrist-15fps", "movement":"push-up", "fps":15, "cycle":true, "loss":{"side":"left","joints":["wrist"],"mode":"low"}, "reps":3, "held":0, "eligible":true, "selected":"right"},
+    {"id":"clothing-pushup-visible-other-wrist-60fps", "movement":"push-up", "fps":60, "cycle":true, "loss":{"side":"left","joints":["wrist"],"mode":"low"}, "reps":3, "held":0, "eligible":true, "selected":"right"},
+    {"id":"clothing-crunch-visible-other-knee", "movement":"crunch", "fps":30, "cycle":true, "loss":{"side":"left","joints":["knee"],"mode":"missing"}, "reps":3, "held":0, "eligible":true, "selected":"right"},
+    {"id":"clothing-legraise-visible-other-ankle", "movement":"leg-raise", "fps":30, "cycle":true, "loss":{"side":"left","joints":["ankle"],"mode":"outside"}, "reps":3, "held":0, "eligible":true, "selected":"right"},
+    {"id":"clothing-plank-visible-other-ankle", "movement":"plank", "fps":30, "loss":{"side":"left","joints":["ankle"],"mode":"low"}, "reps":0, "held":12, "eligible":true, "selected":"right"},
+    {"id":"clothing-pushup-confidence-flicker", "movement":"push-up", "fps":30, "cycle":true, "alternatingCam":true, "reps":3, "held":0, "eligible":true, "selected":"left"},
+    {"id":"clothing-pushup-actual-source-switch-breaks-partial", "movement":"push-up", "fps":30, "cycle":true, "loss":{"side":"left","joints":["wrist"],"mode":"missing","after":6}, "reps":2, "held":0, "eligible":true, "selected":"right"},
+    {"id":"body-scale-mirrored-crunch", "movement":"crunch", "fps":30, "cycle":true, "scale":0.7, "mirror":true, "reps":3, "held":0, "eligible":true},
+    {"id":"body-scale-plank", "movement":"plank", "fps":30, "scale":1.1, "reps":0, "held":12, "eligible":true},
+    {"id":"clothing-stationary-legraise-no-credit", "movement":"leg-raise", "fps":30, "loss":{"side":"left","joints":["ankle"],"mode":"low"}, "reps":0, "held":0, "eligible":true, "selected":"right"}
   ]
 }

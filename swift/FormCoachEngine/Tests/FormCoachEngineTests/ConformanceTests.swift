@@ -105,11 +105,17 @@ final class ConformanceTests: XCTestCase {
         let eligible: Bool
         let form: String?
         let unscored: Bool?
+        let alternatingCam: Bool?
+        let scale: Double?
+        let mirror: Bool?
+        let selected: String?
     }
     struct MovementEvidenceLoss: Decodable {
         let all: Bool?
         let joints: [String]?
         let mode: String
+        let side: String?
+        let after: Double?
     }
 
     static var vec: Vectors!
@@ -189,7 +195,12 @@ final class ConformanceTests: XCTestCase {
                     side[name] = Joint(x: a[0] + (b[0] - a[0]) * mix,
                                        y: a[1] + (b[1] - a[1]) * mix, c: 0.95)
                 }
-                if let loss = row.loss {
+                side = side.mapValues { p in
+                    Joint(x: 0.5 + (p.x - 0.5) * (row.scale ?? 1) * (row.mirror == true ? -1 : 1),
+                          y: 0.5 + (p.y - 0.5) * (row.scale ?? 1), c: p.c)
+                }
+                let intact = side
+                if let loss = row.loss, Double(i) / fps >= (loss.after ?? 0) {
                     let joints = loss.all == true ? Array(side.keys) : try XCTUnwrap(loss.joints, row.id)
                     for name in joints {
                         switch loss.mode {
@@ -204,7 +215,9 @@ final class ConformanceTests: XCTestCase {
                         }
                     }
                 }
-                let frame = PoseFrame(left: side, right: side, cam: "left", conf: 0.95,
+                let frame = PoseFrame(left: row.loss?.side == "right" ? intact : side,
+                                      right: row.loss?.side == "left" ? intact : side,
+                                      cam: row.alternatingCam == true && i % 2 == 1 ? "right" : "left", conf: 0.95,
                                       aspect: 1, sideness: row.movement == "side-plank" ? 0 : 90)
                 result = ev.evaluate(frame, dt: 1 / fps, now: Double(i + 1) / fps)
                 XCTAssertEqual(result.evidence.schema, "movement-evidence/1", "\(row.id) frame \(i)")
@@ -214,6 +227,7 @@ final class ConformanceTests: XCTestCase {
             XCTAssertLessThan(abs(ev.hold - row.held), 1e-8, "\(row.id): observed hold time")
             XCTAssertEqual(result.evidence.movement.eligible, row.eligible, row.id)
             if let status = row.form { XCTAssertEqual(result.evidence.form.status, status, row.id) }
+            if let selected = row.selected { XCTAssertEqual(result.evidence.camera?.selected, selected, row.id) }
         }
     }
 

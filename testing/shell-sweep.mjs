@@ -5,6 +5,7 @@ import { exerciseInputs } from './exercise-inputs.mjs';
 import { privacyCases } from './privacy-cases.mjs';
 import { diagnosticCases } from './diagnostic-cases.mjs';
 import { coachingCases } from './coaching-cases.mjs';
+import { followAlongCases } from './follow-along-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -43,6 +44,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await privacyCases(runCase);
     await diagnosticCases(runCase);
     await coachingCases(runCase);
+    await followAlongCases(runCase);
     await runCase('calibration-demo', 'A beginner choosing Show me first sees a rendered calibration demonstration.', async (page, check) => {
       await page.locator('[data-know="no"]').click(); await page.locator('#calBtn').click();
       await page.locator('#demo').waitFor({ state: 'visible' });

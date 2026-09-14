@@ -31,7 +31,8 @@ window.__testLab = {
   realCamera() { openCamera = testOriginalCamera; },
   mockModel(fail = false) { initModel = async () => {
     if (fail) throw new Error('Deliberate model startup failure');
-    return { detectForVideo: () => ({ landmarks: [] }) };
+    window.__testModelCalls = 0;
+    return { detectForVideo: () => { window.__testModelCalls++; return { landmarks: [] }; } };
   }; },
   audioAccess() { return { Coach, AudioBank, TTL, coach }; },
   diagnosticAccess() { return { diagnostics, DiagnosticBuffer }; },
@@ -87,7 +88,18 @@ window.__testLab = {
     // frame timestamps. Do not replace buildFrame or the model output.
     lastVideoTime = -1;
     lastT = (testNow + 1) * 1000 - dt * 1000;
+    const before = testLandmarks.length;
+    const unassessed = !!sess?.core.following && !calib && !recMode;
     loopBody((testNow + 1) * 1000);
+    if (unassessed) {
+      if (testLandmarks.length !== before) throw new Error('Inference ran during unassessed video replay');
+      // Retain the tick for exact replay without claiming that a model looked
+      // for a person and found none. The timeline supplies the mode actions.
+      testLandmarks.push({ t: testNow, aspect: canvas.width / canvas.height,
+        landmarks: null, inference: 'disabled-unassessed' });
+    } else if (testLandmarks.length !== before + 1) {
+      throw new Error('Expected one real inference for an assessed video frame');
+    }
     return { at, width: canvas.width, height: canvas.height };
   }
 };

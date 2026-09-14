@@ -22,6 +22,8 @@ extension ConformanceTests {
         XCTAssertEqual(ev.rep?.state, "up")
         var otherTop = top, otherBottom = bottom
         otherTop.cam = "right"; otherBottom.cam = "right"
+        // A confidence preference alone now keeps the usable source stable.
+        otherTop.left.removeValue(forKey: "wrist"); otherBottom.left.removeValue(forKey: "wrist")
         let changed = feed(otherBottom, 1)
         XCTAssertEqual(changed.evidence.movement.source, "right")
         XCTAssertNil(changed.rep)

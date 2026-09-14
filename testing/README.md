@@ -57,6 +57,21 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Body/clothing robustness (14 September):** `body-tolerance.test.mjs` runs 235
+software checks in default test/watch/CI. Stable required-observation side selection
+and all-tier scale/mirror/follow-along checks are not real-body accuracy validation.
+Ten appended shared evidence cases bring browser/Swift parity to 27 rows; the
+original rows and root conformance vectors remain unchanged. The default
+`clothing-side-recovery` and `follow-along-unassessed` scenarios use the existing
+engine/browser runner. Four `follow-along-*` shell cases check actual controls,
+layout, honest completion in portrait/landscape/desktop and inference suspension
+through the real animation loop with synthetic video. A fourteenth wall-clock
+audio case captures correction cancellation and fresh teaching on mode change.
+Follow-along is explicit,
+unassessed, and per set: no automatic camera credit or calibration tier verdict.
+The low-score automatic hold-shortening rule was removed. See
+[the policy, deliberate test migrations and remaining gaps](../docs/sessions/body-clothing-tolerance-2026-09-14.md).
+
 **Four-exercise partial-visibility pack:** run `npm run test:partial` to select
 Squat, Crunch, Leg Raise and Plank in this same runner (engine, desktop/narrow
 browser, saved screenshots/traces, automatic failure reproduction and explicit
@@ -241,7 +256,10 @@ or a separate scenario; do not relabel arbitrary footage to fit an expected resu
 The initial First Steps fixture is synthetic, not ground truth about a recording.
 `--scenario-file` accepts another independently authored JSON case.
 
-Video runs save raw detections in `landmarks.json`. Replay without running the model:
+Video runs save raw detections in `landmarks.json`. Explicit follow-along intervals
+retain timed null rows marked `inference: "disabled-unassessed"`, not failed model
+detections; the scenario replays the same mode actions. Assessed frames still require
+exactly one real inference. Replay without running the model:
 
 ```sh
 node testing/run.mjs --build form-coach-v4.11.html --mode engine \
@@ -278,8 +296,9 @@ npm run test:audio:mutations
 
 This is part of `npm test`, the default watcher, and the existing GitHub Actions
 workflow once pushed. The watcher also reruns on voice MP3/manifest changes.
-Thirteen cases cover sustained plank feedback, hip-sag input and recovery,
-tracking loss, Skip/Stop during teaching, expired queue items, and real number
+Fourteen cases cover sustained plank feedback, hip-sag input and recovery,
+tracking loss, Skip/Stop during teaching, switching to unassessed follow-along,
+expired queue items, and real number
 clips for all nine persona/tier selections. The last nine are **playback samples**,
 not full exercise sessions. They give both numbers an explicit 3000ms deadline;
 they do not represent two simultaneous rep events with the app's shorter deadline.

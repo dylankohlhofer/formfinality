@@ -56,7 +56,9 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         for (const [i, segment] of segments.entries()) {
           if (segment.action) {
             await page.evaluate(action => window.__audioLab.mark(action), segment.action);
-            await page.locator(segment.action === 'skip' ? '#skipExBtn' : '#startBtn').click();
+            const selector = {skip:'#skipExBtn', stop:'#startBtn', 'follow-along':'#followAlongBtn'}[segment.action];
+            if(!selector) throw new Error(`Unknown audio action: ${segment.action}`);
+            await page.locator(selector).click();
           } else {
             await page.evaluate(async s => {
               window.__audioLab.observe(s.pose);
@@ -124,6 +126,21 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
           evidence.levels.some(l => oldClips.has(l.playId) && l.ms > boundary?.ms + 250 && l.rms > .001), false);
         check('Next exercise teaching actually plays after Skip', evidence.events.some(e =>
           e.type === 'clip-start' && e.ms > skip.ms && e.item?.key === 'teach.glute-bridge'), true);
+      }
+      if(scenario.id === 'follow-along-cancels-correction') {
+        const choice = evidence.events.find(e=>e.type==='action' && e.action==='follow-along');
+        const boundary = evidence.events.find(e=>e.ms>=choice?.ms && e.state.state==='follow-along');
+        const oldClips = new Set(evidence.events.filter(e=>e.type==='clip-start' && e.ms<choice?.ms).map(e=>e.playId));
+        const correctionClips = new Set(evidence.events.filter(e=>e.type==='clip-start' && e.item?.key==='sag' && e.ms<choice?.ms).map(e=>e.playId));
+        check('Choice enters follow-along',!!boundary,true);
+        check('Actual correction played before the choice',evidence.events.some(e=>e.type==='clip-start' && e.item?.key==='sag' && e.ms<choice?.ms),true);
+        check('Choice interrupts an audibly active correction, not an already silent clip',
+          evidence.levels.some(l=>correctionClips.has(l.playId) && l.ms>=choice?.ms-250 && l.ms<=choice?.ms && l.rms>.001),true);
+        check('Old clips are silent within 250ms of the mode change',
+          evidence.levels.some(l=>oldClips.has(l.playId) && l.ms>boundary?.ms+250 && l.rms>.001),false);
+        check('Teaching actually plays after choosing follow-along',evidence.events.some(e=>e.type==='clip-start' && e.ms>choice?.ms && e.item?.key==='teach.plank'),true);
+        check('Unassessed mode has no started correction, praise or readiness speech',evidence.events.some(e=>
+          e.type==='speech-start' && e.state.state==='follow-along' && e.item?.key!=='teach.plank'),false);
       }
       if (scenario.kind === 'queue') {
         check('An expired correction is actually discarded', evidence.events.some(e => e.type === 'dropped' && e.reason === 'expired' && e.item.key === 'sag'), true);

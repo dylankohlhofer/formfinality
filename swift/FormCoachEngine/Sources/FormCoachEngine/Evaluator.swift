@@ -30,11 +30,17 @@ public struct FormObservation: Codable, Equatable {
     public var missing: [MissingEvidence] = []
 }
 
+public struct CameraObservation: Codable, Equatable {
+    public let requested: String
+    public let selected: String
+}
+
 /// Camera evidence is separate from geometry, form quality and completed work.
 public struct MovementEvidence: Codable, Equatable {
     public var schema = "movement-evidence/1"
     public var movement = MovementObservation()
     public var form = FormObservation()
+    public var camera: CameraObservation? = nil
 }
 
 public struct FormResult {
@@ -69,7 +75,7 @@ public struct FormResult {
 /// Which limbs to colour. Derived from the metric spec itself — a spec already
 /// NAMES its joints, so no tint content is ever authored.
 public struct TintSeg: Equatable { public let a: String; public let b: String; public let sev: Int }
-public struct Tint { public var segs: [TintSeg] = []; public var focus: String? = nil }
+public struct Tint { public var segs: [TintSeg] = []; public var focus: String? = nil; public var side: String? = nil }
 
 public func tintSegs(_ m: MetricSpec) -> (segs: [(String, String)], focus: String?) {
     if m.k == "angle", let v = m.v, let a = m.a, let c = m.c { return ([(v, a), (v, c)], v) }
@@ -219,6 +225,7 @@ public final class Evaluator {
     var scorePool: String? = nil
     var driverSource: String? = nil
     var targetSources: [String: String] = [:]
+    var cameraSide: String? = nil
     public var rep: RepCounter?
 
     public init(_ mv: Movement, tier: TierSpec) {
@@ -255,9 +262,28 @@ public final class Evaluator {
         ema = [:]; sev = [:]; targetSources = [:]; scorePool = ""
     }
 
-    public func evaluate(_ frame: PoseFrame, dt: Double, now: Double) -> FormResult {
+    // Same required-observation policy as HTML. Keep a usable whole side; never
+    // choose on form score or stitch partial limbs. Preference is set-local, not
+    // a saved body profile. Actual driver changes still interrupt partial reps.
+    func observationFrame(_ frame: PoseFrame) -> PoseFrame {
+        let required = movementTargets(mv).filter { ($0.m.agg ?? "camera") == "camera" }
+        func usable(_ side: String) -> Bool {
+            var candidate = frame; candidate.cam = side
+            return !required.isEmpty && required.allSatisfy { !targetObservation($0, candidate).sides.isEmpty }
+        }
+        let preferred = cameraSide ?? frame.cam
+        let other = preferred == "left" ? "right" : "left"
+        let selected = usable(preferred) ? preferred : usable(other) ? other : preferred
+        cameraSide = selected
+        var observed = frame; observed.cam = selected
+        return observed
+    }
+
+    public func evaluate(_ input: PoseFrame, dt: Double, now: Double) -> FormResult {
+        let frame = observationFrame(input)
         var out = FormResult()
         out.reps = rep?.display() ?? 0
+        out.evidence.camera = CameraObservation(requested: input.cam, selected: frame.cam)
 
         var observations: [String: TargetObservation] = [:]
         for t in mv.targets {
@@ -558,7 +584,7 @@ public final class Evaluator {
                 }
             }
         }
-        out.tint = Tint(segs: segs, focus: worst.flatMap { tintSegs($0.target.m).focus })
+        out.tint = Tint(segs: segs, focus: worst.flatMap { tintSegs($0.target.m).focus }, side: frame.cam)
 
         if let first = offenders.first, let key = first.cue {
             let isNew = !raised.contains(key)
@@ -590,6 +616,7 @@ public final class Evaluator {
         sev = [:]
         ema = [:]
         scorePool = nil; driverSource = nil; targetSources = [:]
+        cameraSide = nil
         if let rc = rep {
             rc.reps = 0; rc.state = "down"; rc.last = nil
             rc.base = nil; rc.primed = false; rc.pMax = 0
