@@ -26,14 +26,20 @@ export async function interfaceCases(runCase){
     await capture('welcome');
   });
   await runCase('ui-plan-preview','Preview lists actual expanded sets, scaled rest and the second side, without opening a camera.',async(page,check,capture)=>{
-    await home(page,'strong'); await page.locator('[data-plan="core-strength"]').click();
-    check('11 Strong work sets, not the five authored groups',await page.locator('.planSteps li:not(.planRest)').count(),11);
-    check('10 expanded rest intervals',await page.locator('.planRest').count(),10);
-    check('Scaled first hold',await page.locator('.planSteps li').first().innerText(),'Plank\nSet 1 of 3 · 60 seconds · side view');
-    check('Second side is explicitly named',await page.locator('.planSteps').innerText().then(x=>x.includes('Other side')),true);
+    await home(page,'strong');
+    check('Unsupported Core Strength tier cannot be previewed',await page.locator('[data-plan="core-strength"]').count(),0);
+    await page.locator('[data-plan="full-body"]').click();
+    check('12 Strong work sets, not the four authored groups',await page.locator('.planSteps li:not(.planRest)').count(),12);
+    check('11 expanded rest intervals',await page.locator('.planRest').count(),11);
+    check('Scaled hold',await page.locator('.planSteps li').filter({hasText:'Plank'}).first().innerText(),'Plank\nSet 1 of 3 · 53 seconds · side view');
+    check('Scaled intra-set rest',await page.locator('.planRest').first().innerText(),'Rest · 11 seconds');
     check('Camera remains closed during preview',await page.locator('#skipExBtn').isVisible(),false);
     await capture('plan-preview'); await page.locator('#planBackBtn').click();
     check('Back preserves level',await page.locator('[data-tier="strong"]').getAttribute('aria-pressed'),'true');
+    await page.locator('[data-tier="building"]').click();await page.locator('[data-plan="core-strength"]').click();
+    check('Core Strength has eight supported Building sets',await page.locator('.planSteps li:not(.planRest)').count(),8);
+    check('Second side is still explicitly named',await page.locator('.planSteps').innerText().then(x=>x.includes('Other side')),true);
+    await capture('second-side-preview');
   });
   for(const [name,viewport] of [['small',{width:320,height:640}],['portrait',{width:390,height:844}],['landscape',{width:844,height:390}],['desktop',{width:1280,height:800}]]){
     await runCase(`ui-layout-${name}`,'Welcome, plans, help and workout controls remain reachable in a constrained viewport.',async(page,check,capture)=>{

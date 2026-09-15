@@ -42,6 +42,7 @@ thing standing between here and the Swift port.
 | Document | Question it answers |
 |---|---|
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
+| `sessions/code-review-fixes-2026-09-14.md` | Two review passes: view/hold reliability, camera and microphone lifecycle, complete speech, demo animation, supported plans and test provenance |
 | `sessions/local-coaching-2026-09-14.md` | Local speech controls, explanations, authored-plan search, opt-in memory and AI review with verification and limits |
 | `sessions/workout-summaries-2026-09-14.md` | Evidence-backed debriefs, optional native AI selection, actual local-model smoke and remaining limits |
 | `sessions/interface-review-2026-09-14.md` | Feature-by-feature UI audit, implemented workout controls, mobile contracts and remaining human/device checks |

@@ -38,7 +38,19 @@ spoken commands are unavailable during coach playback; touch Pause remains usabl
 Navigation, backgrounding, finishing or disabling releases input and invalidates
 late callbacks. Returning from background does not re-enable listening.
 Availability/permission timeouts and bounded retries fail visibly. These are
-software contracts, not a certification of recognition in a noisy room.
+software contracts, not a certification of recognition in a noisy room. Pause and
+Help each expose a microphone-off button inside their modal; the inert header is
+not the only way to revoke listening. An abort failure remains visible there too.
+Touch, typed and spoken Resume share camera-readiness checks. Neither pending
+camera replacement nor failed playback can resume assessment or implicitly resume
+it through a confirmed set advance. End remains available; old camera recovery
+callbacks cannot alter the next workout. The native UI host must enforce the same
+readiness policy when it is ported.
+
+Recorded instructions require every word-bearing sentence part. A missing part
+uses the complete explicitly local fallback, or a visual unavailability notice
+if no local voice exists. A target number by itself is not a substitute for the
+missing instruction. Punctuation-only/empty parts do not require audio files.
 
 **Find a workout in your own words**, under the workout picker, accepts a bounded
 English request: plan names, minutes, standing only, no floor, quiet and no
@@ -54,7 +66,13 @@ guided targets, scaled rests and 20–60 seconds setup per set. These assumption
 are not measured performance or a promised finish time. Hard deadlines require
 clarification. A candidate only opens the existing preview; Start is separate.
 Candidates with unsupported resolved movement/tier pairs are excluded, even
-where a legacy plan declares that tier. This does not change the old picker.
+where a legacy plan declares that tier. The picker, preview and startup now use
+the same `planAvailable` policy. Core Strength, Functional Foundations and
+Mobility are unavailable at Strong until their unsupported resolved movements
+are deliberately authored and tested for that tier. No set is silently dropped
+and no substitute beyond the existing declared regression/progression is invented.
+Session construction rejects unsupported plans; retiering cannot introduce an
+unsupported current movement. Empty internal sessions retain their no-op contract.
 
 **Your coach & history** has independent opt-ins for saved preferences and future
 finished workout records. Standard coaching/on-request demos remain the defaults.

@@ -50,10 +50,27 @@ Evaluator results expose `evidence.schema = "movement-evidence/1"`, a movement
 observation status, `eligible` and missing targets, and form landmark coverage with
 observed/missing target IDs and reasons. `observed` means geometry is available,
 not that position or range passed; `eligible` also requires the applicable gates
-and view. Existing `viewLimited`/`viewCue` remain separate and must be considered:
-complete landmark coverage is not a claim of an ideal viewing angle. Suppressions
-identify unobservable targets. Coverage is not an invented numeric confidence or
-a new score. This phase does not revise the existing off-axis threshold policy.
+and view. `viewLimited`/`viewCue` also describe the viewing constraint. Since the
+14 September review fixes, form coverage excludes view-unreliable targets with
+`reason:"view"`; suppression uses `view⊘<target-id>`, not an inferred fault.
+Unavailable measurements never enter smoothing, scoring, cues or tint. A required
+hold depth gate remains unavailable, not silently passed. The 25°/50° alignment
+thresholds and 168° depth-target cutoff are unchanged. Optional form loss still
+does not veto observed rep cycles.
+
+The camera adapter computes shoulder/hip pair angles with x and z in the same
+units. Both members must be finite, at least 0.5 visibility and inside the 2%
+edge margin. One trustworthy pair suffices; no trustworthy pair produces
+`sideness:null, viewUnavailable:true`, which pauses assessed counting without a
+score or an unsupported instruction to turn. Legacy authored/headless fixtures
+can omit view; future native adapters must explicitly mark unavailable camera
+view, using the matching `PoseFrame.viewUnavailable` field. This is not a hidden
+joint reconstruction or a new body-size model.
+
+Calibration allows short tracking flicker without counting unseen time. Once an
+armed check loses required evidence continuously for 2.5 seconds, it pauses and
+offers Restart or Use observed result. New visible frames cannot join another
+bout to that attempt. The grace interval is a UX policy, not an ability measure.
 
 The shell explains interrupted counting through the existing readiness channel.
 Optional form loss must not produce a demand to stop otherwise observed movement.

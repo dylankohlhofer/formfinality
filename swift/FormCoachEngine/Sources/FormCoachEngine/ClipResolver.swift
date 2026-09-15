@@ -50,12 +50,18 @@ public func clipPlanFor(personaId: String, tierId: String, key: String, variant:
         guard let t = vars.t else { return nil }
         mid = NUM(t)
     } else {
-        guard let val = (tokens[0] == "{p}" ? vars.p : vars.x) else { return nil }
+        guard let val = (tokens[0] == "{p}" ? vars.p : vars.x), !val.isEmpty else { return nil }
         mid = TOK(val)
     }
     if !has(mid) { return nil }
 
-    let seq = [P(key + ".a", variant), mid, P(key + ".b", variant)]
-        .filter { $0 == mid || has($0) }
-    return seq.isEmpty ? nil : seq
+    // Mirror HTML: punctuation-only halves need no clip, missing spoken words
+    // require the complete local fallback, never a misleading token-only line.
+    let halves = tmpl.components(separatedBy: tokens[0]).map { text in
+        text.replacingOccurrences(of: "{n}", with: "")
+            .range(of: "[a-z0-9]", options: [.regularExpression, .caseInsensitive]) != nil
+    }
+    let seq = (halves[0] ? [P(key + ".a", variant)] : []) + [mid] +
+        (halves[1] ? [P(key + ".b", variant)] : [])
+    return seq.allSatisfy(has) ? seq : nil
 }

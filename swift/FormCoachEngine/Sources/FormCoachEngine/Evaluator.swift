@@ -285,9 +285,27 @@ public final class Evaluator {
         out.reps = rep?.display() ?? 0
         out.evidence.camera = CameraObservation(requested: input.cam, selected: frame.cam)
 
+        // HTML-first policy: view eligibility precedes smoothing and judgement.
+        let wantsFront = mv.view == "front"
+        let unknownView = frame.viewUnavailable || frame.sideness.map { !$0.isFinite || $0 < 0 || $0 > 90 } == true
+        let aligned = frame.sideness.map { wantsFront ? 90 - $0 : $0 }
+        let viewBlocked = mv.kind != "guided" && (unknownView || aligned.map { $0 < 25 } == true)
+        out.sideness = frame.sideness
+        out.viewLimited = mv.kind != "guided" && !viewBlocked && aligned.map { $0 < 50 } == true
+        if viewBlocked { out.viewCue = unknownView ? "trackingLost" : wantsFront ? "turnfront" : "turnside" }
+        func unreliableView(_ t: PoseTarget) -> Bool {
+            viewBlocked || out.viewLimited && (rep == nil || !(t.pos ?? false) && t.id != mv.reps?.driver) &&
+                t.m.k == "angle" && t.ideal < 168
+        }
+
         var observations: [String: TargetObservation] = [:]
         for t in mv.targets {
             var observation = targetObservation(t, frame)
+            if unreliableView(t) {
+                observation.sides = []; observation.raw = nil; observation.reason = "view"
+                observations[t.id] = observation
+                continue
+            }
             var observedFrame = frame
             if !observation.sides.contains("left") { observedFrame.left = [:] }
             if !observation.sides.contains("right") { observedFrame.right = [:] }
@@ -344,7 +362,7 @@ public final class Evaluator {
             guard let raw = observations[t.id]!.raw, raw.isFinite else {
                 ema.removeValue(forKey: t.id); sev.removeValue(forKey: t.id)
                 targetSources.removeValue(forKey: t.id)
-                let key = "unobserved⊘" + t.id
+                let key = (observations[t.id]!.reason == "view" ? "view⊘" : "unobserved⊘") + t.id
                 if !out.suppressed.contains(key) { out.suppressed.append(key) }
                 return nil
             }
@@ -354,6 +372,12 @@ public final class Evaluator {
             }
             targetSources[t.id] = source
             return raw
+        }
+        if viewBlocked {
+            out.blocking = ["view"]; out.observationPaused = true
+            out.suppressed = mv.targets.map { "view⊘" + $0.id }; suppressed = out.suppressed
+            interrupt(); outOfPose = 0
+            return out
         }
         if !observations.values.contains(where: { !$0.sides.isEmpty }) {
             if out.framing.verdict == "clipped" { out.blocking.append("framing") }
@@ -411,24 +435,11 @@ public final class Evaluator {
             if !out.blocking.contains("framing") { out.blocking.append("framing") }
         }
 
-        // VIEW AWARENESS — say less off-axis, never wrong things.
-        out.sideness = frame.sideness
-        if let sn = frame.sideness {
-            let wantsFront = mv.view == "front"
-            let aligned = wantsFront ? (90 - sn) : sn
-            if aligned < 25 {
-                out.inPosition = false
-                out.inPose = false
-                out.blocking.append("view")
-                out.viewCue = wantsFront ? "turnfront" : "turnside"
-            } else if aligned < 50 {
-                out.viewLimited = true
-            }
-        }
-
         if !missing.isEmpty && rep == nil {
             out.observationPaused = true
-            if missing.contains(where: { $0.reason != "clipped" }) { out.blocking.append("tracking") }
+            if missing.contains(where: { $0.reason == "view" }) { out.viewCue = wantsFront ? "turnfront" : "turnside" }
+            if missing.contains(where: { $0.reason != "clipped" && $0.reason != "view" }) { out.blocking.append("tracking") }
+            suppressed = out.suppressed
             interrupt(); outOfPose = 0
             return out
         }

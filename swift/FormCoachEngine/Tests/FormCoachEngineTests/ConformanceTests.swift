@@ -109,6 +109,11 @@ final class ConformanceTests: XCTestCase {
         let scale: Double?
         let mirror: Bool?
         let selected: String?
+        let view: MovementEvidenceView?
+    }
+    struct MovementEvidenceView: Decodable {
+        let sideness: Double?
+        let unavailable: Bool?
     }
     struct MovementEvidenceLoss: Decodable {
         let all: Bool?
@@ -218,12 +223,17 @@ final class ConformanceTests: XCTestCase {
                 let frame = PoseFrame(left: row.loss?.side == "right" ? intact : side,
                                       right: row.loss?.side == "left" ? intact : side,
                                       cam: row.alternatingCam == true && i % 2 == 1 ? "right" : "left", conf: 0.95,
-                                      aspect: 1, sideness: row.movement == "side-plank" ? 0 : 90)
+                                      aspect: 1, sideness: row.view?.sideness ?? (row.movement == "side-plank" ? 0 : 90),
+                                      viewUnavailable: row.view?.unavailable ?? false)
                 result = ev.evaluate(frame, dt: 1 / fps, now: Double(i + 1) / fps)
                 XCTAssertEqual(result.evidence.schema, "movement-evidence/1", "\(row.id) frame \(i)")
                 if row.unscored == true { XCTAssertNil(result.score, "\(row.id) frame \(i) must remain unscored") }
             }
             XCTAssertEqual(ev.rep?.display() ?? 0, row.reps, row.id)
+            if row.unscored == true {
+                XCTAssertNil(ev.avg(), row.id); XCTAssertEqual(ev.n, 0, row.id)
+                XCTAssertTrue(ev.scoreTrace.isEmpty, row.id)
+            }
             XCTAssertLessThan(abs(ev.hold - row.held), 1e-8, "\(row.id): observed hold time")
             XCTAssertEqual(result.evidence.movement.eligible, row.eligible, row.id)
             if let status = row.form { XCTAssertEqual(result.evidence.form.status, status, row.id) }
@@ -523,6 +533,21 @@ final class ConformanceTests: XCTestCase {
             let plan = Self.content.plans.first { $0.id == r.plan }!
             let got = expandPlanSteps(plan.steps, tier: Self.content.tiers[r.tier]!)
             XCTAssertEqual(got, r.steps, "\(r.plan)@\(r.tier)")
+        }
+    }
+
+    func testReviewedClipCompleteness() throws {
+        struct Suite: Decodable { let schema: String; let cases: [ClipRow] }
+        let url = Self.repoRoot.appendingPathComponent("testing/clip-resolution-vectors.json")
+        let suite = try JSONDecoder().decode(Suite.self, from: Data(contentsOf: url))
+        XCTAssertEqual(suite.schema, "clip-resolution/1")
+        XCTAssertEqual(suite.cases.count, 17)
+        for r in suite.cases {
+            let man = Set(r.manifest)
+            XCTAssertEqual(clipPlanFor(personaId: "warm", tierId: "building", key: r.key,
+                variant: r.variant, vars: ClipVars(t: r.vars.t, p: r.vars.p, x: r.vars.x),
+                tmpl: r.tmpl, has: { man.contains($0) }), r.expect,
+                "\(r.key): \(r.tmpl), manifest \(r.manifest)")
         }
     }
 

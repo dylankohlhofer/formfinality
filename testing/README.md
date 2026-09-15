@@ -19,12 +19,16 @@ npm test
 then engine and desktop/narrow Chromium scenarios. An assertion failure exits 1.
 It also sweeps all **21 movements / 44 supported movement-tier pairs**, rendering
 each in both desktop and narrow viewports (**88 exercise browser cases**), and
-checks all 12 supported plan-tier combinations plus calibration, camera and voice
-queue paths. It does not invent support for unavailable exercise tiers.
+checks all 12 declared plan-tier combinations (nine available, three deliberately
+excluded at Strong) plus calibration, camera and voice queue paths. It does not
+invent support for unavailable exercise tiers.
 It also runs real-time audio capture cases and deliberate audio-capture mutations
 (a healthy control, muted clips, overlapping playback and preserved initial silence).
 Missing human recordings are explicitly **coverage incomplete**, not a video pass.
-Use `--require-video` to make that coverage gap exit 2.
+Use `--require-video` to make that coverage gap exit 2. It requires `--mode all`
+or `--mode video` without `--library-only`; engine/browser/audio-only selections
+exit 2 immediately. A required-video run needs actual passed video results, not
+merely the absence of a blocked row.
 
 **Regression retained:** First Steps discovered and now protects the fix for the
 v4.11 calibration exception. See [FC-LAB-001](findings/calibration-has-demo.md).
@@ -56,6 +60,28 @@ fields (plus provenance); tolerances and other recorded expectations are unchang
 See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
+
+**Full-code review fixes (14 September):** `review-regressions.test.mjs` adds 70
+independent checks for view-eligible scoring, camera-coordinate/visibility rules,
+calibration continuity, every demo's return interpolation and unsupported plan
+startup/retiering and recorded-instruction completeness. Seventeen new shared clip
+cases and all eight historical clip rows test the actual browser resolver; Swift
+reads the same cases. Eight appended shared evidence cases bring JavaScript/Swift
+parity to 35. Five new shell cases use real modal controls to disable substituted
+local recognizers and finish an interrupted calibration. Five infrastructure
+checks protect required-video selection and exit status. Five further `review-*`
+shell cases cover pending/failed/stale camera replacement, honest unavailable-view
+telemetry and full local speech fallback when recorded words are absent. A harness
+invocation regression requires all four legacy suites to read the archived build,
+never a changed working file. A real archived-build mutation run and three faulty
+verifier controls also protect path portability and prevent false-green controls.
+All use the existing
+default/watch/CI loop; no new parallel harness or real microphone is introduced.
+`refresh-review-view.mjs --write` is a manual-only, seven-field migration across
+three historical view scenarios, not an oracle generator. See
+[the fix record](../docs/sessions/code-review-fixes-2026-09-14.md).
+`refresh-review-speech.mjs --write` deliberately changes only the historical Rest
+case with a missing prefix: complete local fallback, not an isolated number.
 
 **Evidence-backed summaries (14 September):** `summary.test.mjs` adds 50 checks
 and `summary-cases.mjs` adds ten browser cases through this same runner. The

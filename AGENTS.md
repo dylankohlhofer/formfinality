@@ -173,7 +173,7 @@ The low-score automatic target-shortening rule is removed: score is not fatigue.
 judging: elapsed time is not held time, Finish this set is manual, score is null,
 and no unobserved reps/form/ability claims enter totals or debrief. Previously watched
 frames count once. The next movement returns to camera assessment; calibration has
-no follow-along verdict. Keep the 235 body-tolerance checks, 27 shared evidence rows,
+no follow-along verdict. Keep the 235 body-tolerance checks, 35 shared evidence rows,
 two new action timelines, four follow-along shell cases and its real-clip audio
 cancellation case in the default loop.
 These test software policy, not body-size/clothing recognition accuracy; the model
@@ -236,6 +236,33 @@ Preserve coverage gaps, hard process deadlines and same-run concurrency protecti
 AI never rewrites an oracle or declares its own findings solved. Read
 `docs/local-coach-contract.md` and `testing/ai-review.md` before changing this boundary.
 
+The September 14 review fixes apply view eligibility before smoothing/scoring.
+`view⊘<target-id>` means no measurement, not a bad score. Required off-axis hold
+gates stay unavailable; optional form loss does not veto observed rep cycles.
+The camera adapter uses consistent x/z units and confident, finite, in-frame
+shoulder/hip pairs. No trustworthy pair yields explicit `viewUnavailable:true`;
+future native adapters must set the matching PoseFrame flag. Legacy headless
+fixtures may omit view. Calibration pauses after 2.5s continuous required-evidence
+loss and offers Restart/Use observed result, never joining separate bouts.
+Keep `review-regressions` in default test/watch/CI, the 35 shared evidence rows,
+modal microphone-off cases, temporal demo checks and required-video exit tests.
+Picker/search/preview/start share supported-plan validation; empty internal sessions
+retain their no-op contract. The seven-field root vector migration is explicit in
+`testing/refresh-review-view.mjs`; never run it automatically to accept divergences.
+Camera-switch state gates every Resume route and confirmed set advance, not just
+the visible button. Failed playback keeps assessment paused; late recovery callbacks
+cannot affect a new workout. Preserve the five `review-*` shell cases. Unavailable
+view telemetry is not labelled guided. Missing words in a spliced recording require
+the complete local fallback (or visual unavailability), never a number-only fragment.
+The 17 `testing/clip-resolution-vectors.json` rows are shared with Swift; eight older
+clip rows also run against the actual browser resolver. The one historical Rest
+expectation was explicitly migrated by `testing/refresh-review-speech.mjs`.
+All original harnesses in the shared runner must use its saved `build.html`, so a
+working-file edit during watch mode cannot substitute another build in that report.
+The mutation harness resolves its verifier from its own location, not the build's
+directory. Its control needs both exit 0 and a successful refGates line; a missing
+verifier or unrelated process failure must never count as a green control.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled
@@ -289,10 +316,10 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 ## Current state
 
 17 suites of coverage were lost to an ephemeral sandbox; `verify.mjs` reconstructs 4,127
-checks from the surviving vectors and exits 0. `swift test` passes 104 deterministic
-tests (25 engine, 22 summary, 57 interaction); three real-model smoke tests are
-opt-in and skipped by default. They read the same root conformance JSON, 27 shared
-movement-evidence cases, 22 summary-selection, 22 choice-selection and 39 command
+checks from the surviving vectors and exits 0. `swift test` passes 105 deterministic
+tests (26 engine, 22 summary, 57 interaction); three real-model smoke tests are
+opt-in and skipped by default. They read the same root conformance JSON, 35 shared
+movement-evidence cases, 17 clip-resolution cases, 22 summary-selection, 22 choice-selection and 39 command
 cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived

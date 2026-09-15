@@ -32,11 +32,13 @@ for(const row of suite.cases) test(`shared Swift/browser evidence: ${row.id}`, (
         }
     }
     r = ev.evaluate({...f,cam:row.alternatingCam && i % 2 ? 'right' : 'left',conf:.95,aspect:1,
-      sideness:row.movement === 'side-plank' ? 0 : 90}, 1 / row.fps, (i + 1) / row.fps);
+      sideness:row.view?.sideness ?? (row.movement === 'side-plank' ? 0 : 90),
+      viewUnavailable:row.view?.unavailable ?? false}, 1 / row.fps, (i + 1) / row.fps);
     assert.equal(r.evidence.schema, 'movement-evidence/1');
     if(row.unscored) assert.equal(r.score, null, `frame ${i} must remain unscored`);
   }
   assert.equal(ev.rep?.display() || 0, row.reps);
+  if(row.unscored){assert.equal(ev.avg(),null);assert.equal(ev.n,0);assert.deepEqual(ev.scoreTrace,[]);}
   assert.ok(Math.abs(ev.hold - row.held) < 1e-8);
   assert.equal(r.evidence.movement.eligible, row.eligible);
   if(row.form) assert.equal(r.evidence.form.status, row.form);

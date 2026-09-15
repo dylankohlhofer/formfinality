@@ -6,7 +6,8 @@
     "push-up": {"rest": "pushTop", "peakPose": "pushBottom"},
     "leg-raise": {"rest": "supine", "peak": {"knee": [0.56, 0.53], "ankle": [0.58, 0.30], "heel": [0.60, 0.29], "toe": [0.66, 0.22]}},
     "plank": {"rest": "plank"},
-    "side-plank": {"rest": "plank"}
+    "side-plank": {"rest": "plank"},
+    "downward-dog": {"rest": "ddogLow"}
   },
   "cases": [
     {"id":"crunch-visible", "movement":"crunch", "fps":30, "cycle":true, "reps":3, "held":0, "eligible":true, "form":"complete"},
@@ -35,6 +36,14 @@
     {"id":"clothing-pushup-actual-source-switch-breaks-partial", "movement":"push-up", "fps":30, "cycle":true, "loss":{"side":"left","joints":["wrist"],"mode":"missing","after":6}, "reps":2, "held":0, "eligible":true, "selected":"right"},
     {"id":"body-scale-mirrored-crunch", "movement":"crunch", "fps":30, "cycle":true, "scale":0.7, "mirror":true, "reps":3, "held":0, "eligible":true},
     {"id":"body-scale-plank", "movement":"plank", "fps":30, "scale":1.1, "reps":0, "held":12, "eligible":true},
-    {"id":"clothing-stationary-legraise-no-credit", "movement":"leg-raise", "fps":30, "loss":{"side":"left","joints":["ankle"],"mode":"low"}, "reps":0, "held":0, "eligible":true, "selected":"right"}
+    {"id":"clothing-stationary-legraise-no-credit", "movement":"leg-raise", "fps":30, "loss":{"side":"left","joints":["ankle"],"mode":"low"}, "reps":0, "held":0, "eligible":true, "selected":"right"},
+    {"id":"view-crunch-oblique-15fps", "movement":"crunch", "fps":15, "cycle":true, "view":{"sideness":35}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"view-crunch-oblique-30fps", "movement":"crunch", "fps":30, "cycle":true, "view":{"sideness":35}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"view-crunch-oblique-60fps", "movement":"crunch", "fps":60, "cycle":true, "view":{"sideness":35}, "reps":3, "held":0, "eligible":true, "form":"unavailable", "unscored":true},
+    {"id":"view-plank-wrong-angle", "movement":"plank", "fps":30, "view":{"sideness":0}, "reps":0, "held":0, "eligible":false, "form":"unavailable", "unscored":true},
+    {"id":"view-sideplank-wrong-angle", "movement":"side-plank", "fps":30, "view":{"sideness":90}, "reps":0, "held":0, "eligible":false, "form":"unavailable", "unscored":true},
+    {"id":"view-plank-unavailable", "movement":"plank", "fps":30, "view":{"unavailable":true}, "reps":0, "held":0, "eligible":false, "form":"unavailable", "unscored":true},
+    {"id":"view-crunch-unavailable", "movement":"crunch", "fps":30, "cycle":true, "view":{"unavailable":true}, "reps":0, "held":0, "eligible":false, "form":"unavailable", "unscored":true},
+    {"id":"view-downward-dog-required-depth", "movement":"downward-dog", "fps":30, "view":{"sideness":38}, "reps":0, "held":0, "eligible":false, "unscored":true}
   ]
 }

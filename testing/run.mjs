@@ -3,7 +3,7 @@ import { readFile, readdir, mkdir, writeFile, stat } from 'node:fs/promises';
 import { resolve, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { hash, validate, validateRecording, loadEngine, fixtures, engineAdapter, runTimeline } from './lib.mjs';
+import { hash, validate, validateRecording, loadEngine, fixtures, engineAdapter, runTimeline, runExitCode } from './lib.mjs';
 import { runBrowser } from './browser.mjs';
 import { report } from './report.mjs';
 import { librarySweep } from './library.mjs';
@@ -25,6 +25,10 @@ options.mode ??= 'all';
 if (options.pack && (!/^[a-z0-9-]+$/.test(options.pack) || options.scenario || options['scenario-file'] ||
     options.libraryOnly || options.mode === 'audio')) throw new Error('A named pack cannot be combined with scenario, scenario-file, library-only or audio selection');
 if (!['all', 'engine', 'browser', 'video', 'audio'].includes(options.mode)) throw new Error('Unknown mode');
+if(options.requireVideo && (!['all','video'].includes(options.mode) || options.libraryOnly)){
+  console.error('--require-video requires scenario video coverage: use --mode all or video, without --library-only.');
+  process.exit(2);
+}
 if (options.mode === 'audio' && (options.recording || options.landmarks || options['scenario-file'] || options.libraryOnly))
   throw new Error('Audio uses committed wall-clock cases: optionally select --scenario <audio-case-id>. Video/landmark inputs are not supported in this mode yet.');
 if ((options.recording || options.landmarks) && !(options.scenario || options['scenario-file'])) throw new Error('A recording must name its scenario');
@@ -54,11 +58,13 @@ run.bridgeHash = hash(await readFile(resolve(root, 'testing/bridge.js')));
 run.summaryFixtureHash = hash(await readFile(resolve(root, 'testing/summary-selection-vectors.json')));
 run.coachChoiceFixtureHash = hash(await readFile(resolve(root,'testing/coach-choice-vectors.json')));
 run.coachCommandFixtureHash = hash(await readFile(resolve(root,'testing/coach-command-vectors.json')));
+run.clipResolutionFixtureHash = hash(await readFile(resolve(root,'testing/clip-resolution-vectors.json')));
+run.movementEvidenceFixtureHash = hash(await readFile(resolve(root,'testing/movement-evidence-vectors.json')));
 run.testSourceHashes = {};
 for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs|js)$/.test(n)))
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'local-command-listener', 'ai-review', 'review-workflow']) {
+  for (const suite of ['coach-regressions', 'review-regressions', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'local-command-listener', 'ai-review', 'review-workflow']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });
@@ -68,7 +74,7 @@ if (options.mode === 'all') {
         actual: checked.status, expected: 0 }], error: checked.error?.message });
   }
   for (const suite of ['verify.mjs', 'verify-mutations.mjs', 'verify-draw.mjs', 'verify-skip.mjs']) {
-    const checked = spawnSync(process.execPath, [suite, resolve(options.build)], { cwd: root, encoding: 'utf8', timeout: 120000 });
+    const checked = spawnSync(process.execPath, [suite, resolve(dir, 'build.html')], { cwd: root, encoding: 'utf8', timeout: 120000 });
     await writeFile(resolve(dir, suite + '.log'), (checked.stdout || '') + (checked.stderr || ''));
     run.results.push({ id: suite, mode: 'legacy', status: checked.status === 0 ? 'passed' : 'failed',
       checks: [{ label: `${suite} exits successfully`, pass: checked.status === 0, actual: checked.status, expected: 0 }],
@@ -190,4 +196,4 @@ if(!options.recording && !options.landmarks && !options['scenario-file'] && opti
 }
 await writeFile(resolve(root, 'test-results/LATEST.txt'), relative(root, dir) + '\n');
 console.log(`Review: ${resolve(dir, 'index.html')}`);
-process.exitCode = failed || reviewFailed ? 1 : blocked && (options.requireVideo || options.mode === 'video') ? 2 : 0;
+process.exitCode = runExitCode(run.results,{requireVideo:options.requireVideo,mode:options.mode,reviewFailed});

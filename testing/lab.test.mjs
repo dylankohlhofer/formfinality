@@ -1,11 +1,78 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
-import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError } from './lib.mjs';
+import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError, runExitCode } from './lib.mjs';
 import { findings, escape, hasScreenshot, suiteLog } from './report.mjs';
 import { serve } from './browser.mjs';
+import {resolve,dirname,join} from 'node:path';
+
+test('Every original harness consumes the archived build, even if the working file changes during a run',async()=>{
+  const source=await readFile(new URL('./run.mjs',import.meta.url),'utf8');
+  const block=source.slice(source.indexOf("if (options.mode === 'all') {"),source.indexOf('const frameFor ='));
+  assert.ok(block.includes('verify-skip.mjs'),'Exercise the actual production harness loop');
+  const calls=[],root='/repo',dir='/repo/test-results/saved';
+  await vm.runInNewContext(`(async()=>{${block}})()`,{
+    root,dir,resolve,options:{mode:'all',build:'/working/changed.html'},run:{results:[]},
+    process:{execPath:process.execPath,env:{}},writeFile:async()=>{},
+    spawnSync:(exe,args,opts)=>{calls.push({exe,args,opts});return {status:0,stdout:'',stderr:''};}
+  });
+  const legacy=calls.filter(c=>c.args[0].startsWith('verify'));
+  assert.equal(legacy.length,4);
+  for(const call of legacy)assert.equal(call.args[1],resolve(dir,'build.html'),call.args[0]);
+  for(const call of calls.filter(c=>c.args[0]==='--test'))
+    assert.equal(call.opts.env.FORM_COACH_TEST_BUILD,resolve(dir,'build.html'));
+});
+
+test('Mutation harness works with an archived build outside the harness directory',async()=>{
+  const root=fileURLToPath(new URL('../',import.meta.url));
+  await mkdir(resolve(root,'test-results'),{recursive:true});
+  const dir=await mkdtemp(resolve(root,'test-results/archived-mutation-'));
+  const build=resolve(dir,'saved build.html');
+  await writeFile(build,await readFile(resolve(root,'form-coach-v4.11.html')));
+  const r=spawnSync(process.execPath,[resolve(root,'verify-mutations.mjs'),build],{cwd:dir,encoding:'utf8',timeout:30000});
+  await writeFile(resolve(dir,'verify-mutations.log'),(r.stdout||'')+(r.stderr||''));
+  assert.equal(r.status,0,r.error?.message || r.stdout+r.stderr);
+  assert.match(r.stdout,/all 8 mutations caught, control stayed green/);
+});
+for(const outcome of ['empty-success','launch-error','green-line-nonzero'])
+  test(`Mutation control must prove verifier success: ${outcome}`,async()=>{
+    const html=await readFile(new URL('../form-coach-v4.11.html',import.meta.url),'utf8');
+    const original=await readFile(new URL('../verify-mutations.mjs',import.meta.url),'utf8');
+    const source=original.slice(original.indexOf('const BUILD =')).replaceAll('import.meta.url',JSON.stringify(new URL('../verify-mutations.mjs',import.meta.url).href));
+    const logs=[];let exit;
+    vm.runInNewContext(source,{
+      dirname,resolve,join,fileURLToPath,readFileSync:()=>html,writeFileSync:()=>{},unlinkSync:()=>{},existsSync:()=>true,
+      process:{argv:['node','verify-mutations.mjs','/saved/build.html'],execPath:process.execPath,exit:code=>{exit=code;}},
+      console:{log:s=>logs.push(String(s)),error:s=>logs.push(String(s))},
+      execFileSync:()=>{
+        if(outcome==='empty-success')return '';
+        throw Object.assign(new Error('Verifier failure'),{status:outcome==='launch-error'?null:1,
+          stdout:outcome==='green-line-nonzero'?'  refGates 224 vectors … ok\n':'',stderr:'Verifier did not finish successfully'});
+      }
+    });
+    assert.equal(exit,1);
+    assert.ok(logs.some(line=>line.includes('✗ control — unmodified build')),logs.join('\n'));
+  });
+
+for(const flags of [['--mode','engine'],['--mode','browser'],['--mode','audio'],['--mode','all','--library-only']])
+  test(`Required-video rejects non-video selection: ${flags.join(' ')}`,()=>{
+    const r=spawnSync(process.execPath,['testing/run.mjs','--build','form-coach-v4.11.html',...flags,'--require-video'],{encoding:'utf8',timeout:10000});
+    assert.equal(r.status,2);assert.match(r.stderr,/requires scenario video coverage/);
+  });
+test('Required-video needs completed video results, not merely absence of blocked rows',()=>{
+  const engine={mode:'engine',status:'passed'},video={mode:'video',status:'passed'};
+  for(const options of [{requireVideo:true},{mode:'video'}]){
+    assert.equal(runExitCode([],options),2);assert.equal(runExitCode([engine],options),2);
+    assert.equal(runExitCode([engine,{...video,status:'blocked'}],options),2);
+    assert.equal(runExitCode([engine,video],options),0);
+    assert.equal(runExitCode([video,{...video,status:'blocked'}],options),2);
+    assert.equal(runExitCode([{...video,status:'failed'}],options),1);
+  }
+  assert.equal(runExitCode([engine,{...video,status:'blocked'}]),0);
+  assert.equal(runExitCode([video],{requireVideo:true,reviewFailed:true}),1);
+});
 import { fileURLToPath } from 'node:url';
 import { loadEngine } from './lib.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';

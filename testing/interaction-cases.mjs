@@ -14,6 +14,42 @@ async function feed(page,seconds,id='squat',cycle=false){
 }
 async function command(page,text){await page.locator('#coachCommandInput').fill(text);await page.locator('#coachCommandForm button').click();}
 export async function interactionCases(runCase){
+  for(const width of [390,1280])for(const dialog of ['pause','help'])
+    await runCase(`interaction-mic-off-${dialog}-${width}`,'An opted-in microphone can be disabled by touch inside every active modal.',async(page,check,capture)=>{
+      await page.setViewportSize({width,height:844});await start(page);await page.locator('#askCoachBtn').click();
+      await page.evaluate(()=>{
+        window.reviewMic={aborts:0};
+        window.SpeechRecognition=class {
+          processLocally=false;
+          static async available(){return 'available';}
+          start(){queueMicrotask(()=>this.onstart?.());}
+          abort(){window.reviewMic.aborts++;}
+        };
+      });
+      await page.getByText('Hands-free controls · optional microphone',{exact:true}).click();
+      await page.locator('#listenOnBtn').click();await page.locator('#coachResumeBtn').click();
+      await page.locator(dialog==='pause'?'#pauseBtn':'#helpBtn').click();
+      await page.waitForFunction(()=>document.getElementById('listenOffBtn').textContent.includes('Listening'));
+      const button=page.locator(dialog==='pause'?'#pauseMicOffBtn':'#helpMicOffBtn');
+      check('Microphone off is visible inside the top modal',await button.isVisible(),true);
+      const before=await page.evaluate(()=>window.reviewMic.aborts);
+      await button.click(); // Real actionability check: no forced click through an inert dialog.
+      check('Recognizer is released without resuming',await page.evaluate(before=>window.reviewMic.aborts>before,before),true);
+      check('Header no longer claims listening',await page.locator('#listenOffBtn').isVisible(),false);
+      check('Opt-out does not close the modal',await page.locator(dialog==='pause'?'#sessionDialog':'#helpDialog').evaluate(e=>e.open),true);
+      await capture('microphone-disabled');
+    });
+  await runCase('interaction-calibration-tracking-gap','Sustained tracking loss offers Restart/Finish and preserves the observed Learning result.',async(page,check,capture)=>{
+    await page.locator('#calBtn').click();await feed(page,7,'plank');
+    const held=await page.evaluate(()=>__testLab.snapshot().held);
+    await feed(page,3,null);
+    check('Gap opens the interruption dialog',await page.locator('#sessionDialog').evaluate(e=>e.open),true);
+    check('Continuity cannot be resumed',await page.locator('#resumeBtn').textContent(),'Restart plank check');
+    await feed(page,26,'plank');check('More frames cannot join a second bout',await page.evaluate(()=>__testLab.snapshot().held),held);
+    await page.locator('#endSessionBtn').click();
+    check('Observed result remains Learning',await page.evaluate(()=>__testLab.snapshot().calibration.tierId),'learning');
+    await capture('interrupted-result');
+  });
   for(const width of [390,1280])await runCase(`interaction-explain-${width}`,'On-demand explanations use actual recent evidence and pause without counting.',async(page,check,capture)=>{
     await page.setViewportSize({width,height:844});await start(page);await feed(page,4);await feed(page,1,null);
     await page.locator('#askCoachBtn').click();

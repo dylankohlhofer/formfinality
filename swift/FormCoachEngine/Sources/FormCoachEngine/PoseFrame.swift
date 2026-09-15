@@ -20,10 +20,12 @@ public struct PoseFrame {
     public var conf: Double
     public var aspect: Double?           // image W/H — restores physical angles
     public var sideness: Double?         // 90 = side-on, 0 = facing; nil = unknown
+    public var viewUnavailable: Bool     // adapters mark missing camera evidence; legacy fixtures may omit view
     public init(left: SideJoints, right: SideJoints, cam: String, conf: Double,
-                aspect: Double? = nil, sideness: Double? = nil) {
+                aspect: Double? = nil, sideness: Double? = nil, viewUnavailable: Bool = false) {
         self.left = left; self.right = right; self.cam = cam; self.conf = conf
         self.aspect = aspect; self.sideness = sideness
+        self.viewUnavailable = viewUnavailable
     }
     public func side(_ s: String) -> SideJoints { s == "right" ? right : left }
 }

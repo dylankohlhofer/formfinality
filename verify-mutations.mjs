@@ -38,11 +38,13 @@
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from "fs";
 import { execFileSync } from "child_process";
 import { dirname, resolve, join } from "path";
+import { fileURLToPath } from "url";
 
 const BUILD = process.argv[2];
 if(!BUILD){ console.error("usage: node verify-mutations.mjs <build.html>"); process.exit(2); }
 if(!existsSync(BUILD)){ console.error(`no such build: ${BUILD}`); process.exit(2); }
-const ROOT = dirname(resolve(BUILD));
+const ROOT = dirname(fileURLToPath(import.meta.url));
+const BUILD_DIR = dirname(resolve(BUILD));
 
 const load = () => readFileSync(BUILD, "utf8");
 
@@ -157,14 +159,17 @@ console.log(`build   ${BUILD}\n`);
 
 let missed = 0;
 for(const m of MUTATIONS){
-  const tmp = join(ROOT, `.mutant-${process.pid}.html`);
-  let out = "", broke = null;
+  const tmp = join(BUILD_DIR, `.mutant-${process.pid}.html`);
+  let out = "", broke = null, exitStatus = null;
   try {
     writeFileSync(tmp, m.apply(load()));
     /* Non-zero exit is the expected outcome for a mutation, so the throw carries
        the output we actually want to read. */
-    try { out = execFileSync("node", ["verify.mjs", tmp], { cwd: ROOT, encoding: "utf8" }); }
-    catch(e){ out = (e.stdout || "") + (e.stderr || ""); }
+    try {
+      out = execFileSync(process.execPath, [join(ROOT,"verify.mjs"), tmp], { cwd: ROOT, encoding: "utf8", stdio:"pipe" });
+      exitStatus = 0;
+    }
+    catch(e){ exitStatus = e.status; out = (e.stdout || "") + (e.stderr || ""); }
   } catch(e) {
     /* The mutation itself could not be applied — a renamed movement, a changed REF
        shape. That is a broken TEST, not a passing build, and it must say so by name
@@ -186,7 +191,9 @@ for(const m of MUTATIONS){
   const line   = (out.split("\n").find(l => l.includes("refGates")) || "").trim();
   const failed = /refGates\s+\d+ vectors … \d+ FAILED/.test(line);
   const caught = m.expect.filter(e => out.includes(e));
-  const ok     = m.expect.length ? (failed && caught.length === m.expect.length) : !failed;
+  const ok     = m.expect.length
+    ? (Number.isInteger(exitStatus) && exitStatus !== 0 && failed && caught.length === m.expect.length)
+    : exitStatus === 0 && /refGates\s+\d+ vectors … ok/.test(line);
 
   console.log(`${ok ? "  ✓" : "  ✗"} ${m.name}`);
   console.log(`      ${m.why}`);

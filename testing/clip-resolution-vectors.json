@@ -1,0 +1,252 @@
+{
+  "schema": "clip-resolution/1",
+  "cases": [
+    {
+      "id": "sentence-parts-0",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-1",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/building/teach.plank.a_0.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-2",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/num/40.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-3",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/building/teach.plank.a_0.mp3",
+        "voice/warm/num/40.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-4",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/building/teach.plank.b_0.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-5",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/building/teach.plank.a_0.mp3",
+        "voice/warm/building/teach.plank.b_0.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-6",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/num/40.mp3",
+        "voice/warm/building/teach.plank.b_0.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "sentence-parts-7",
+      "key": "teach.plank",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Plank — {t} seconds. Hold still.",
+      "manifest": [
+        "voice/warm/building/teach.plank.a_0.mp3",
+        "voice/warm/num/40.mp3",
+        "voice/warm/building/teach.plank.b_0.mp3"
+      ],
+      "expect": [
+        "voice/warm/building/teach.plank.a_0.mp3",
+        "voice/warm/num/40.mp3",
+        "voice/warm/building/teach.plank.b_0.mp3"
+      ]
+    },
+    {
+      "id": "punctuation-tail",
+      "key": "rest",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Rest — {t}.",
+      "manifest": [
+        "voice/warm/building/rest.a_0.mp3",
+        "voice/warm/num/40.mp3"
+      ],
+      "expect": [
+        "voice/warm/building/rest.a_0.mp3",
+        "voice/warm/num/40.mp3"
+      ]
+    },
+    {
+      "id": "missing-rest-prefix",
+      "key": "rest",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "Rest — {t}.",
+      "manifest": [
+        "voice/warm/num/40.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "empty-prefix",
+      "key": "getset",
+      "variant": 0,
+      "vars": {
+        "x": "plank"
+      },
+      "tmpl": "{x} coming up.",
+      "manifest": [
+        "voice/warm/tok/plank.mp3",
+        "voice/warm/building/getset.b_0.mp3"
+      ],
+      "expect": [
+        "voice/warm/tok/plank.mp3",
+        "voice/warm/building/getset.b_0.mp3"
+      ]
+    },
+    {
+      "id": "missing-getset-tail",
+      "key": "getset",
+      "variant": 0,
+      "vars": {
+        "x": "plank"
+      },
+      "tmpl": "{x} coming up.",
+      "manifest": [
+        "voice/warm/tok/plank.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "token-only",
+      "key": "number",
+      "variant": 0,
+      "vars": {
+        "t": 40
+      },
+      "tmpl": "{t}.",
+      "manifest": [
+        "voice/warm/num/40.mp3"
+      ],
+      "expect": [
+        "voice/warm/num/40.mp3"
+      ]
+    },
+    {
+      "id": "optional-name",
+      "key": "start",
+      "variant": 0,
+      "vars": {
+        "p": "First Steps"
+      },
+      "tmpl": "Alright{n}. {p}. Set up side-on.",
+      "manifest": [
+        "voice/warm/building/start.a_0.mp3",
+        "voice/warm/tok/first-steps.mp3",
+        "voice/warm/building/start.b_0.mp3"
+      ],
+      "expect": [
+        "voice/warm/building/start.a_0.mp3",
+        "voice/warm/tok/first-steps.mp3",
+        "voice/warm/building/start.b_0.mp3"
+      ]
+    },
+    {
+      "id": "empty-token-value",
+      "key": "getset",
+      "variant": 0,
+      "vars": {
+        "x": ""
+      },
+      "tmpl": "{x} coming up.",
+      "manifest": [
+        "voice/warm/tok/.mp3",
+        "voice/warm/building/getset.b_0.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "multiple-tokens",
+      "key": "start",
+      "variant": 0,
+      "vars": {
+        "t": 40,
+        "p": "First Steps"
+      },
+      "tmpl": "{p} for {t} seconds.",
+      "manifest": [
+        "voice/warm/num/40.mp3",
+        "voice/warm/tok/first-steps.mp3"
+      ],
+      "expect": null
+    },
+    {
+      "id": "whole-line",
+      "key": "go",
+      "variant": 0,
+      "vars": {},
+      "tmpl": "Whenever you are ready.",
+      "manifest": [
+        "voice/warm/building/go_0.mp3"
+      ],
+      "expect": [
+        "voice/warm/building/go_0.mp3"
+      ]
+    }
+  ]
+}

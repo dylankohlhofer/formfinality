@@ -5,6 +5,14 @@ import { exerciseInputs } from './exercise-inputs.mjs';
 import { partialVisibilityInputs } from './partial-visibility-inputs.mjs';
 
 export const hash = data => createHash('sha256').update(data).digest('hex');
+export function runExitCode(results,{requireVideo=false,mode='all',reviewFailed=false}={}) {
+  if(reviewFailed || results.some(r=>['failed','error'].includes(r.status))) return 1;
+  if(requireVideo || mode==='video'){
+    const video=results.filter(r=>r.mode==='video');
+    if(!video.length || video.some(r=>r.status!=='passed')) return 2;
+  }
+  return 0;
+}
 export function compactEffects(effects) {
   let frame = 0;
   const keep = new Set(['reset', 'say', 'num', 'repPeak', 'bigLabel', 'tip', 'demoOff', 'regressShow', 'regressHide', 'finish', 'calibFinish']);

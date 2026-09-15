@@ -9,6 +9,7 @@ import { followAlongCases } from './follow-along-cases.mjs';
 import { interfaceCases } from './interface-cases.mjs';
 import { summaryCases } from './summary-cases.mjs';
 import { interactionCases } from './interaction-cases.mjs';
+import { reviewFollowupCases } from './review-followup-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -51,6 +52,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await interfaceCases(runCase);
     await summaryCases(runCase);
     await interactionCases(runCase);
+    await reviewFollowupCases(runCase);
     await runCase('calibration-demo', 'A beginner choosing Show me first sees a rendered calibration demonstration.', async (page, check) => {
       await page.locator('[data-know="no"]').click(); await page.locator('#calBtn').click();
       await page.locator('#demo').waitFor({ state: 'visible' });
@@ -152,8 +154,16 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     for (const plan of engine.PLANS) for (const tier of plan.tiers) {
       await runCase(`plan-${plan.id}-${tier}`, `${plan.name} at ${tier}: selection, all steps skipped through to debrief.`, async (page, check) => {
         await page.locator('#skipBtn').click(); await page.locator(`[data-t="${tier}"]`).click(); await page.locator('#goBtn').click();
-        check('Only plans declared for this tier are offered', await page.locator('.plancard').evaluateAll(xs => xs.map(x => x.dataset.plan).sort()),
-          engine.PLANS.filter(p => p.tiers.includes(tier)).map(p => p.id).sort());
+        const unavailable = tier === 'strong' ? ['core-strength','functional','mobility'] : [];
+        check('Only plans with supported resolved movements are offered', await page.locator('.plancard').evaluateAll(xs => xs.map(x => x.dataset.plan).sort()),
+          engine.PLANS.filter(p => p.tiers.includes(tier) && !unavailable.includes(p.id)).map(p => p.id).sort());
+        if(unavailable.includes(plan.id)){
+          await page.getByText('Find a workout in your own words',{exact:true}).click();
+          await page.locator('#planRequestInput').fill(plan.name);await page.locator('#planRequestForm button').click();
+          check('Search agrees with picker exclusion',await page.locator('[data-coach-plan]').count(),0);
+          check('No camera starts for unsupported tier',await page.locator('#skipExBtn').isVisible(),false);
+          return;
+        }
         await page.locator(`[data-plan="${plan.id}"]`).click(); await page.locator('#planStartBtn').click();
         for (let i = 0; i < 60 && !(await page.evaluate(() => window.__testLab.snapshot().done)); i++) await page.locator('#skipExBtn').click();
         check('Plan reaches the debrief', await page.locator('#msgInner h2').innerText(), 'Session complete');

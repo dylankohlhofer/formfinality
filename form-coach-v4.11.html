@@ -629,10 +629,12 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
 <dialog id="sessionDialog" aria-labelledby="sessionDialogTitle">
   <h2 id="sessionDialogTitle">Workout paused</h2><p id="sessionDialogCopy"></p>
   <div class="row"><button class="ctl primary" id="resumeBtn">Resume workout</button>
-  <button class="ctl" id="endSessionBtn">End workout</button></div>
+  <button class="ctl" id="endSessionBtn">End workout</button>
+  <button class="ctl" id="pauseMicOffBtn" hidden>Turn microphone off</button></div>
 </dialog>
 <dialog id="helpDialog" aria-labelledby="helpTitle">
   <button class="ctl" id="helpClose">Close help</button><h2 id="helpTitle">Make yourself comfortable</h2>
+  <button class="ctl" id="helpMicOffBtn" hidden>Turn microphone off</button>
   <p>Prop the camera securely. Start with a view of the movement, then follow the framing hints. There is no single correct distance for every phone or body.</p>
   <h3>What the controls mean</h3>
   <ul><li><b>Show me how:</b> watch the movement demonstration.</li><li><b>Guide outline:</b> a reference drawing, not a size or shape you must match.</li>
@@ -1092,7 +1094,7 @@ function parseLocalPlanRequest(text){
 }
 
 function localPlanCandidate(plan,tierId){
-  if(!plan.tiers.includes(tierId)) return null;
+  if(!planAvailable(plan,tierId)) return null;
   const steps = [], movements = [];
   let workLow = 0, workHigh = 0, restSeconds = 0;
   for(const step of expandPlanSteps(plan.steps,tierId)){
@@ -1672,14 +1674,18 @@ function buildFrame(lms, aspect = 1){
 
   /* SIDENESS — how side-on is the body? Landmark z (depth) answers it: side-on, one
      shoulder sits BEHIND the other (|Δz| large, |Δx| small) → ~90°. Facing the camera,
-     the pair separates in x, not z → ~0°. Averaged over shoulders and hips; null when
-     z is absent (headless tests) so nothing downstream changes behaviour. */
+     the pair separates in x, not z → ~0°. Average only trustworthy shoulder/hip
+     pairs. Unknown view is explicit: invisible joints are not angle evidence. */
   let sideness = null;
   const pair = (li, ri) => {
     const a = lms[li], b = lms[ri];
-    if(!a || !b || a.z == null || b.z == null) return null;
-    if(a.z === 0 && b.z === 0) return null;
-    const dx = Math.abs(a.x - b.x) * aspect, dz = Math.abs(a.z - b.z);
+    if(![a,b].every(p => p && Number.isFinite(p.visibility) && p.visibility >= .5 &&
+      Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z) &&
+      p.x >= .02 && p.x <= .98 && p.y >= .02 && p.y <= .98)) return null;
+    // MediaPipe x AND z use image-width units. Convert both to height units;
+    // scaling x alone made an identical view change classification on rotation.
+    if(!Number.isFinite(aspect) || aspect <= 0) return null;
+    const dx = Math.abs(a.x - b.x) * aspect, dz = Math.abs(a.z - b.z) * aspect;
     if(dx + dz < 0.02) return null;
     return Math.atan2(dz, dx) * 180 / Math.PI;
   };
@@ -1687,7 +1693,7 @@ function buildFrame(lms, aspect = 1){
   if(ps.length) sideness = ps.reduce((a,b)=>a+b,0) / ps.length;
 
   return { left:L, right:R, cam: cl >= cr ? "left" : "right",
-           conf: Math.max(cl,cr), aspect, sideness };
+           conf: Math.max(cl,cr), aspect, sideness, viewUnavailable:sideness === null };
 }
 
 /* ═══ FRAMING ══════════════════════════════════════════════════════════
@@ -1737,7 +1743,7 @@ function coachingFacts(r, mv){
     (!mv.reps || x.t.id !== mv.reps.driver) &&
     !(r.viewLimited && x.t.m.k === "angle" && x.t.ideal < 168)).map(x => x.cue) : [];
   return {t:"coachContext", keys, positive:observed && r.inPose && r.score > 80, readiness:null,
-    view:r?.ok && (r.viewLimited || r.viewCue) ? (mv.view === "front" ? "turnfront" : "turnside") : null};
+    view:r?.ok && r.viewCue !== "trackingLost" && (r.viewLimited || r.viewCue) ? (mv.view === "front" ? "turnfront" : "turnside") : null};
 }
 /* Which joints does this movement actually measure? Derived from the metric specs
    themselves — the same content-as-data trick as the tint, so no new authoring.
@@ -2033,8 +2039,23 @@ class Evaluator {
     const requestedSide = frame.cam;
     frame = this.observationFrame(frame);
 
+    // Apply the existing view thresholds BEFORE smoothing or making judgements.
+    // Legacy authored/headless frames can omit view; camera adapters must mark
+    // unavailable view explicitly rather than treating hidden joints as reliable.
+    const wantsFront = this.mv.view === "front";
+    const unknownView = frame.viewUnavailable === true || frame.sideness != null &&
+      (!Number.isFinite(frame.sideness) || frame.sideness < 0 || frame.sideness > 90);
+    const aligned = frame.sideness == null ? null : wantsFront ? 90-frame.sideness : frame.sideness;
+    const viewBlocked = this.mv.kind !== "guided" && (unknownView || aligned != null && aligned < 25);
+    out.sideness = frame.sideness;
+    out.viewLimited = this.mv.kind !== "guided" && !viewBlocked && aligned != null && aligned < 50;
+    if(viewBlocked) out.viewCue = unknownView ? "trackingLost" : wantsFront ? "turnfront" : "turnside";
+    const unreliableView = t => viewBlocked || out.viewLimited && (!this.rep || !t.pos && t.id !== this.mv.reps.driver) &&
+      t.m.k === "angle" && t.ideal < 168;
+
     const observations = new Map(this.mv.targets.map(t => {
       const o = targetObservation(t, frame);
+      if(unreliableView(t)) return [t.id,{sides:[],raw:null,reason:"view"}];
       const raw = o.sides.length ? this.read(t, {...frame,
         left:o.sides.includes("left") ? frame.left : {}, right:o.sides.includes("right") ? frame.right : {}}) : null;
       if(o.sides.length && (raw == null || !Number.isFinite(raw))){ o.sides = []; o.reason = "unreadable"; }
@@ -2071,7 +2092,8 @@ class Evaluator {
       const raw = o.raw;
       if(raw == null || !Number.isFinite(raw)){
         delete this.ema[t.id]; delete this.sev[t.id]; delete this.targetSources[t.id];
-        if(!out.suppressed.includes("unobserved⊘" + t.id)) out.suppressed.push("unobserved⊘" + t.id);
+        const key = (o.reason === "view" ? "view⊘" : "unobserved⊘") + t.id;
+        if(!out.suppressed.includes(key)) out.suppressed.push(key);
         return null;
       }
       const source = o.sides.join("+");
@@ -2082,6 +2104,13 @@ class Evaluator {
       return raw;
     };
     /* Judged on the joints this movement needs, not a fixed list — see buildFrame. */
+    if(viewBlocked){
+      out.blocking = ["view"]; out.observationPaused = true;
+      out.suppressed = this.mv.targets.map(t => "view⊘" + t.id);
+      this.suppressed = out.suppressed;
+      this.interrupt(); this.outOfPose = 0;
+      return out; // unavailable is not a bad hold, correction, tint or score
+    }
     // Availability is per target/side, not an average diluted by unrelated form.
     if(![...observations.values()].some(o => o.sides.length)){
       if(out.framing.verdict === "clipped") out.blocking.push("framing");
@@ -2139,29 +2168,11 @@ class Evaluator {
       if(!out.blocking.includes("framing")) out.blocking = [...out.blocking, "framing"];
     }
 
-    /* VIEW AWARENESS — never grade silently from an angle we can't read.
-       sideness: 90 = side-on, 0 = facing the camera (null in headless tests).
-       Aligned <25°: block arming and ask them to turn. 25–50°: coach the
-       view-invariant subset only (straight lines, sag/pike sign, verticality,
-       rep cycles — all measured stable off-axis) and suppress depth judgements,
-       which drift badly past ~40°. Facing movements mirror the logic. */
-    out.sideness = frame.sideness;
-    if(frame.sideness != null){
-      const wantsFront = this.mv.view === "front";
-      const aligned = wantsFront ? (90 - frame.sideness) : frame.sideness;
-      if(aligned < 25){
-        out.inPosition = false;
-        out.inPose = false;
-        out.blocking = [...out.blocking, "view"];
-        out.viewCue = wantsFront ? "turnfront" : "turnside";
-      } else if(aligned < 50){
-        out.viewLimited = true;
-      }
-    }
-
     if(missing.length && !this.rep){
       out.observationPaused = true;
-      if(missing.some(x => x.reason !== "clipped")) out.blocking.push("tracking");
+      if(missing.some(x => x.reason === "view")) out.viewCue = wantsFront ? "turnfront" : "turnside";
+      if(missing.some(x => !["clipped","view"].includes(x.reason))) out.blocking.push("tracking");
+      this.suppressed = out.suppressed;
       this.interrupt(); this.outOfPose = 0;
       return out; // explain missing hold evidence, never score it as bad form
     }
@@ -2935,13 +2946,20 @@ function resolveMovementCore(id, tierId){
     return { id: mv.regression, mv: M[mv.regression] };
   if(!mv.tiers.includes(tierId) && mv.regressionOf && M[mv.regressionOf]?.tiers.includes(tierId))
     return { id: mv.regressionOf, mv: M[mv.regressionOf] };
-  return { id, mv };
+  return mv.tiers.includes(tierId) ? { id, mv } : null;
+}
+function planAvailable(plan,tierId){
+  // Empty internal sessions retain their established immediate-finish/no-op contract.
+  return Object.hasOwn(TIERS,tierId) && Array.isArray(plan?.steps) &&
+    (!plan.tiers || plan.tiers.includes(tierId)) &&
+    expandPlanSteps(plan.steps,tierId).every(s => s.rest != null || resolveMovementCore(s.ex,tierId) !== null);
 }
 const scaledCore = (v, isRest, tierId) => Math.max(isRest ? 8 : 5,
   Math.round(v * (isRest ? TIERS[tierId].rest : TIERS[tierId].effort)));
 
 class SessionCore {
   constructor(plan, tierId, env){
+    if(!planAvailable(plan,tierId)) throw new Error("Workout is not available with supported movements at this tier");
     this.plan = plan; this.tierId = tierId; this.env = env;
     this.steps = expandPlanSteps(plan.steps, tierId);
     this.i = -1;
@@ -3079,7 +3097,7 @@ class SessionCore {
     }
 
     const res = resolveMovementCore(st.ex, this.tierId);
-    if(!res){ this.next(E); return; }
+    if(!res) throw new Error("Workout contains an unsupported movement at this tier");
     this.mvId = res.id; this.mv = res.mv;
     this.ev = new Evaluator(this.mv, this.tierId);
     this.target = scaledCore(st.t, false, this.tierId);
@@ -3389,6 +3407,7 @@ class SessionCore {
 
   retierRaw(tierId){
     const E = [];
+    if(!planAvailable(this.plan,tierId) || this.mv && !this.mv.tiers.includes(tierId)) return E;
     this.hideRegression(E);
     this.tierId = tierId;
     if(this.ev) this.ev.tier = tierId;
@@ -3518,6 +3537,7 @@ class CalibrationCore {
     this.ev = new Evaluator(M["plank"], "building");
     this.t = 0; this.max = 30; this.done = false; this.paused = false;
     this.armed = false; this.armT = 0;
+    this.trackingGap = 0;
     this.lastSaid = {}; this._now = 0;
   }
 
@@ -3588,6 +3608,10 @@ class CalibrationCore {
     if(this.done || this.paused) return E;
     const r = frame ? this.ev.evaluate(frame, dt, now) : null;
     E.push(coachingFacts(r, M.plank));
+    // A brief camera flicker pauses counted time; sustained evidence loss ends
+    // continuity. Reuse the existing Restart/Finish UI, retaining watched work.
+    this.trackingGap = !r?.ok || r.observationPaused ? this.trackingGap + dt : 0;
+    if(this.armed && this.trackingGap >= 2.5){ E.push(...this.pause()); return E; }
     if(!r || !r.ok){
       this.armT = 0;
       readinessFx(this, "trackingLost", now, E);
@@ -3802,8 +3826,8 @@ function refPose(ref, t){
   const per = 1 / (ref.fps / 6);                    // slow, deliberate — it's a demo
   const span = per * (F.length - 1) * 2;            // out and back
   let u = (t % span) / per;
+  if(u > F.length - 1) u = 2 * (F.length - 1) - u;
   let i = Math.floor(u), f = u - i;
-  if(i >= F.length - 1){ i = F.length - 1 - (i - (F.length - 1)); f = 1 - f; }
   f = f * f * (3 - 2 * f);                          // smoothstep — ease each keyframe blend
   i = Math.max(0, Math.min(i, F.length - 1));
   const a = F[i];
@@ -4207,6 +4231,7 @@ function diagnosticFrame(stamp, frame, dt, now, effects){
   const r = effects.find(e => e.t === "telem")?.r;
   // Allowlist the pose contract: never copy a video element, pixels or arbitrary input properties.
   const pose = frame ? { cam:frame.cam, aspect:frame.aspect || 1, conf:frame.conf, sideness:frame.sideness,
+    ...(frame.viewUnavailable !== undefined ? {viewUnavailable:frame.viewUnavailable} : {}),
     ...Object.fromEntries(["left","right"].map(side => [side, Object.fromEntries(JOINTS.filter(j => frame[side]?.[j]).map(j => {
       const p = frame[side][j]; return [j, {x:p.x, y:p.y, z:p.z, c:p.c}];
     }))])) } : null;
@@ -4376,9 +4401,12 @@ function clipPlanFor(personaId, tierId, key, variant, vars, tmpl, has){
   else { const val = tokens[0] === "{p}" ? vars.p : vars.x; if(!val) return null; mid = TOK(val); }
   if(!has(mid)) return null;                               // can't say the middle → say it all in TTS
 
-  const seq = [P(key + ".a", variant), mid, P(key + ".b", variant)]
-    .filter(q => q === mid || has(q));
-  return seq.length ? seq : null;
+  // Empty/punctuation-only halves need no recording. Missing WORDS must never
+  // turn "Rest — forty seconds" into just "forty"; use the full local fallback.
+  const halves = tmpl.split(tokens[0]).map(s => /[a-z0-9]/i.test(s.replace(/\{n\}/g,"")));
+  const seq = [...(halves[0] ? [P(key + ".a", variant)] : []), mid,
+    ...(halves[1] ? [P(key + ".b", variant)] : [])];
+  return seq.every(has) ? seq : null;
 }
 function phrase(key, vars={}){
   const bank = bankFor(key);
@@ -4997,7 +5025,11 @@ function renderFinish(p){
    9 · TELEMETRY — the debug instrument. You can SEE the coach staying quiet.
    ═══════════════════════════════════════════════════════════════ */
 function renderTelemetry(r, ev, state){
-  if(!r.readings.length){ telEl.innerHTML = clockTag() + '<span class="meta">guided — no form claims made</span>'; return; }
+  if(!r.readings.length){
+    const label = r.guided ? "guided — no form claims made" : "observation unavailable — counting paused";
+    telEl.innerHTML = clockTag() + `<span class="meta">${label}${r.blocking?.length ? " · blocked by: " + esc(r.blocking.join(", ")) : ""}</span>`;
+    return;
+  }
   if(r.guided){
     const g = r.readings.map(x => `<span class="t ${x.s<=0?"bad":"ok"}">⊘${x.t.id} <b>${Math.round(x.v)}</b></span>`).join("");
     telEl.innerHTML = clockTag() + g + `<span class="t meta">guided — position checked, <b>no form claims made</b></span>`;
@@ -5080,6 +5112,7 @@ function screenChanged(){
   });
 }
 function showPlanPreview(plan){
+  if(!planAvailable(plan,tier)){ showHome(); banner("This workout is not available at this level. Choose another workout or level."); return; }
   screenChanged();
   const steps = expandPlanSteps(plan.steps, tier);
   const sets = steps.filter(s => s.ex).length;
@@ -5132,11 +5165,18 @@ function pauseCurrent(reason = "user"){
   applyFx(host,host.core.pause(reason)); return true;
 }
 $("pauseBtn").onclick = () => pauseCurrent();
+function canResumeCurrent(){
+  return running && !document.hidden && !cameraStarting && cameraSwitchState === "idle" &&
+    !!(calib?.core.paused || sess?.core.paused);
+}
 async function resumeCurrent(){
-  if(document.hidden) return;
+  // The same gate owns touch, typed and spoken Resume, including confirmations.
+  // Disabling a DOM button alone cannot prevent a voice callback racing a flip.
+  if(!canResumeCurrent()) return false;
   closeCoachPanel(false); cancelCoachConfirmation(); coach.reset();
   if(calib){ running = false; stopCam(); calib = null; $("sessionDialog").close(); await beginCalibration(); }
   else if(sess){ lastT = 0; lastVideoTime = -1; applyFx(sess,sess.core.resume()); await requestWakeLock(); }
+  return true;
 }
 $("resumeBtn").onclick = () => resumeCurrent();
 function endCurrent(){
@@ -5208,7 +5248,7 @@ function routeCoachAction(action){
   if(action === "pause"){ closeCoachPanel(false); if(c.paused) showPauseDialog(!!calib); else pauseCurrent("command"); return true; }
   // Other dialogs retain ownership. Voice must not operate behind help/diagnostics.
   if($("helpDialog").open || $("diagPanel").open || $("memoryDialog").open) return false;
-  if(action === "resume"){ resumeCurrent(); return true; }
+  if(action === "resume"){ if(!canResumeCurrent()) return false; resumeCurrent(); return true; }
   if(["explain","demo","repeat"].includes(action)){ cancelCoachConfirmation(); return showCoachPanel(action); }
   if(action === "cancel"){ cancelCoachConfirmation(); $("coachActionStatus").textContent = "Cancelled. Your workout remains paused."; return true; }
   if(["skip","finish","end"].includes(action)){
@@ -5230,6 +5270,10 @@ function routeCoachAction(action){
     cancelCoachConfirmation();
     if(!pending || pending.action !== requested || pending.token !== coachContextToken() || performance.now() > pending.expires){
       $("coachActionStatus").textContent = "No matching current confirmation. Nothing changed."; return false;
+    }
+    if(requested !== "end" && !calib && !canResumeCurrent()){
+      $("coachActionStatus").textContent = "The camera is not ready to resume. Nothing was skipped or finished. Wait for the switch, or end this workout.";
+      return false;
     }
     closeCoachPanel(false); $("sessionDialog").close();
     if(requested === "end") endCurrent();
@@ -5275,6 +5319,10 @@ document.querySelectorAll("#tierSeg button").forEach(b => { b.textContent = TIER
    so it appears only after the verdict, or when the person chooses to skip. */
 const tierSegEl = document.getElementById("tierSeg");
 document.querySelectorAll("#tierSeg button").forEach(b => b.onclick = () => {
+  if(sess && running && (!planAvailable(sess.core.plan,b.dataset.tier) ||
+    sess.core.mv && !sess.core.mv.tiers.includes(b.dataset.tier))){
+    banner("This workout is not available at that level. End the workout to choose another."); return;
+  }
   setTier(b.dataset.tier);
   if(sess && running) sess.retier();       // flipping tier mid-set must not leave a stale target
   else if(!running) showHome();
@@ -5380,7 +5428,7 @@ function showHome(){
   screenChanged();
   tierSegEl.hidden = false;
   msgEl.hidden = false;
-  const avail = PLANS.filter(p => p.tiers.includes(tier));
+  const avail = PLANS.filter(p => planAvailable(p,tier));
   msgInner.innerHTML = `
     <h2>${userName ? `Hi, ${esc(userName)}` : "Choose a session"}</h2>
     <p><b class="choiceLabel">${TIERS[tier].label}</b> — ${TIERS[tier].blurb.toLowerCase()}<br>
@@ -5504,7 +5552,7 @@ async function initModel(){
     runningMode:"VIDEO", numPoses:1 });
 }
 
-let camFacing = "user", wakeLock = null, cameraStage = "permission";
+let camFacing = "user", wakeLock = null, cameraStage = "permission", cameraSwitchState = "idle";
 /* Flip and Skip only mean anything with a live feed, and they appear and vanish
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){
@@ -5564,7 +5612,8 @@ function stopCam(){
   localListener?.stop("workout stopped"); closeCoachPanel(false);
   cameraRequest++; cameraStarting = false; startBtn.disabled = false;
   $("helpBtn").disabled = false;
-  flipBtn.disabled = false; $("resumeBtn").disabled = false;
+  cameraSwitchState = "idle";
+  flipBtn.disabled = false; $("resumeBtn").disabled = false; $("coachResumeBtn").disabled = false;
   if(video.srcObject){ video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
   try{ wakeLock?.release(); }catch(e){} wakeLock = null;
   coach.reset();
@@ -5575,10 +5624,11 @@ $("flipBtn").onclick = async () => {
   const original = video.srcObject, request = cameraRequest;
   const facing = camFacing === "user" ? "environment" : "user";
   let stream;
+  cameraSwitchState = "switching";
   flipBtn.disabled = true;
   // A new view must not finish an unfinished rep from the old camera.
   pauseCurrent("camera switch");
-  $("resumeBtn").disabled = true;
+  $("resumeBtn").disabled = true; $("coachResumeBtn").disabled = true;
   try{
     stream = await navigator.mediaDevices.getUserMedia({
       video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
@@ -5597,16 +5647,23 @@ $("flipBtn").onclick = async () => {
     video.srcObject = original;
     try{
       await video.play();
+      if(request !== cameraRequest || !running) return;
       $("sessionDialogCopy").textContent = calib
         ? "Couldn’t switch cameras. Your original camera and observations are kept. Use the observed result, or restart the plank check."
         : "Couldn’t switch cameras. Your original camera and observed work are kept. Resume with this camera, or end the workout.";
     }catch(recoveryError){
+      if(request !== cameraRequest || !running) return;
+      cameraSwitchState = "failed";
       $("sessionDialogCopy").textContent = "Neither camera could resume playback. Your observed work is kept. End this workout to review it, then try starting again.";
       diagnosticEvent("camera-recovery-failed", {name:recoveryError.name});
     }
     diagnosticEvent("camera-switch-failed", {name:e.name});
   }finally{
-    if(request === cameraRequest){ flipBtn.disabled = false; $("resumeBtn").disabled = false; }
+    if(request === cameraRequest){
+      if(cameraSwitchState !== "failed") cameraSwitchState = "idle";
+      flipBtn.disabled = false;
+      $("resumeBtn").disabled = $("coachResumeBtn").disabled = cameraSwitchState !== "idle";
+    }
   }
 };
 
@@ -5680,6 +5737,7 @@ async function beginCalibration(){
   if(document.hidden) pauseCurrent("background startup");
 }
 async function beginSession(plan){
+  if(!planAvailable(plan,tier)){ showHome(); banner("This workout is not available at this level. Choose another workout or level."); return; }
   tierSegEl.hidden = true;   /* changing difficulty mid-set isn't a real choice — it
                                 returns at the debrief, where it is */
   pending = "session";
@@ -6103,11 +6161,16 @@ localListener = new LocalCommandListener({
     $("listenOffBtn").textContent = status.listening ? "Listening · mic off" : "Mic off";
     $("listenOnBtn").textContent = status.enabled || status.reason === "abort-failed" ? "Turn microphone off" : "Enable local listening";
     $("listenOnBtn").dataset.listeningEnabled = String(status.enabled || status.reason === "abort-failed");
+    for(const id of ["pauseMicOffBtn","helpMicOffBtn"]){
+      $(id).hidden = !status.enabled && status.reason !== "abort-failed";
+      $(id).textContent = status.reason === "abort-failed" ? "Microphone release failed — close this page" : "Turn microphone off";
+    }
   }
 });
 $("listenOnBtn").onclick = () => $("listenOnBtn").dataset.listeningEnabled === "true"
   ? localListener.stop("user disabled") : localListener.start();
 $("listenOffBtn").onclick = () => localListener.stop("user disabled");
+$("pauseMicOffBtn").onclick = $("helpMicOffBtn").onclick = $("listenOffBtn").onclick;
 addEventListener("pagehide",()=>localListener.stop("page hidden"));
 
 new ResizeObserver(() => {

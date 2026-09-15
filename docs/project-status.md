@@ -3,10 +3,10 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
-**Last updated:** 14 September 2026 — local coaching controls, evidence-backed
-explanations, authored-workout requests, opt-in history and optional on-device
-quality review, following the debrief/interface/body-clothing work. These use
-the existing test infrastructure. The 9 September
+**Last updated:** 14 September 2026 — two full-code-review passes following local
+coaching controls, evidence-backed explanations, authored-workout requests, opt-in
+history and optional on-device quality review. These use the existing test
+infrastructure. The 9 September
 recording adds real-room evidence but is not a completed independent beginner
 protocol; that release gate remains open.
 
@@ -66,6 +66,86 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Full-code review fixes:** view-unreliable form no longer affects scores, cues or
+tint; calibration cannot join separate bouts across sustained tracking loss;
+camera view uses consistent x/z units and observed shoulder/hip pairs. Pause and
+Help expose microphone-off controls inside their modals. Demo return interpolation
+is continuous. Workout availability is consistent across picker/search/preview/start
+(nine supported plan/tier combinations, three Strong exclusions), and required-video
+runs cannot succeed without video. No model, server or movement thresholds changed.
+The second pass closes command/touch camera-readiness divergence, dead-camera
+Resume, stale recovery callbacks, misleading unavailable-view telemetry and
+partial recorded instructions. The original harnesses now consume the saved
+build; the mutation harness handles archived paths and cannot call a failed or
+missing verifier a healthy control.
+See [the fix record](sessions/code-review-fixes-2026-09-14.md), including the explicit
+seven-field view migration, one corrected clip expectation and retained failures.
+
+**Latest verification (14 September local time, second review pass):** `npm test`
+exits **0** at `test-results/2026-09-15T00-47-17-766Z-71918/`. All **77
+infrastructure tests**, **1,280 targeted tests across 17 suites**, and all four
+original harnesses pass. The **320 report rows** contain **308 passing entries**
+and **12 blocked video entries**, with zero unexpected failures.
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 106/106 | 992 |
+| Recorded-clip audio | 16/16 | 338 |
+
+Original harness totals: **4,127 conformance**, **eight caught mutations and a
+healthy control**, **250 drawing**, **26 skip**. Four historical frame-rate
+vectors remain unreplayable; their missing generator was not recovered.
+Swift passes **105 deterministic tests** (26 engine, 22 summary, 57 interaction),
+with three optional real-model tests skipped. Shared parity includes **35 movement
+evidence rows** and **17 clip-resolution rows**. The separate blank-video smoke
+passes **14/14** at `test-results/2026-09-15T00-46-13-980Z-71677/`; it verifies the
+MediaPipe adapter on blank synthetic footage, not human recognition accuracy.
+
+All **26 coverage-gap findings** remain explicit: 12 missing-video entries, two
+native-TTS waveform gaps and 12 case-level recognition/real-person warnings.
+There are no unexpected speech review candidates. No AI reviewer, physical-device
+test or new real-model smoke was invoked. No push or remote CI run is claimed.
+
+Final HTML SHA-256:
+`21a6f523e98d178c16c0a715580a743446a19b76ab691ba2e93da8aac4d1cc67`.
+The saved build, all nine recorded build/fixture/lockfile/bridge hashes and all
+56 recorded JavaScript test-source hashes match the final files. Documentation
+was updated afterwards for the requested review commit. The earlier failed
+second-review run is retained: it exposed the mutation harness's archived-path
+assumption, now repaired and covered by real archived-build and failed-control
+tests. See the fix record for both review passes and the deliberately limited
+eight-field root-expectation migration.
+
+**Earlier verification (14 September, first review pass):** `npm test` exits
+**0** at `test-results/2026-09-14T23-02-24-220Z-66545/`. All **72 infrastructure
+tests**, **1,255 targeted tests across 17 suites**, and the four original harnesses
+pass. The **315 report rows** comprise 303 passing entries and 12 blocked video
+entries; there are zero unexpected failures.
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 101/101 | 957 |
+| Recorded-clip audio | 16/16 | 338 |
+
+Swift passes **104 deterministic tests**, including the **35 shared movement
+evidence cases**, with three optional real-model smokes skipped. The final-build
+blank-video smoke separately passes **14/14** at
+`test-results/2026-09-14T22-59-57-152Z-66194/`. This is adapter wiring, not human
+exercise accuracy. All **26 coverage-gap findings** remain explicit; no AI reviewer
+was invoked and no gap was labelled solved by passing software tests.
+
+That checkpoint's HTML SHA-256:
+`6f4c41fd1841f88a6609c016c89082fe76380b49d1544de6f708f27b790d89b5`.
+The saved build, root vector hash and every recorded JavaScript test-source hash
+matched that checkpoint's files; documentation was updated afterwards. Seven historical
+view-checkpoint fields were deliberately migrated, with all other root expectations
+and the original 27 shared evidence rows preserved. Those changes were still
+uncommitted at that checkpoint and are included in the subsequent review commit.
+
 **Local coaching interactions:** Ask coach pauses and explains recent measured
 counting conditions, with existing demos and repeat teaching. Typed and optional
 strictly local spoken commands use the actual controls, with expiring explicit
@@ -79,7 +159,7 @@ prepares synthetic review evidence; `npm run test:review -- --run <exact-run>`
 optionally prioritises existing findings without changing an oracle or closing
 coverage gaps. See [implementation and evidence](sessions/local-coaching-2026-09-14.md).
 
-**Latest verification (14 September, local-coaching checkpoint):** `npm test`
+**Earlier verification (14 September, local-coaching checkpoint):** `npm test`
 exits **0** at `test-results/2026-09-14T15-22-34-852Z-54396/`. All **67
 infrastructure tests**, **1,202 targeted checks across 16 suites**, and all four
 original harnesses pass. Scenario results:
@@ -432,11 +512,11 @@ before the Swift port is justified.
 
 | | |
 |---|---|
-| **Build** | `form-coach-v4.11.html` — single file, 267,922 bytes (262 KiB); existing external runtime, model and font assets remain; not yet an offline package |
-| **Verification** | Four browser harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught · drawing 250/250 · skip 26/26 · `swift test` 25/25 including 27 additional shared evidence cases |
+| **Build** | `form-coach-v4.11.html` — single file, 367,224 bytes (359 KiB); existing external runtime, model and font assets remain; not yet an offline package |
+| **Verification** | Four harnesses green: `verify.mjs` **4,127/4,127** against 1,896 recorded vectors · mutations 8/8 caught with a verified control · drawing 250/250 · skip 26/26 · Swift 105 deterministic tests, including 35 shared movement-evidence and 17 clip-resolution cases, plus three opt-in model smokes skipped |
 | **Content** | 21 movements (10 rep · 10 hold · 1 guided), 5 plans, 3 tiers, 3 personas |
 | **Voice** | Previous render plan: 1,351 clips, 210 pending. Five new readiness/framing keys also need recorded clips; fallback requires a verified local English voice or remains visual-only. No new render/cost estimate is claimed. |
-| **Swift package** | 13 source/manifest files (10 library, two test files and Package.swift); root conformance and movement-evidence fixtures current |
+| **Swift package** | 36 Swift files (24 source files, 11 test files and Package.swift); root conformance and movement-evidence fixtures current; native session cores/UI remain unported |
 | **Beginner tests** | **1 of 2 complete** — see `test-01-max.md` |
 
 ### A note on the test count
