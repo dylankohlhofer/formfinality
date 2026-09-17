@@ -89,6 +89,13 @@ and email if Git asks. Do not force-push this unrelated history to the original
 repository. Return reviewed changes as a patch or a new source snapshot, or ask
 the project owner to reconcile them onto the original branch.
 
+On macOS, the included packaging helper can make another local handover after
+committing tracked changes: `node handover/package-snapshot.mjs test-results/<completed-full-run>`.
+It reads committed assets from Git, checks the test checkpoint and explicitly
+allowlists additional untracked documents. New untracked files require review
+before export. It does not push or upload the ZIP. The integrity verifier itself
+is platform-independent; the packager currently uses macOS ZIP tools.
+
 For shared Git history, the owner must separately grant your GitHub account
 access to `dylankohlhofer/formfinality` and publish the checkpoint. Do not assume
 this preparation invited anyone or pushed anything. Never copy `.codex/auth.json`,

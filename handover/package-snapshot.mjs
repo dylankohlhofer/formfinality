@@ -1,4 +1,4 @@
-// Explicit, local-only working-source export. Never recursively archive the checkout.
+// Explicit, local-only checkpoint export. Never recursively archive the checkout.
 // Usage: node handover/package-snapshot.mjs <completed-test-run-directory>
 import { readFile, writeFile, mkdir, mkdtemp, lstat, readlink, symlink, realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 const root = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), '..'));
 const hash = data => createHash('sha256').update(data).digest('hex');
 const git = args => execFileSync('git', args, {cwd: root, encoding: 'utf8'}).trim();
+const checkpoint = git(['rev-parse','HEAD']);
+execFileSync('git',['diff','--quiet','HEAD','--'],{cwd:root});
 const historicalRun = '2026-09-15T03-36-59-711Z-84685';
 const reportDir = await realpath(resolve(root, process.argv[2] || 'MISSING-TEST-RUN'));
 const reportRelative = relative(resolve(root, 'test-results'), reportDir);
@@ -60,12 +62,37 @@ if (unknown.length) throw new Error(`Review additional untracked files before ex
 const selected = [...new Set([...tracked.filter(p => !excluded.includes(p)), ...untracked])].sort();
 const allowed = new Set(['.md','.mjs','.js','.json','.html','.swift','.yml','.mp3','']);
 const secret = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b|\bgh[pousr]_[A-Za-z0-9]{24,}\b|\bgithub_pat_[A-Za-z0-9_]{30,}\b|\bAKIA[0-9A-Z]{16}\b/;
-const payload = [];
 for (const p of selected) {
   if (p.split('/').some(s => !s || s === '.' || s === '..' || ['.git','.codex','.agents','node_modules','test-results','private','assets','.build'].includes(s)) ||
       /(^|\/)(\.env(?:\..*)?|auth\.json|id_rsa|id_ed25519)$/.test(p) || !allowed.has(extname(p)))
     throw new Error(`Not an approved source path: ${p}`);
-  const path = resolve(root,p), info = await lstat(path);
+}
+// Read committed assets from Git objects, avoiding slow materialization of old
+// working-folder assets. A dirty tracked checkout must be committed first.
+for(const line of list(['ls-files','--stage','-z'])) {
+  if(!line.startsWith('120000 '))continue;
+  const p=line.slice(line.indexOf('\t')+1);
+  if(p!=='CLAUDE.md' || git(['show',`${checkpoint}:${p}`])!=='AGENTS.md')
+    throw new Error(`Unexpected checkpoint symlink: ${p}`);
+}
+const parent = resolve(root,'test-results/handovers');
+await mkdir(parent,{recursive:true});
+const out = await mkdtemp(resolve(parent,'formfinality-2026-09-16-'));
+const stage = resolve(out,'source/formfinality');
+await mkdir(stage,{recursive:true});
+const checkpointZip=resolve(out,'checkpoint.zip');
+execFileSync('git',['archive','--format=zip',`--output=${checkpointZip}`,checkpoint,'--','.',':!swift-port-kit.zip'],{cwd:root});
+execFileSync('/usr/bin/unzip',['-q',checkpointZip,'-d',stage]);
+for(const p of untracked) {
+  const source=resolve(root,p), info=await lstat(source), real=await realpath(source);
+  if(!info.isFile() || info.isSymbolicLink() || !real.startsWith(root+sep))throw new Error(`Unsafe untracked source: ${p}`);
+  await mkdir(dirname(resolve(stage,p)),{recursive:true});
+  await writeFile(resolve(stage,p),await readFile(source),{flag:'wx',mode:info.mode&0o777});
+}
+console.log('Checkpoint extracted; checking selected source and asset hashes.');
+const payload = [];
+for (const p of selected) {
+  const path = resolve(stage,p), info = await lstat(path);
   if (info.isSymbolicLink()) {
     const target = await readlink(path);
     if (p !== 'CLAUDE.md' || target !== 'AGENTS.md') throw new Error(`Unexpected symlink: ${p}`);
@@ -73,29 +100,21 @@ for (const p of selected) {
   } else {
     if (!info.isFile()) throw new Error(`Not a regular source file: ${p}`);
     const real = await realpath(path);
-    if (!real.startsWith(root + sep)) throw new Error(`Source escapes checkout: ${p}`);
+    if (!real.startsWith(stage + sep)) throw new Error(`Source escapes snapshot: ${p}`);
     const bytes = await readFile(path);
     if (extname(p) !== '.mp3' && secret.test(bytes.toString('utf8')))
       throw new Error(`Possible credential found; review locally before exporting: ${p}`);
-    payload.push({path:p,type:'file',sha256:hash(bytes),bytes,mode:info.mode & 0o777});
+    payload.push({path:p,type:'file',sha256:hash(bytes)});
   }
 }
-const manifest = JSON.parse(await readFile(resolve(root,'voice/manifest.json'),'utf8'));
+for(const [p,h] of Object.entries(expected))
+  if(payload.find(f=>f.path===p)?.sha256!==h)throw new Error(`Archived checkpoint differs from tested source: ${p}`);
+const manifest = JSON.parse(await readFile(resolve(stage,'voice/manifest.json'),'utf8'));
 const paths = new Set(payload.map(x => x.path));
 if (!Array.isArray(manifest) || new Set(manifest).size !== manifest.length ||
     manifest.some(p => typeof p !== 'string' || !p.startsWith('voice/') || !paths.has(p)))
   throw new Error('Every unique active voice asset must be present');
 
-const parent = resolve(root,'test-results/handovers');
-await mkdir(parent,{recursive:true});
-const out = await mkdtemp(resolve(parent,'formfinality-2026-09-16-'));
-const stage = resolve(out,'source/formfinality');
-await mkdir(stage,{recursive:true});
-for (const f of payload) {
-  await mkdir(dirname(resolve(stage,f.path)),{recursive:true});
-  if (f.type === 'symlink') await symlink(f.target,resolve(stage,f.path));
-  else await writeFile(resolve(stage,f.path),f.bytes,{flag:'wx',mode:f.mode});
-}
 const baseline = {
   schema:'formcoach-handover-baseline/1', sourceRun:basename(reportDir), historicalRun,
   started:report.started, origin:report.origin, sourcePlatform:report.platform, sourceNode:report.node,
@@ -123,16 +142,16 @@ for (const [path,data] of [['handover/BASELINE.json',baseline],['handover/TRANSF
 }
 const receipt = {
   schema:'formcoach-handover/1', created:new Date().toISOString(),
-  branch:git(['branch','--show-current']), commit:git(['rev-parse','HEAD']),
+  branch:git(['branch','--show-current']), commit:checkpoint,
   workingStatus:git(['status','--short']), historyIncluded:false,
   files:payload.map(({path,type,sha256,target}) => ({path,type,sha256,...(target?{target}:{})})).sort((a,b)=>a.path.localeCompare(b.path))
 };
 await writeFile(resolve(stage,'handover/SNAPSHOT.json'),JSON.stringify(receipt,null,2)+'\n',{flag:'wx'});
-// Catch a watcher/editor changing the source during the export.
-for (const f of payload.filter(f=>!['handover/BASELINE.json','handover/TRANSFER-CHECKS.json'].includes(f.path))) {
-  const data=f.type==='symlink'?await readlink(resolve(root,f.path)):await readFile(resolve(root,f.path));
-  if(hash(data)!==f.sha256)throw new Error(`Source changed during export: ${f.path}`);
-}
+// Do not mislabel a changed checkout as this checkpoint.
+if(git(['rev-parse','HEAD'])!==checkpoint)throw new Error('Git checkpoint changed during export');
+execFileSync('git',['diff','--quiet','HEAD','--'],{cwd:root});
+for(const p of untracked)
+  if(hash(await readFile(resolve(root,p)))!==payload.find(f=>f.path===p).sha256)throw new Error(`Untracked source changed: ${p}`);
 execFileSync(process.execPath,[resolve(stage,'handover/verify-snapshot.mjs')],{stdio:'inherit'});
 const zip=resolve(out,'formfinality-handover-2026-09-16.zip');
 const entries=[...receipt.files.map(f=>'formfinality/'+f.path),'formfinality/handover/SNAPSHOT.json'];
