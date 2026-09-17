@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { audioSweep } from './audio-sweep.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
-const html = await readFile(resolve(root, 'form-coach-v4.11.html'), 'utf8');
+const html = await readFile(resolve(root, process.env.FORM_COACH_TEST_BUILD || 'form-coach-v4.11.html'), 'utf8');
 await mkdir(resolve(root, 'test-results'), { recursive: true });
 const dir = await mkdtemp(resolve(root, 'test-results/audio-mutation-'));
 await writeFile(resolve(dir, 'build.html'), html);
@@ -100,6 +100,34 @@ test('muting actual media elements is caught as silence', async () => {
     }) });
   assert.ok(!r.error, r.error);
   assert.ok(r.checks.some(c => !c.pass && c.label.includes('non-silent')), JSON.stringify(r));
+});
+test('a stalled second number cannot pass on the first audible number', async () => {
+  const target=resolve(dir,'stalled-second-number');
+  const [r] = await audioSweep({root,html,dir:target,only:'clips-steady-building',repeatFailures:false,
+    verification:{variant:'withhold the second number response',expected:'second number completion/signal check fails; NOT an app bug',source:'testing/audio-capture.test.mjs'},
+    // Leave precisely this request unanswered until the test closes its context.
+    mutate:page=>page.route('**/voice/steady/num/2.mp3',()=>{})});
+  assert.ok(!r.error,r.error);
+  assert.ok(r.checks.find(c=>c.label==='Number 1 actually plays to completion with measured signal')?.pass,JSON.stringify(r));
+  assert.equal(r.checks.find(c=>c.label==='Number 2 actually plays to completion with measured signal')?.pass,false);
+  const e=JSON.parse(await readFile(resolve(target,'audio-clips-steady-building/audio.json')));
+  assert.ok(e.events.some(e=>e.type==='coach-decision' && e.event==='failed' && e.item.text==='2' && e.ms<3500),
+    'An unavailable number must release the queue within its original 3s deadline, not after the 25s watchdog');
+  assert.ok(!e.events.some(e=>e.type==='tts-request'),'No unsolicited TTS fallback');
+});
+test('an unanswered first clip retries once and both real numbers still finish', async()=>{
+  const target=resolve(dir,'recover-first-request');let requests=0;
+  const [r]=await audioSweep({root,html,dir:target,only:'clips-steady-building',repeatFailures:false,
+    verification:{variant:'withhold only the first number request',expected:'fresh retry recovers actual complete audio within the original deadlines',source:'testing/audio-capture.test.mjs'},
+    mutate:page=>page.route('**/voice/steady/num/1.mp3',route=>{if(++requests>1)return route.continue();})});
+  assert.equal(r.status,'passed',JSON.stringify(r));assert.equal(requests,2);
+  const e=JSON.parse(await readFile(resolve(target,'audio-clips-steady-building/audio.json')));
+  const loads=e.events.filter(e=>e.type==='clip-request' && e.path==='voice/steady/num/1.mp3');
+  assert.equal(loads.length,2);
+  assert.ok(e.events.some(e=>e.type==='clip-cancelled' && e.playId===loads[0].playId));
+  assert.ok(!e.events.some(e=>e.type==='clip-start' && e.playId===loads[0].playId));
+  assert.ok(e.events.some(e=>e.type==='clip-start' && e.playId===loads[1].playId));
+  assert.equal(e.events.filter(e=>e.type==='clip-stalled' && e.retry).length,1);
 });
 test('bypassing the queue makes real clips overlap and is caught', async () => {
   const [r] = await audioSweep({ root, html, dir: resolve(dir, 'overlap'), only: 'clips-steady-building', repeatFailures: false,

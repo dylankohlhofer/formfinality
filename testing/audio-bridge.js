@@ -69,6 +69,12 @@ window.__audioLab = (() => {
     }
     return decision(event, item, reason);
   };
+  const diagnostic = diagnosticEvent;
+  diagnosticEvent = (kind, data) => {
+    if(kind === 'speech' && data.event === 'clip-stalled')
+      log('clip-stalled', {path:data.path,reason:data.reason,retry:data.retry,item:activeItem});
+    return diagnostic(kind, data);
+  };
   const fx = applyFx;
   applyFx = (host, effects) => {
     latest = effects.findLast(e => e.t === 'telem')?.r ?? latest;

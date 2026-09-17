@@ -3,7 +3,9 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
-**Last updated:** 14 September 2026 — two full-code-review passes following local
+**Last updated:** 14 September 2026 — bounded recorded-audio recovery, following architecture review and measured runtime
+optimisations, following authorized lifecycle/import fixes and the adversarial review,
+two full-code-review passes and local
 coaching controls, evidence-backed explanations, authored-workout requests, opt-in
 history and optional on-device quality review. These use the existing test
 infrastructure. The 9 September
@@ -66,6 +68,150 @@ the three known Cat–Cow engine failures; none are suppressed. Evidence:
 
 ## Executive summary
 
+**Latest changes: bounded recorded-audio recovery and stricter playback checks.**
+The player checks stalled startup/progress, makes at most one fresh-element retry
+before any words start, and retains the original first-start deadline. A failed
+line releases the coaching gate with visual guidance; no automatic native/cloud
+fallback is added. Tests now require both declared number clips to complete with
+their own measured signal and reject hidden watchdog/recorded-utterance failures.
+The full `npm test` **passes**, including the two new real-transport fault checks.
+The archived build fails both new fault checks
+and the stalled-calibration case. The underlying OS/browser trigger of the original
+stalls is not established. See [the recovery record](sessions/audio-stall-recovery-2026-09-14.md).
+
+**Latest verification (14 September local time, audio stall recovery):** `npm test`
+exits **0** at `test-results/2026-09-15T03-36-59-711Z-84685/`. All **82 infrastructure
+tests**, **1,507 targeted tests in 20 suites**, and the four original harnesses pass.
+The report contains **346 rows: 334 passing and 12 blocked real-video rows**, with
+zero unexpected failures. All six earlier audio failures now pass stricter rules.
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 129/129 | 1,106 |
+| Recorded-clip audio | 16/16 | 388 |
+
+The 26 review candidates are existing coverage gaps; no AI review or physical-device
+validation is claimed. The original totals remain **4,127 conformance**, **eight
+caught mutations plus healthy control**, **250 drawing** and **26 skip**; four lost
+frame-rate vectors remain unreplayable. The actual-audio mutation suite is retained
+at `test-results/audio-mutation-4OUVyI/`, with all ten tests passing while its
+deliberately broken captures remain failures.
+
+Final HTML SHA-256:
+`cb6e83e77533d22db76f0681128066771fb13feaacc4245ec6f7806106f31bf5`.
+The archived build and all 63 recorded JavaScript test-source hashes match the
+working files. Judgement/drawing, content, vectors, voice assets, dependencies and
+Swift are unchanged in this follow-up. Changes remain uncommitted and unpushed.
+
+**Previous changes: measured browser-boundary optimisations, no engine changes.**
+One current-frame conversion feeds drawing and judgement. Passive UI writes are
+idempotent without throttling changed observations. Diagnostic appends use
+incremental accounting while retaining transactional flag/eviction protection.
+The isolated synthetic recorder workload improved **2.34×** (550.22 → 235.37 ms
+median), with identical exported snapshots; this is not whole-app FPS or mobile
+battery evidence. Eleven new default regression checks and four shell cases
+protect the optimisations. All **1,495 targeted tests across 19 suites**, the four
+original harnesses and the **14-check blank-video smoke** pass. The final full run
+does **not** pass: six recorded-audio cases fail with stalled local clip requests.
+The architecture/system guides now describe current boundaries rather than obsolete
+UI-coverage and fatigue claims. See
+[the architecture review](sessions/architecture-optimisations-2026-09-14.md).
+
+**Previous verification (14 September local time, architecture optimisations):**
+`npm test` exits **1** at `test-results/2026-09-15T02-55-42-639Z-80560/`. All **77
+infrastructure tests**, **19 targeted suites**, **four original harnesses**, **55
+engine cases / 1,307 assertions**, **110 browser / 942**, and **128 shell / 1,100**
+pass. Recorded audio is **10/16 cases passing, 293/307 assertions**. The report
+has **344 rows: 326 passing, six failed, 12 blocked real-video**. Its 39 review
+candidates include failed checks and existing coverage gaps, not 39 distinct bugs.
+
+The six failures involve Ask/Resume, Pause/Resume, queue expiry, tracking-loss
+speech and two Warm number samples. Traces show unanswered local MP3 requests and
+playback watchdog/cancellation events; all six automatic repeats pass their checks,
+but the initial failures remain open. A separate baseline comparison stalled while
+importing browser tooling and was stopped. No root cause or environment-only
+explanation is established. No audio expectations or production speech logic were
+changed to get green. See the architecture review for exact evidence and the
+limits of the number-sample checks.
+
+Final HTML SHA-256:
+`f8796a4f1cfa83f3ebe2687f810c2dcda0572fd638d4e40eeb9df86cd45cb502`.
+The separate final-build blank-video smoke passes **14/14** at
+`test-results/2026-09-15T02-54-59-462Z-80424/`. The earlier first-optimisation
+full run passed, but predates the final text-node cache edge-case fix and is not
+the current verification checkpoint. Changes remain uncommitted and unpushed.
+
+**Previous changes: all five adversarial findings repaired in the browser shell.**
+End owns and immediately releases both pending-switch streams; animation callbacks
+carry camera-generation identity; wake-lock requests coalesce and reject stale
+grants. Diagnostic imports validate blocker lists before replay and guard success,
+failure and input cleanup against older reads. The original eight browser cases
+now pass; expanded coverage is **18 cases / 89 checks**, plus **221 targeted
+control/diagnostic tests**. The **14-check blank-video smoke** passes. Engine
+extraction is byte-identical to `e639a9b`;
+vectors, Swift, voice assets and dependencies are unchanged. Changes remain
+uncommitted and unpushed. See [the repair follow-up](sessions/adversarial-review-2026-09-14.md#authorized-repair-follow-up--14-september-2026).
+
+**Previous verification (14 September local time, authorized repairs):** `npm test`
+exits **0** at `test-results/2026-09-15T02-18-47-243Z-76360/`. All **77 infrastructure
+tests**, **1,484 targeted tests in 18 suites**, and all four original harnesses pass.
+The report contains **339 rows: 327 passing and 12 blocked real-video rows**, with
+zero unexpected failures. All six original adversarial failures are now passing;
+the other previous rows retain their statuses.
+
+| Mode | Cases passed | Assertions |
+|---|---:|---:|
+| Engine | 55/55 | 1,307 |
+| Browser | 110/110 | 942 |
+| Interface / shell | 124/124 | 1,081 |
+| Recorded-clip audio | 16/16 | 338 |
+
+The four harness totals are unchanged: **4,127 conformance**, **eight caught
+mutations plus healthy control**, **250 drawing** and **26 skip**. The four lost
+historical frame-rate vectors remain explicitly unreplayable. The report's **26
+review candidates are existing coverage gaps**, not new failures or solved
+recognition limits; no AI reviewer was invoked. `npm run test:video` separately
+passes **14/14** at `test-results/2026-09-15T02-18-02-794Z-76218/` using synthetic
+blank footage, not a human exercise recording.
+
+Repaired HTML SHA-256:
+`0b6e49759815f582c3f0196e6613c0aa2b4dae7a7b87e360a416e55b2fdb70ab`.
+The archived build, nine recorded build/fixture/lockfile/bridge hashes and all 58
+JavaScript test-source hashes match the final files. The expanded browser suite
+also deliberately fails **14/18 cases** on the archived pre-fix build, retaining
+four healthy controls. No expectations were weakened to make the repairs pass.
+
+**Prior review checkpoint: five open defects; no application changes.** New
+adversarial tests reproduce a retained camera stream after End during pending
+replacement, revived old animation loops, an orphaned wake lock, malformed
+diagnostic blocker lists crashing replay and stale import failure hiding a newer
+review. The user explicitly chose review/tests only; nothing was fixed, committed
+or pushed. See [the prioritized findings and reproductions](sessions/adversarial-review-2026-09-14.md).
+
+**Prior verification (14 September local time, adversarial review):** `npm test`
+exits **1** at `test-results/2026-09-15T02-00-08-396Z-74284/`, for six new shell
+failures representing those five bugs. All six automatically reproduce. The
+**77 infrastructure tests**, **1,478 targeted tests in 18 suites**, all four original
+harnesses, **55 engine / 1,307 assertions**, **110 browser / 942**, and **16 audio /
+338** pass. Shell coverage is **108 passing / six failing cases**, with **1,014
+passing / 13 failed assertions**. All pre-existing cases retain their statuses.
+
+The report contains **329 rows: 311 passing, six failing, 12 blocked video**.
+Its **39 review candidates** are 26 existing coverage gaps plus 13 failed assertions,
+not 39 distinct bugs. No unexpected speech concerns or automatic AI review were
+added. New coverage includes 132 seeded control histories across all 44 supported
+exercise/tier pairs, 44 uneven-cadence cases, 20 diagnostic histories and two
+accelerated long-session tests (198 tests total), plus eight browser cases.
+
+The HTML hash remains
+`21a6f523e98d178c16c0a715580a743446a19b76ab691ba2e93da8aac4d1cc67`.
+The archived build, nine recorded build/fixture/lockfile/bridge hashes and all 58
+JavaScript test-source hashes match the final files. Production HTML, root vectors,
+Swift and dependencies are unchanged from `e639a9b`. Testing/docs changes remain
+uncommitted; real-person, physical-device and cross-browser gaps remain open.
+
 **Full-code review fixes:** view-unreliable form no longer affects scores, cues or
 tint; calibration cannot join separate bouts across sustained tracking loss;
 camera view uses consistent x/z units and observed shoulder/hip pairs. Pause and
@@ -81,7 +227,7 @@ missing verifier a healthy control.
 See [the fix record](sessions/code-review-fixes-2026-09-14.md), including the explicit
 seven-field view migration, one corrected clip expectation and retained failures.
 
-**Latest verification (14 September local time, second review pass):** `npm test`
+**Earlier verification (14 September local time, second review pass):** `npm test`
 exits **0** at `test-results/2026-09-15T00-47-17-766Z-71918/`. All **77
 infrastructure tests**, **1,280 targeted tests across 17 suites**, and all four
 original harnesses pass. The **320 report rows** contain **308 passing entries**

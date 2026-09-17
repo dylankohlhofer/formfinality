@@ -8,6 +8,10 @@ remembered.
 **New to the codebase?** `architecture-guide.md` is the orientation — the whole system, from
 nothing, with a map of where everything lives.
 
+**Continuing on another device?** Start with `../START-HERE.md` and
+`sessions/device-handover-2026-09-16.md`; the latter records the conversation's
+current next task and distinguishes completed fixes from the proposed voice audit.
+
 ---
 
 ## If you have five minutes
@@ -43,6 +47,9 @@ thing standing between here and the Swift port.
 |---|---|
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
 | `sessions/code-review-fixes-2026-09-14.md` | Two review passes: view/hold reliability, camera and microphone lifecycle, complete speech, demo animation, supported plans and test provenance |
+| `sessions/adversarial-review-2026-09-14.md` | Seeded controls, long sessions, five reproduced lifecycle/import defects and their authorized repair follow-up |
+| `sessions/architecture-optimisations-2026-09-14.md` | Architecture assessment, measured conversion/DOM/diagnostic optimisations, regression evidence and deferred platform work |
+| `sessions/audio-stall-recovery-2026-09-14.md` | Bounded local-clip recovery, original speech deadlines, real failed-request controls and stricter complete-audio checks |
 | `sessions/local-coaching-2026-09-14.md` | Local speech controls, explanations, authored-plan search, opt-in memory and AI review with verification and limits |
 | `sessions/workout-summaries-2026-09-14.md` | Evidence-backed debriefs, optional native AI selection, actual local-model smoke and remaining limits |
 | `sessions/interface-review-2026-09-14.md` | Feature-by-feature UI audit, implemented workout controls, mobile contracts and remaining human/device checks |

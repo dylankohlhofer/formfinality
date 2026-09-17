@@ -5,6 +5,10 @@ going near a line of it. No prior knowledge assumed. Where a concept needs teach
 zero — what a dot product is, what a neural network actually does — this guide names it and
 points at `concepts-deep-dive.md` rather than re-teaching it badly.
 
+Updated after the September 14 architecture review. Current verification counts
+belong in `project-status.md`; optimization measurements and deferred work are in
+`sessions/architecture-optimisations-2026-09-14.md`.
+
 **What this guide is.** A map. `system-reference.md` is the spec, `concepts-deep-dive.md` is
 the theory, `swift-port.md` is the plan. This is the thing that tells you which of those you
 need, and where in the code anything actually lives.
@@ -43,7 +47,9 @@ It has no idea how tall you are, and never needs to.
 1. **Camera** — a `<video>` element. Raw pixels.
 2. **Pose model** — Google's MediaPipe, running *on the device*, turning pixels into 33
    labelled points (left shoulder, right knee…) each with an x, a y, a depth guess, and a
-   confidence. This is the only machine learning in the product, and we didn't train it.
+   confidence. This is the browser's pose model; we didn't train it. The optional
+   native coaching selectors are separate consumers of approved facts/IDs, not
+   alternative pose judges or a cloud coach.
 3. **Engine** — pure arithmetic. Takes the points, measures angles, decides what's wrong,
    decides whether to mention it. Knows nothing about screens.
 4. **Shell** — puts things on the screen and plays audio. Knows nothing about exercise.
@@ -66,31 +72,34 @@ verify-mutations.mjs      breaks demos on purpose, checks the tests notice
 verify-draw.mjs           checks the demo drawings are drawn correctly
 verify-skip.mjs           checks both cores record skips as null, never zero
 swift/                    the iOS port (a Swift package, engine only)
-voice/                    rendered coach audio — 1,294 clips across three
+voice/                    rendered coach audio across three
                           personas plus spoken numbers, indexed by manifest.json
 voice-render-kit/         the ElevenLabs tooling that produced them
 docs/                     this vault
+testing/                  shared replay/browser/audio runner, regressions and profiles
 ```
 
 ### Why one HTML file?
 
-It looks eccentric. It is deliberate. A single file has no build step, no bundler, no
-`node_modules`, no version skew between what you tested and what you shipped. You open it in
-a browser and that is the product. For a solo project whose next milestone is *watching a
-beginner use it*, the ability to change one line and refresh is worth more than module
-hygiene.
+There is one production source entrypoint and no production bundler. Tests have
+pinned npm dependencies; recorded voice assets are separate, and the browser still
+loads its runtime/model and fonts externally. Opening one HTML file does **not**
+make this an offline package. Tests archive the exact HTML and relevant input hashes
+so verification cannot silently switch to a newly edited working build.
 
-The cost is real: 3,940 lines in one file, and your editor's outline view is the only
-navigation. That cost is paid down by the numbered section banners described next.
+The large file is a maintenance cost. Named extraction boundaries, the effect
+protocol and focused tests matter more than its physical file count. Preserve these
+seams now; a future source split must keep an equivalent generated artifact and
+test provenance. It is not a prerequisite for removing redundant runtime work.
 
 ### The two halves of that file
 
 The file has a hard internal seam at `const VERSION`:
 
-| | Lines | What lives there |
+| | Search anchors | What lives there |
 |---|---|---|
-| **Engine** | ~505–2740 | Content declarations, geometry, scoring, evaluator, rep counter, session logic |
-| **Shell** | ~2740–3940 | Voice playback, DOM updates, screens, camera, the animation loop |
+| **Core / headless helpers** | `const TIERS` → `const VERSION` | Content, geometry, evaluator, counters, session/calibration state machines, approved coaching contracts and injected drawing helpers |
+| **Browser shell** | `const VERSION` onward | Voice, local diagnostics, DOM effects, controls, screens, camera ownership and animation loop |
 
 This is not a comment — it is load-bearing. `verify.mjs` literally slices the file at those
 two markers, and imports the engine as a module to test it headlessly. That is why the
@@ -206,10 +215,10 @@ The largest section, and where judgement happens.
 - **`class Rep`** — counts reps. Far harder than it sounds: it needs two thresholds rather
   than one, a "primed" flag so you can't score a rep you never started, and a minimum
   duration so a bounced rep doesn't count. See the hysteresis and debouncing rows in §7.
-- **`sessionInsights`** — turns *when* faults happened into advice. Sag at 22 seconds of a
-  30-second plank is fatigue: hold shorter sets. Sag at 2 seconds is technique: fix the
-  setup. Same fault, same count, opposite advice. It is the most trainer-like thing in the
-  product.
+- **`sessionInsights` / `buildWorkoutSummary`** — summarize observed work and select
+  approved teaching. Timing is an observation, **not a fatigue or setup diagnosis**.
+  Missing measurements remain missing; unassessed sets do not acquire assessment
+  highlights. See `workout-summary-contract.md`.
 - **`SessionCore` / `CalibrationCore`** — the state machines that drive a whole workout and
   the initial "what tier are you?" assessment.
 - **`REF` / `refPose` / `drawRef`** — the demo stick figures. Hand-authored keyframes, the
@@ -232,7 +241,7 @@ describing what should happen:
 
 Each carries a `t` (the type) and whatever fields that type needs — `say` takes a dialogue
 key plus priority and cooldown, `bigTime` takes seconds, `scoreFill` takes a percentage.
-There are 23 types in all (`say`, `banner`, `bigReps`, `pop`, `tip`, `telem`…). A single
+Types include `say`, `banner`, `bigReps`, `pop`, `tip` and `telem`. A single
 shell function, `applyFx`, is a switch statement that replays each one onto the DOM.
 
 **Why this is worth the ceremony:**
@@ -241,13 +250,40 @@ shell function, `applyFx`, is a switch statement that replays each one onto the 
   it and replays 1,896 recorded cases in about a second.
 - **The engine is portable.** Swift can implement the same logic and prove it identical,
   because "identical" means *emits the same effects for the same input*.
-- **The shell is too thin to hide a bug.** If `applyFx` is only ever a switch statement, there
-  is nowhere for judgement to accumulate in the UI layer.
+- **Judgement stays outside the shell.** `applyFx` applies the ordered effects, while
+  platform adapters own asynchronous camera, voice and import state. Those adapters
+  can still have bugs: explicit ownership and browser regressions are essential.
 - **It is deterministic.** Same frames in, same effects out, every time. That is what makes
   recorded vectors a viable specification at all.
 
 The house rule that protects it: *keep judgement in the engine; keep the shell too thin to
-hide a bug.* Every time something clever ends up in `applyFx`, it becomes untestable.
+hide a bug.* Display optimisations belong in the shell; exercise decisions do not.
+Platform state and resource ownership need independent lifecycle tests.
+
+### Runtime ownership and passive rendering
+
+Each camera generation owns its scheduled animation and all acquired streams,
+including both streams during a pending switch. End releases them immediately;
+late callbacks cannot join another workout. Optional wake-lock requests coalesce
+and release obsolete grants. Diagnostics use both a Clear epoch and per-import
+identity, guarding success, failure and input cleanup.
+
+`loopBody` converts each detected pose once and shares it with drawing and the core.
+It does not lower inference cadence or reuse a previous observation. Paused and
+explicit follow-along intervals retain their existing no-inference/null contracts.
+
+Passive text/HTML writes use `setText`/`setHTML`; visibility writes use `setHidden`.
+Unchanged values avoid DOM work, but changes are never time-throttled. Text writes
+invalidate the cached HTML for that owned node. The dial keeps segment references
+until its target changes; continuous hold progress remains continuous. Speech,
+logs, measurements and controls are not coalesced or dropped with display updates.
+
+`DiagnosticBuffer` accounts bytes incrementally. Appends without pressure or a new
+flag do not copy/scan retained history. Retroactive flag protection and eviction
+still scan as needed; speculative changes commit only after all budgets fit.
+This is a bounded transactional buffer, not an unbounded queue or a guarantee of
+constant-time work under eviction. The 4 MiB limit measures serialized exports,
+not JavaScript heap use.
 
 ---
 
@@ -308,7 +344,8 @@ looking.
 
 ## 8 · How it is tested
 
-There are no unit tests in the usual sense. There is a **recorded specification**.
+There is a **recorded specification**, plus independent unit, property, lifecycle,
+browser, audio and infrastructure tests in the shared `testing/` loop.
 
 `conformance-vectors.json` holds 1,896 cases captured from a known-good build: inputs and the
 outputs they produced. Four harnesses cover the recorded specification and the derived
@@ -338,10 +375,13 @@ and was lost when a sandbox reset. Three documents went on *claiming* the covera
 nothing ran it, and two bugs walked straight through the gap. So now the test has a test.
 **An assertion nobody has watched fail is an assumption.**
 
-**The honest gap:** the UI shell has almost no automated coverage. A manual smoke pass is
-its only test. `refGates` and `verify-draw` between them prove a demo passes its gates and is
-drawn undistorted — neither can tell you it *reads* as the movement. Only a person looking
-can do that.
+**The honest gap:** substantial automated shell coverage uses substituted camera
+streams and recognizers, desktop/narrow Chromium and synthetic poses. It does not
+validate physical iOS/Android lifecycle, real-body/clothing recognition or beginner
+comprehension. Real recorded-clip audio is tested separately; native TTS waveforms
+and hardware speakers remain gaps. Missing human recordings stay blocked.
+`refGates` and `verify-draw` prove gate/proportion consistency, not that a demo reads
+clearly to a beginner. See `testing/README.md` for the exact mode boundaries.
 
 ---
 
@@ -376,8 +416,7 @@ coordinates, and those were never wrong. The fix converts at the boundary in bot
 
 ### What is being ported
 
-**The engine only.** `swift/FormCoachEngine` is a Swift package of ten source files, ~795
-lines:
+The core engine lives in `swift/FormCoachEngine`. Its engine target contains:
 
 | File | Mirrors |
 |---|---|
@@ -385,15 +424,18 @@ lines:
 | `Scoring.swift` | `scoreTarget`, `cueFor` |
 | `Filters.swift` | `emaAlpha` — frame-rate independence |
 | `RepCounter.swift` | `class Rep` |
-| `Evaluator.swift` | `class Evaluator` — the largest, 368 lines |
+| `Evaluator.swift` | `class Evaluator` and shared movement-evidence contracts |
 | `PlanExpansion.swift` | `expandPlanSteps` |
 | `ClipResolver.swift` | voice clip lookup |
 | `ContentModels.swift` | `Codable` mirrors of the content schemas |
 | `Content.swift` | decodes a `ContentPack` from a JSON file |
 | `PoseFrame.swift` | the frame/joint structures |
 
-It is *smaller* than the browser engine because it carries no content — that stays in JSON,
-decoded at launch — and no drawing.
+The package additionally contains `FormCoachSummary`, `FormCoachInteraction` and
+the explicit local-review CLI. Those targets constrain optional on-device model
+selection and local commands; they are not a completed native workout application.
+SessionCore/CalibrationCore and the camera/UI lifecycle are still unported.
+Content stays in shared JSON, decoded at launch; drawing remains platform-specific.
 
 > **Stale naming, worth knowing before it confuses you.** `ContentModels.swift` and
 > `PORTING.md` still say `content-v4.7.json`. The tests actually read **`content-v4.8.json`
@@ -428,9 +470,10 @@ the vectors → make Swift pass. Two implementations quietly drifting apart is t
 that kills ports, and it is easy to do accidentally: you fix something in Swift because it is
 obviously right, and now the browser is wrong and nothing tells you.
 
-`swift test` runs 15 conformance tests against **the same `conformance-vectors.json`** the
-browser harness uses. Green means the Swift engine is behaviourally identical, not merely
-plausible.
+`swift test` consumes **the same root conformance vectors** plus shared evidence,
+clip, summary, choice and command cases. Deterministic tests and stubbed lifecycle
+checks are distinct from the optional real-model smoke tests. A green result proves
+the cases executed, not a completed port or physical-phone behavior.
 
 ### Things that will bite
 
@@ -448,11 +491,12 @@ plausible.
   browser was. A bug once hid for months behind `requestAnimationFrame` surviving its own
   exceptions. Do not repeat it in a new language.
 
-### When the port starts
+### When native application integration starts
 
-Not yet, and deliberately. The gate is in `swift-port.md`: it needs two beginner test
-sessions first, because porting an unvalidated product means building the same wrong thing
-twice, in two languages, with a conformance suite guaranteeing they stay equally wrong.
+Engine and optional coaching packages already exist. A complete native workout
+shell does not. The beginner-validation gate in `swift-port.md` remains important:
+porting an unvalidated interaction can build the same wrong thing twice while
+conformance proves only that the implementations agree.
 
 ---
 

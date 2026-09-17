@@ -263,6 +263,42 @@ The mutation harness resolves its verifier from its own location, not the build'
 directory. Its control needs both exit 0 and a successful refGates line; a missing
 verifier or unrelated process failure must never count as a green control.
 
+The adversarial review's five lifecycle/import defects were subsequently authorized
+for repair. Keep the 198 seeded control/timing/retention checks and 18 `adversarial-*`
+shell cases in the default loop. End releases every owned stream immediately,
+including both sides of a pending camera switch. Animation chains are bound to
+their camera generation; cancellation alone cannot revoke delivered callbacks.
+Coalesce pending wake-lock requests and release grants from obsolete workouts;
+optional platform failures must not block startup, Resume or camera cleanup.
+Validate frame/summary blocker lists before opening a diagnostic, retaining valid
+schema 1/2 optional fields. Import success, failure and input cleanup must all check
+request identity and Clear's epoch; an old callback cannot erase a newer review or
+pending selection. See `docs/sessions/adversarial-review-2026-09-14.md` for retained
+failures and the repair follow-up. Engine/vectors/Swift are unchanged by these
+shell fixes; real-device/body-recognition gaps remain.
+
+The architecture optimisations keep the judgement engine unchanged. `loopBody`
+shares one current-frame conversion with drawing and evaluation; never reuse an
+old pose or lower observation cadence as a rendering optimisation. Passive text/
+HTML writes use `setText`/`setHTML` so text clears invalidate cached markup; dial
+node references and fractions reset when the target changes. Do not throttle
+changed blockers, clocks, continuous hold arcs, speech or logs. Diagnostic byte
+accounting is incremental; flag pinning/eviction remains transactional and bounded.
+Keep `architecture` and the four `architecture-*` shell cases in default test/CI.
+Timing benchmarks are optional, never flaky CI thresholds or phone-performance
+claims. See `docs/sessions/architecture-optimisations-2026-09-14.md`.
+
+Recorded playback has a two-second startup/progress check and at most one fresh-
+element retry before any segment starts. Remove the stale source/cache entry;
+pause alone does not abort its load. Preserve the original first-start deadline,
+never replay a partially heard line, and fail a stalled splice visibly without
+playing its remaining fragments. Stop/Pause/Skip must clear all retry/progress
+timers and invalidate old callbacks. Keep `audio-stalls`, the stalled-calibration
+shell case and both real-transport fault tests. Number samples must prove both
+numbers complete with their own measured signal; a queue start is not sound.
+Watchdog/recorded-utterance failures cannot pass behind earlier audio. The original
+OS/browser trigger remains unconfirmed; see `docs/sessions/audio-stall-recovery-2026-09-14.md`.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled

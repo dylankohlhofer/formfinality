@@ -36,6 +36,8 @@ window.__testLab = {
   }; },
   audioAccess() { return { Coach, AudioBank, TTL, coach }; },
   diagnosticAccess() { return { diagnostics, DiagnosticBuffer }; },
+  renderAccess() { return { apply:effects=>applyFx(calib || sess,effects),ring:setRing,
+    telemetry:(r,state)=>renderTelemetry(r,(calib || sess).core.ev,state),clock:TelLog }; },
   coachAccess() { return {routeCoachAction,parseCoachCommand,coachMemory,listener:localListener,
     context:coachContextToken,host:calib || sess,preferences:()=>({...coachPreferences})}; },
   snapshot() {

@@ -2,7 +2,7 @@ import { escape } from './report.mjs';
 
 // Independent, explicit policies. Heuristics produce review candidates, not a
 // claim that the model has listened to (or understood) the captured waveform.
-export function auditAudio(evidence) {
+export function auditAudio(evidence, {numbers = []} = {}) {
   const checks = [], concerns = [], events = evidence.events || [], levels = evidence.levels || [];
   const check = (label, actual, expected, pass = actual === expected) => checks.push({ label, actual, expected, pass });
   const starts = events.filter(e => e.type === 'speech-start');
@@ -18,8 +18,20 @@ export function auditAudio(evidence) {
       Number.isFinite(evidence.decoded?.rms) && evidence.decoded.rms > .0001);
   const failures = events.filter(e => ['clip-error', 'capture-error'].includes(e.type));
   check('No media load, playback or capture errors', failures, [], failures.length === 0);
+  const timeouts = events.filter(e => e.type === 'coach-decision' && e.reason === 'playback timeout');
+  check('No playback watchdog timeouts', timeouts, [], timeouts.length === 0);
+  const incomplete = events.filter(e => e.type === 'coach-decision' && e.event === 'failed' && e.item?.clips?.length);
+  check('No recorded utterance fails behind other audible clips', incomplete, [], incomplete.length === 0);
   const clips = events.filter(e => e.type === 'clip-start');
   check('At least one real clip actually started', clips.length, '> 0', clips.length > 0);
+  // A queue start is intent, not sound. These uninterrupted number samples have
+  // explicit expected words; neither may hide behind the other's measured signal.
+  for(const number of numbers){
+    const matching = clips.filter(e => e.item?.key === 'number' && e.item.text === String(number));
+    check(`Number ${number} actually plays to completion with measured signal`, matching.length === 1 &&
+      events.some(e => e.type === 'clip-end' && e.playId === matching[0].playId && e.reason === 'ended') &&
+      levels.some(l => l.playId === matching[0].playId && l.rms > .0001), true);
+  }
   for (const clip of clips) {
     const end = events.find(e => e.type === 'clip-end' && e.playId === clip.playId);
     if (!end || end.ms - clip.ms < 250) continue; // intentional short interruption; retained in timeline
@@ -75,7 +87,7 @@ export function auditAudio(evidence) {
 }
 
 export function audioReviewPage(scenario, evidence, audit) {
-  const rows = evidence.events.filter(e => ['speech-start', 'clip-start', 'clip-end', 'clip-pause-request', 'clip-cancelled', 'clip-error', 'dropped', 'tts-request', 'tts-unavailable', 'observation', 'action'].includes(e.type));
+  const rows = evidence.events.filter(e => ['speech-start', 'clip-start', 'clip-end', 'clip-stalled', 'clip-pause-request', 'clip-cancelled', 'clip-error', 'dropped', 'tts-request', 'tts-unavailable', 'observation', 'action'].includes(e.type));
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Voice review — ${escape(scenario.id)}</title>
   <style>body{font:16px/1.5 system-ui;max-width:1100px;margin:32px auto;padding:0 20px;color:#222}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}small{color:#555}audio{width:100%}button,a{color:#534693}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
   <h1>${escape(scenario.id)} — voice review</h1><p>${escape(scenario.description)}</p>

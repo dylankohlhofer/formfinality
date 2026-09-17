@@ -61,6 +61,42 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Architecture optimisations (14 September):** `architecture.test.mjs` adds 11
+deterministic conversion, no-pressure append complexity, byte-accounting and
+transactional retention checks. Four `architecture-*` cases use the existing
+shell runner for unchanged DOM writes, continuous dial progress and cache
+invalidation/freshness. They run in default/watch/CI; benchmarks do not gate CI.
+
+```sh
+node --test testing/architecture.test.mjs
+node testing/check-shell.mjs form-coach-v4.11.html 'architecture-*'
+node testing/architecture-benchmark.mjs <baseline.html> form-coach-v4.11.html
+```
+
+Run the optional serial benchmark without competing tests/watchers. It records
+build hashes, five alternating workload samples, snapshot equivalence and pose
+conversion counts. It uses synthetic data, substituted drawing and no model or
+private recordings. Buffer timings are not full-app FPS, heap or physical-phone
+battery/thermal measurements. See [the review and measurements](../docs/sessions/architecture-optimisations-2026-09-14.md).
+
+**Adversarial review and authorized fixes (14 September):** `adversarial.test.mjs` adds
+198 seeded control, uneven-cadence, diagnostic round-trip and accelerated long-session
+checks. The initial eight browser cases reproduced five application defects through
+six failures: pending camera cleanup, duplicate animation chains, overlapping wake
+locks, malformed diagnostic blocker lists and a stale import-error callback. The
+original failing evidence is retained. The user subsequently authorized repairs;
+all original assertions remain, with ten additional browser cases covering restart
+success/failure, wake-lock grant ordering/retry and overlapping diagnostic imports.
+The resulting **18 cases / 89 checks** pass in the focused shell run. Six additional
+parser tests check both diagnostic schemas and frame/summary records, including
+valid absent/null/empty blocker lists. Engine, vectors and Swift are unchanged.
+See [findings, reproduction and verification](../docs/sessions/adversarial-review-2026-09-14.md).
+
+```sh
+node --test testing/adversarial.test.mjs
+node testing/check-shell.mjs form-coach-v4.11.html 'adversarial-*'
+```
+
 **Full-code review fixes (14 September):** `review-regressions.test.mjs` adds 70
 independent checks for view-eligible scoring, camera-coordinate/visibility rules,
 calibration continuity, every demo's return interpolation and unsupported plan
@@ -387,12 +423,27 @@ npm run test:audio:mutations
 
 This is part of `npm test`, the default watcher, and the existing GitHub Actions
 workflow once pushed. The watcher also reruns on voice MP3/manifest changes.
-Fourteen cases cover sustained plank feedback, hip-sag input and recovery,
+Sixteen cases cover sustained plank feedback, hip-sag input and recovery,
 tracking loss, Skip/Stop during teaching, switching to unassessed follow-along,
 expired queue items, and real number
 clips for all nine persona/tier selections. The last nine are **playback samples**,
 not full exercise sessions. They give both numbers an explicit 3000ms deadline;
 they do not represent two simultaneous rep events with the app's shorter deadline.
+Each number must now actually start, complete and contain its own measured signal;
+queue decisions plus one audible number cannot pass an incomplete sample. Whole-
+line watchdog timeouts and failed recorded utterances are also explicit failures.
+
+**Stall recovery (14 September):** `audio-stalls.test.mjs` adds 12 deterministic
+startup/progress, retry, cancellation and deadline checks to default/watch/CI.
+`coaching-stalled-calibration` proves failed teaching does not strand actual
+calibration. Two additional real-media fault tests run in `npm test` and
+`test:audio:mutations`: one unanswered first request recovers via a fresh element;
+a permanently absent second number stays a failed capture and releases its queue.
+The player checks progress every two seconds, retries at most once before a line
+starts and respects its original first-start deadline. Stalled partial instructions
+are not replayed or advanced into their remaining fragments. `clip-stalled` events
+and retry decisions are retained in the audio timeline. See
+[the causal tests and limits](../docs/sessions/audio-stall-recovery-2026-09-14.md).
 
 Open **Listen and review the speech timeline** in the main report. Each case saves:
 

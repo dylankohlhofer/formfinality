@@ -10,6 +10,8 @@ import { interfaceCases } from './interface-cases.mjs';
 import { summaryCases } from './summary-cases.mjs';
 import { interactionCases } from './interaction-cases.mjs';
 import { reviewFollowupCases } from './review-followup-cases.mjs';
+import { adversarialCases } from './adversarial-cases.mjs';
+import { architectureCases } from './architecture-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -53,6 +55,8 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await summaryCases(runCase);
     await interactionCases(runCase);
     await reviewFollowupCases(runCase);
+    await adversarialCases(runCase);
+    await architectureCases(runCase);
     await runCase('calibration-demo', 'A beginner choosing Show me first sees a rendered calibration demonstration.', async (page, check) => {
       await page.locator('[data-know="no"]').click(); await page.locator('#calBtn').click();
       await page.locator('#demo').waitFor({ state: 'visible' });

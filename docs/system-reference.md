@@ -5,6 +5,10 @@ How the system actually works, at v4.11. Replaces `technical-documentation.md`,
 different audience. Plain language throughout; if you want the computer-science
 foundations underneath, read `concepts-deep-dive.md`.
 
+Updated for the September 14 architecture review. Current verification counts live
+in `project-status.md`; movement, summary and local-coach contracts take precedence
+over abbreviated descriptions here.
+
 ---
 
 ## The product in one paragraph
@@ -24,13 +28,13 @@ one-time £4.99 purchase rather than a subscription.
 ```
 1  CAMERA        getUserMedia → a <video> element
 2  FRAME         30–60 per second
-3  INFERENCE     BlazePose → 33 landmarks + confidences        (~10 ms)
-4  BUILD FRAME   landmarks → {left, right, cam, conf, aspect, sideness}
-5  METRICS       readMetric per target — angles, line deviations
-6  SMOOTHING     dt-normalised EMA per target
-7  SCORING       scoreTarget → 0–100 per target
-8  GATES         position gates → arming?   quality gates → clock running?
-9  VIEW          sideness → block cues, or suppress depth-dependent ones
+3  INFERENCE     BlazePose → 33 landmarks + confidences (device latency unproven)
+4  BUILD FRAME   one conversion → {left, right, cam, conf, aspect, sideness, viewUnavailable}
+5  OBSERVATION   required camera-side evidence and view eligibility
+6  METRICS       readMetric per eligible target — angles, line deviations
+7  SMOOTHING     dt-normalised EMA; unavailable sources leave the pool
+8  SCORING       observed quality → 0–100; no quality measurement → null
+9  GATES         position gates → arming?   required hold evidence → clock running?
 10 FRAMING       bounding box → framed / far / clipped
 11 REPS          hysteresis + priming + tempo floor + short-range
 12 SELECTION     worst offender, under cue budget and cooldown
@@ -38,7 +42,7 @@ one-time £4.99 purchase rather than a subscription.
 14 SHELL         replay → screen, speech, telemetry
 ```
 
-**Steps 5–13 are pure and headlessly testable. Steps 1–4 and 14 are the impure edges.**
+**Steps 4–13 are headlessly testable. Steps 1–3 and 14 use platform adapters.**
 That line is exactly where the Swift port cuts — not a coincidence, it's why the
 architecture is shaped this way.
 
@@ -46,7 +50,7 @@ architecture is shaped this way.
 
 ## Content is data, not code
 
-All 21 movements, 5 plans, 3 tiers, 3 personas and 84 dialogue keys are **declarations**.
+Movements, plans, tiers, personas and dialogue keys are **declarations**.
 Adding a movement means adding data; no logic changes. The whole content set exports to JSON,
 so the Swift port hand-transcribes nothing.
 
@@ -84,7 +88,8 @@ the framing check can be *derived* rather than authored:
 | `line` | `of` relative to `from`→`to` | signed deviation from a straight line |
 | `vert` | `a`→`b` | how far a segment is from vertical |
 
-**Target roles** — a target does exactly one of three jobs:
+**Target roles** — declarations can combine flags; observation eligibility and the
+rep-driver exclusion determine which measurements may contribute to quality:
 
 | Role | Flag | Effect |
 |---|---|---|
@@ -92,8 +97,9 @@ the framing check can be *derived* rather than authored:
 | Quality gate | `gate: true` | Decides whether the hold clock *runs* |
 | Graded | `w: <n>` | Contributes to the form score, weighted |
 
-`w: 0` means "measure but don't grade" — used for rep drivers, where the instantaneous value
-is about counting, not quality.
+`w: 0` means "measure but don't grade". Rep drivers and rep position gates are
+excluded from frame quality regardless of weight; cycles determine rep progress.
+No observed quality means null, not zero or a perfect score.
 
 ### Scoring
 
@@ -149,10 +155,11 @@ Both failure modes have a voice; a rep that vanishes silently reads as a broken 
 budget and cooldown. Silence is a feature — it gives someone time to actually attempt the
 correction.
 
-**View awareness.** `sideness` estimates how side-on the body is. Below 25° the coach stops
-making claims and asks the person to turn; between 25–50° it suppresses depth-dependent cues
-while keeping the ones that survive the angle. Suppressed decisions are *logged*, so the
-telemetry shows what would have been said and why it wasn't.
+**View awareness.** `sideness` and declared front/side view determine alignment.
+Wrong or unknown view makes affected measurements unavailable **before** smoothing,
+score and cue selection; limited view suppresses unreliable targets. Required
+movement evidence still gates counting. Suppressions remain inspectable. See
+`movement-evidence-contract.md` for exact required/optional rules.
 
 **Framing.** A bounding box over the joints the movement actually *judges* (setup-gate joints
 excluded — a crunch doesn't read your ankles). Returns `framed` / `far` / `clipped` with the
@@ -188,13 +195,21 @@ core while the shell is platform-specific.
 
 ## Voice
 
-**Recorded clips, not TTS.** 1,351 clips across 3 personas × 3 tiers, resolved by key and
+**Recorded clips first.** The manifest indexes clips across personas and tiers, resolved by key and
 spliced with number clips (`"You held" + "twenty-three" + "seconds."`). `AudioBank` loads a
 manifest, falls back to TTS only when a clip is genuinely missing, and cache-busts against
 the manifest's timestamp so a re-render can't be defeated by browser caching.
 
-Permanently TTS by necessity: personal-record lines (fully dynamic value), the session-end
-summary (contains the user's name), and the developer recording tool.
+Fallback requires an explicitly local English voice for each utterance. A missing
+word-bearing splice falls back to the complete sentence, never a misleading
+fragment; unavailable local speech releases its queue and is explained visually.
+Pending/current speech has request identity, topic relevance and expiration.
+Background, Pause, Skip and explicit follow-along retain their cancellation rules.
+Recorded startup/progress now has a two-second check and at most one fresh-element
+retry before a segment starts. The original first-start deadline still applies;
+stalled partial lines are not replayed. Unrecoverable stalls release the queue with
+visual guidance, and cancellation clears the new timers. The whole-line watchdog
+remains separate from this progress check. See `sessions/audio-stall-recovery-2026-09-14.md`.
 
 ---
 
@@ -206,12 +221,30 @@ Stated because the honesty principle requires it:
   side-on. Taught up front instead of corrected.
 - **Bird-dog hip rotation** — rotation about the spine's long axis; the limbs are visible,
   the hips are not.
-- **Lumbar contact with the floor** (dead bug, hollow holds) — inferred from hip angle.
+- **Lumbar contact with the floor** (dead bug, hollow holds) — visible hip angle is
+  a separate measurement, not proof of contact.
 - **Per-segment spinal articulation** — why `cat-cow` is `guided`.
 - **Left/right asymmetry under rotation** — `agg:"worst"` helps only when both sides show.
 
-There is **no persistence**. Name, tier and persona reset on reload. History, streaks and
-calendar are designed but unbuilt — see `backlog.md`.
+Local coaching preferences/history have separate explicit opt-ins and bounded,
+allowlisted storage, export and erase. No inferred fitness progress or automatic
+difficulty changes are stored. Private diagnostic capture is independently opted
+in, memory-only and bounded; imports stay local and are observations, not renewed
+judgements. See `local-coach-contract.md` and `testing/README.md`.
+
+## Runtime efficiency and ownership
+
+The camera loop shares one current-frame conversion with drawing and judgement.
+Passive DOM writes are idempotent, not throttled; changed blockers, clocks and
+continuous hold progress still update immediately. Diagnostic appends maintain
+incremental byte accounting while flag pinning and pressure handling preserve
+transactional retention. See the architecture optimisation session note for
+measured work counts and the limits of its desktop microbenchmark.
+
+Camera generations own animation requests and every stream, including both sides
+of a pending switch. Wake-lock requests coalesce and release obsolete grants.
+Import request identity covers success, failure and input cleanup as well as
+Clear's epoch. These platform concerns do not belong in exercise judgement.
 
 ---
 
@@ -226,16 +259,20 @@ calendar are designed but unbuilt — see `backlog.md`.
 | `verify-draw.mjs` | `drawRef` — demos drawn in the proportions they were authored in | 250 checks |
 | `verify-skip.mjs` | both cores' skip paths — a skipped phase is null, never zero | 26 checks |
 
-All headless, 0 divergences; `swift test` passes 15/15 against the same JSON. Unit (one
+The four harnesses are headless. Swift reads the same root JSON plus shared evidence,
+clip, summary, command and choice cases. See project status for the last executed
+native checkpoint; stubbed lifecycle tests are not physical-device validation. Unit (one
 function across every target × tier), property (the same movement scores identically at
 24/30/60/90 fps), integration (whole scenarios), regression (one per fixed bug). The last two
 harnesses assert *derived invariants* rather than recorded outputs — a drawing and a skip are
 both things the vectors cannot reach.
 
-**The honest gap:** the UI shell has almost no automated coverage — `verify-draw.mjs` holds
-`drawRef` and that is all of it. 4,127 vector checks prove the core emits the right effects,
-not that the screen replays them. That's why the desktop smoke test is Phase B of
-`next-steps-guide.md`.
+The shared `npm test` loop also runs independent engine properties, desktop/narrow
+browser scenarios, camera/import/lifecycle cases and real recorded-clip audio.
+Deterministic architecture checks protect conversion counts, redundant DOM work
+and transactional diagnostic accounting; timing benchmarks do not gate CI.
+Physical phones, native-TTS waveforms, real-body/clothing recognition and beginner
+comprehension remain gaps. Missing consented recordings are blocked, never passes.
 
 **Self-consistency is back, as `refGates` (224 checks).** This section once claimed the
 category on the strength of a check inside `gen-refs.mjs` — which was lost, was never carried

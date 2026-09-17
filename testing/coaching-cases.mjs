@@ -27,6 +27,21 @@ async function controlledPlayback(page, mode = 'recorded') {
 // Queue tests use actual Coach code with controlled playback callbacks. No claim
 // about acoustic audibility; audio-sweep measures real recorded clip output.
 export async function coachingCases(runCase){
+  await runCase('coaching-stalled-calibration','Never-starting recorded teaching fails visibly and releases actual calibration without manually clearing the coach.',async(page,check)=>{
+    await controlledPlayback(page);
+    await page.locator('#voice').check();await page.locator('#calBtn').click();
+    check('Actual calibration teaching owns the queue',await page.evaluate(()=>__testLab.audioAccess().coach.cur?.key),'teach.plank');
+    await page.waitForFunction(()=>!__testLab.audioAccess().coach.speaking(),null,{timeout:6000});
+    check('One fresh-element retry, no unplayed instruction tail',await page.evaluate(()=>__coaching.started.length),2);
+    check('Failure explains the on-screen alternative',await page.locator('#speechStatus').innerText().then(s=>/recorded speech could not finish.*on-screen/i.test(s)),true);
+    const {poses}=JSON.parse(await readFile(new URL('../conformance-vectors.json',import.meta.url),'utf8'));
+    const held=await page.evaluate(frame=>{
+      for(let i=0;i<195;i++)__testLab.feed(frame,1/30);
+      return __testLab.snapshot().held;
+    },exerciseInputs(poses).frame('plank'));
+    check('Fresh observed calibration hold can accrue after audio failure',held>=4.5&&held<=5.5,true);
+    check('No automatic native voice is substituted',await page.evaluate(()=>__coaching.spoken.length),0);
+  });
   await runCase('coaching-context-withdrawal','Resolved faults discard pending speech and cancel active speech without disturbing valid teaching.',async(page,check)=>{
     const r=await page.evaluate(()=>{
       const {Coach,AudioBank}=__testLab.audioAccess(); let stops=0; const ends=[];

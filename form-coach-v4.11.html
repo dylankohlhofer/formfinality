@@ -3953,6 +3953,8 @@ const AudioBank = {
   manifest: new Set(),
   cache: new Map(),
   playEpoch: 0,            // stop() invalidates every continuation of old speech
+  pendingLoads: new Set(),
+  stallMs: 2000,           // local clip startup/progress budget, not utterance length
 
   stamp: "",               // changes whenever the bank is re-rendered
 
@@ -4007,19 +4009,55 @@ const AudioBank = {
   },
 
   /** Play a sequence of clips back to back. Resolves when done. */
-  play(paths, onEnd){
+  play(paths, onEnd, {deadline = Infinity} = {}){
     const queue = paths.map(path => ({path, audio:this.get(path)})).filter(x => x.audio);
     if(!queue.length) return false;
     const epoch = this.playEpoch;
-    let i = 0, failed = queue.length !== paths.length;
+    let i = 0, failed = queue.length !== paths.length, heard = false, retried = false, settled = false;
+    const finish = result => { if(settled || epoch !== this.playEpoch) return; settled = true; onEnd?.(result); };
     const next = () => {
-      if(epoch !== this.playEpoch) return;
-      if(i >= queue.length){ onEnd?.({failed}); return; }
+      if(settled || epoch !== this.playEpoch) return;
+      if(i >= queue.length){ finish({failed}); return; }
       const {audio:a, path} = queue[i++];
+      let live = true, started = false, position = 0, timer;
+      const current = () => live && !settled && epoch === this.playEpoch;
+      const clear = () => { clearTimeout(timer); this.pendingLoads.delete(clear); };
+      const discard = () => {
+        live = false; clear(); a.onplaying = a.onended = null;
+        // pause alone leaves an unresolved fetch/decoder cached for the next set.
+        if(this.cache.get(path) === a) this.cache.delete(path);
+        a.pause(); a.removeAttribute?.("src"); a.load?.();
+      };
+      const arm = () => {
+        clearTimeout(timer); this.pendingLoads.add(clear);
+        timer = setTimeout(check, Math.max(0, Math.min(this.stallMs, heard ? Infinity : deadline - performance.now())));
+      };
+      const check = () => {
+        if(!current()) return;
+        const expired = !heard && performance.now() >= deadline;
+        if(!expired && started && a.currentTime > position + .001){ position = a.currentTime; arm(); return; }
+        const retry = !expired && !heard && !retried;
+        discard();
+        const reason = expired ? "clip expired before playback" : started ? "clip playback stalled" : "clip loading stalled";
+        diagnosticEvent("speech", {event:"clip-stalled", path, reason, retry});
+        // Retry at most once, only before any words were heard. Never replay a
+        // half-spoken instruction or skip its missing words and play the number.
+        if(retry){
+          retried = true; const fresh = this.get(path);
+          if(fresh){ queue[--i] = {path,audio:fresh}; next(); return; }
+        }
+        finish({failed:true, reason});
+      };
       a.currentTime = 0;
-      a.onplaying = () => { if(epoch === this.playEpoch) diagnosticEvent("speech", {event:"clip-playing", path}); };
-      a.onended = () => { if(epoch !== this.playEpoch) return; diagnosticEvent("speech", {event:"clip-ended", path}); next(); };
-      a.play().catch(() => { if(epoch !== this.playEpoch) return; failed = true; diagnosticEvent("speech", {event:"clip-error", path}); next(); });
+      a.onplaying = () => {
+        if(!current()) return;
+        if(!heard && performance.now() >= deadline){ check(); return; }
+        started = heard = true; position = a.currentTime;
+        diagnosticEvent("speech", {event:"clip-playing", path}); arm();
+      };
+      a.onended = () => { if(!current()) return; live = false; clear(); diagnosticEvent("speech", {event:"clip-ended", path}); next(); };
+      arm();
+      a.play().catch(() => { if(!current()) return; live = false; clear(); failed = true; diagnosticEvent("speech", {event:"clip-error", path}); next(); });
     };
     next();
     return true;
@@ -4029,6 +4067,7 @@ const AudioBank = {
     /* pause() can reject an unresolved play() promise. Invalidate first, so its
        catch — or a late ended callback — cannot start the next abandoned clip. */
     this.playEpoch++;
+    for(const clear of this.pendingLoads) clear();
     for(const a of this.cache.values()){ try{ a.pause(); }catch(e){} }
   }
 };
@@ -4062,7 +4101,7 @@ class DiagnosticBuffer {
   static sampleMs = 200;
   constructor(){ this.clear(); }
   clear(){
-    this.active = false; this.items = []; this.bytes = 0; this.dropped = 0; this.meta = null; this.lastAt = 0;
+    this.active = false; this.items = []; this.bytes = 0; this.recentBytes = 0; this.dropped = 0; this.meta = null; this.lastAt = 0;
     this.flags = []; this.summaryAt = -Infinity; this.summaryKey = ""; this.stopReason = "";
   }
   start(meta){
@@ -4093,7 +4132,9 @@ class DiagnosticBuffer {
     if(!["frame","effect","speech","flag","control"].includes(kind) || !data || typeof data !== "object")
       throw new Error("Invalid diagnostic entry");
     const entry = this.record(kind, at, data);
-    let candidates = this.items.slice(), flags = this.flags.map(f => ({...f}));
+    let candidates = this.items, flags = this.flags.map(f => ({...f}));
+    let bytes = this.bytes + entry.size;
+    let recent = this.recentBytes + (kind === "frame" ? entry.size : 0);
     for(const flag of flags) if(!flag.endedBy && at > flag.until){ flag.endedBy = "window elapsed"; flag.closedAt = flag.until; }
     if(kind === "flag"){
       if(flags.length >= DiagnosticBuffer.maxFlags) throw new Error("Eight flagged moments are already saved. Export and clear before flagging more.");
@@ -4101,6 +4142,7 @@ class DiagnosticBuffer {
         firstFrameAt:null, lastFrameAt:null, sampleAt:-Infinity, endedBy:null, closedAt:null};
       candidates = candidates.map(item => {
         if(item.kind !== "frame" || item.at < flag.from || item.at - flag.sampleAt < DiagnosticBuffer.sampleMs) return item;
+        if(!item.pinned) recent -= item.size;
         flag.sampleAt = item.at; flag.firstFrameAt ??= item.at; flag.lastFrameAt = item.at;
         return {...item, pinned:true};
       });
@@ -4111,6 +4153,7 @@ class DiagnosticBuffer {
       for(const flag of flags) if(!flag.endedBy && at <= flag.until && at - flag.sampleAt >= DiagnosticBuffer.sampleMs){
         entry.pinned = true; flag.sampleAt = at; flag.firstFrameAt ??= at; flag.lastFrameAt = at;
       }
+      if(entry.pinned) recent -= entry.size;
       const d = JSON.parse(entry.text).data;
       const state = {phase:d.phase, movement:d.movement, tier:d.tier, target:d.target, state:d.after?.state || d.stateBefore,
         reps:d.reps, blocked:d.blocked, tracking:d.frame !== null,
@@ -4120,22 +4163,28 @@ class DiagnosticBuffer {
         summary = this.record("summary", at, {...state, held:d.held, score:d.score ?? null,
           repEvent:d.repEvent, sampling:"periodic or changed state; no joint positions"});
     }
-    candidates.push(entry); if(summary) candidates.push(summary);
-    let bytes = candidates.reduce((n,x) => n + x.size, 0), count = candidates.length;
-    let recent = candidates.reduce((n,x) => n + (x.kind === "frame" && !x.pinned ? x.size : 0), 0), dropped = 0;
-    const kept = candidates.filter(item => {
-      if(item.kind === "frame" && !item.pinned && (recent > DiagnosticBuffer.recentBytes || bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries)){
-        bytes -= item.size; recent -= item.size; count--; dropped++; return false;
+    if(summary) bytes += summary.size;
+    let count = candidates.length + 1 + (summary ? 1 : 0), dropped = 0;
+    // Ordinary appends use incremental accounting. Only flagging or pressure
+    // walks history; pressure works on a copy until the whole append can commit.
+    if(recent > DiagnosticBuffer.recentBytes || bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries){
+      candidates = [...candidates, entry]; if(summary) candidates.push(summary);
+      candidates = candidates.filter(item => {
+        if(item.kind === "frame" && !item.pinned && (recent > DiagnosticBuffer.recentBytes || bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries)){
+          bytes -= item.size; recent -= item.size; count--; dropped++; return false;
+        }
+        return true;
+      });
+      if(bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries){
+        this.stopReason = "Protected diagnostic space is full. Capture paused; saved moments are safe. Export and clear to record more.";
+        this.pause("capacity reached"); throw new Error(this.stopReason);
       }
-      return true;
-    });
-    if(bytes > DiagnosticBuffer.maxBytes - 16384 || count > DiagnosticBuffer.maxEntries){
-      this.stopReason = "Protected diagnostic space is full. Capture paused; saved moments are safe. Export and clear to record more.";
-      this.pause("capacity reached"); throw new Error(this.stopReason);
+    }else{
+      candidates.push(entry); if(summary) candidates.push(summary);
     }
     // Commit only after the protected records fit. An unsuccessful flag must not
     // replace an earlier one or destroy its pre-roll while trying to make room.
-    this.items = kept; this.flags = flags; this.bytes = bytes; this.dropped += dropped; this.lastAt = at;
+    this.items = candidates; this.flags = flags; this.bytes = bytes; this.recentBytes = recent; this.dropped += dropped; this.lastAt = at;
     if(summary){ this.summaryAt = at; this.summaryKey = summaryKey; }
     return true;
   }
@@ -4182,6 +4231,9 @@ class DiagnosticBuffer {
       if(!["frame","effect","speech","flag","control",...(data.schema === "formcoach-diagnostic/2" ? ["summary"] : [])].includes(e.kind) || !Number.isFinite(e.at) || e.at < last ||
          !e.data || typeof e.data !== "object") throw new Error("Invalid diagnostic timeline");
       last = e.at;
+      if((e.kind === "frame" || e.kind === "summary") && e.data.blocked != null &&
+         (!Array.isArray(e.data.blocked) || !e.data.blocked.every(x => typeof x === "string")))
+        throw new Error("Invalid diagnostic blocker list");
       if(e.kind === "frame"){
         const f = e.data.frame;
         if(f !== null){
@@ -4208,7 +4260,7 @@ class DiagnosticBuffer {
 const diagnostics = new DiagnosticBuffer();
 const POSE_SOURCE = { runtime:"@mediapipe/tasks-vision@0.10.14", delegate:"GPU",
   model:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
-let diagnosticOrigin = 0, diagnosticEpoch = 0, diagnosticReview = null, diagnosticTimer = 0, diagnosticUiAt = -Infinity;
+let diagnosticOrigin = 0, diagnosticEpoch = 0, diagnosticImportRequest = 0, diagnosticReview = null, diagnosticTimer = 0, diagnosticUiAt = -Infinity;
 function diagnosticEvent(kind, data){
   if(!diagnostics.active) return false;
   try{
@@ -4573,7 +4625,7 @@ class Coach {
     /* Recorded clip first — a real human voice, instantly, from a local file.
        Only fall back to robot-TTS if we don't have this line recorded. */
     item.mode = item.clips ? "recorded" : "local-tts";
-    if(item.clips && AudioBank.play(item.clips, finish)){
+    if(item.clips && AudioBank.play(item.clips, finish, {deadline:item.at + item.ttl})){
       diagnosticSpeech("play-request", item);
       this.watchdog = setTimeout(timedOut, 25000);
       return;
@@ -4783,6 +4835,22 @@ const bigEl=$("big"), bigLabel=$("bigLabel"), scoreCol=$("scoreCol"), scoreFill=
       scoreLab=$("scoreLab"), telEl=$("tel"), tipEl=$("tip"), msgEl=$("msg"), msgInner=$("msgInner"),
       regBox=$("regress"), regTxt=$("regressTxt");
 
+// Passive view writes are idempotent, never throttled: changed observations are
+// visible immediately. All text/HTML writes to these owned nodes use this seam.
+const viewHTML = new WeakMap();
+function setText(el, value){
+  viewHTML.delete(el);
+  const text = String(value);
+  // Matching words inside old HTML are not yet text-only output.
+  const plain = text ? el.childNodes.length === 1 && el.firstChild.nodeType === 3 : !el.firstChild;
+  if(el.textContent !== text || !plain) el.textContent = text;
+}
+function setHTML(el, html){
+  if(viewHTML.get(el) === html) return;
+  el.innerHTML = html; viewHTML.set(el, html);
+}
+function setHidden(el, hidden){ if(el.hidden !== hidden) el.hidden = hidden; }
+
 /** A plan step's movement, resolved for the user's tier (auto-regress if not offered). */
 let sess = null;
 
@@ -4796,10 +4864,11 @@ let sess = null;
    Same component, two modes, and it needs no new engine data: the effects
    already carry n/tgt for reps, and the core knows the target for holds. */
 const ringEl = $("ring"), dialEl = $("dial");
-let ringN = -1;
+let ringN = -1, ringFills = [], ringFraction = null;
 function buildRing(n){
   if(n === ringN) return;
   ringN = n;
+  ringFraction = null;
   const C = 2*Math.PI*84, gap = n > 1 ? Math.min(7, C/n*0.16) : 0;
   const seg = C/n - gap;
   let h = "";
@@ -4814,16 +4883,19 @@ function buildRing(n){
             stroke-dasharray="0 ${C}" stroke-dashoffset="${off}"/>`;
   }
   ringEl.innerHTML = h;
+  ringFills = ringEl.querySelectorAll(".seg-f");
 }
 function setRing(frac, total){
   const n = Math.max(1, Math.min(40, total|0 || 1));
   buildRing(n);
   const C = 2*Math.PI*84, gap = n > 1 ? Math.min(7, C/n*0.16) : 0, seg = C/n - gap;
   frac = Math.max(0, Math.min(1, frac || 0));
-  const fills = ringEl.querySelectorAll(".seg-f");
+  if(frac === ringFraction) return;
+  ringFraction = frac;
   for(let i=0;i<n;i++){
     const local = Math.max(0, Math.min(1, frac*n - i));
-    fills[i].setAttribute("stroke-dasharray", `${seg*local} ${C-seg*local}`);
+    const dash = `${seg*local} ${C-seg*local}`;
+    if(ringFills[i].getAttribute("stroke-dasharray") !== dash) ringFills[i].setAttribute("stroke-dasharray", dash);
   }
 }
 let ringMode = "", ringPeak = 0;
@@ -4870,7 +4942,7 @@ function applyFx(host, E){
         ringMode = e.s; ringPeak = 0;
         dialEl.classList.toggle("rest", e.s === "REST");
         if(e.s === "GET SET") setRing(0, 1);
-        bigLabel.textContent = e.s; break;
+        setText(bigLabel, e.s); break;
       case "bigTime": {
         setBig(clock(e.secs));
         const tgt = host.core && (host.core.target ?? host.core.max);
@@ -4881,22 +4953,23 @@ function applyFx(host, E){
         break; }
       case "bigReps": setBig(`${e.n}/${e.tgt}`); setRing(e.tgt ? e.n/e.tgt : 0, e.tgt); break;
       case "scoreCol": scoreCol.classList.toggle("on", e.on); break;
-      case "scoreLab": scoreLab.textContent = e.s; break;
+      case "scoreLab": setText(scoreLab, e.s); break;
       case "scoreFill":
-        scoreFill.style.width = e.pct + "%";
+        if(scoreFill.style.width !== e.pct + "%") scoreFill.style.width = e.pct + "%";
         /* same bands as the body tint, so the two channels can never disagree */
-        scoreFill.style.background = e.pct < 52 ? "var(--bad)" : e.pct < 78 ? "var(--warn)" : "var(--bone)";
+        { const color = e.pct < 52 ? "var(--bad)" : e.pct < 78 ? "var(--warn)" : "var(--bone)";
+          if(scoreFill.style.background !== color) scoreFill.style.background = color; }
         break;
-      case "tip": tipEl.innerHTML = e.html; break;
+      case "tip": setHTML(tipEl, e.html); break;
       case "telem": {
         lastTint = e.r.tint || null;
         /* A red limb while praise is on screen is the exact contradiction test 01
            surfaced. The body is the newer signal — retract the words. */
         if(bannerIsPraise && lastTint && lastTint.segs.some(g => g.sev >= 2)) clearBanner();
         renderTelemetry(e.r, host.core.ev, e.state); break; }
-      case "telText": lastTint = null; telEl.textContent = e.s; break;
+      case "telText": lastTint = null; setText(telEl, e.s); break;
       case "telRest":
-        telEl.innerHTML = clockTag() + `<span class="meta">resting · next: ${e.next}</span>`;
+        setHTML(telEl, clockTag() + `<span class="meta">resting · next: ${e.next}</span>`);
         break;
       case "setupBar": setupBar.classList.toggle("on", e.on); break;
       case "followControls":
@@ -5027,12 +5100,12 @@ function renderFinish(p){
 function renderTelemetry(r, ev, state){
   if(!r.readings.length){
     const label = r.guided ? "guided — no form claims made" : "observation unavailable — counting paused";
-    telEl.innerHTML = clockTag() + `<span class="meta">${label}${r.blocking?.length ? " · blocked by: " + esc(r.blocking.join(", ")) : ""}</span>`;
+    setHTML(telEl, clockTag() + `<span class="meta">${label}${r.blocking?.length ? " · blocked by: " + esc(r.blocking.join(", ")) : ""}</span>`);
     return;
   }
   if(r.guided){
     const g = r.readings.map(x => `<span class="t ${x.s<=0?"bad":"ok"}">⊘${x.t.id} <b>${Math.round(x.v)}</b></span>`).join("");
-    telEl.innerHTML = clockTag() + g + `<span class="t meta">guided — position checked, <b>no form claims made</b></span>`;
+    setHTML(telEl, clockTag() + g + `<span class="t meta">guided — position checked, <b>no form claims made</b></span>`);
     return;
   }
   const parts = r.readings.map(x => {
@@ -5053,8 +5126,8 @@ function renderTelemetry(r, ev, state){
   const vw = r.sideness != null
     ? `<span class="t ${(r.blocking||[]).includes("view") ? "bad" : (r.viewLimited ? "sup" : "meta")}">view <b>${Math.round(r.sideness)}°</b>${r.viewLimited ? " · reduced coaching" : ""}</span>`
     : "";
-  telEl.innerHTML = clockTag() + parts + st + vw +
-    `<span class="t meta">tier <b>${tier}</b> ×${TIERS[tier].tol}</span>` + sup;
+  setHTML(telEl, clockTag() + parts + st + vw +
+    `<span class="t meta">tier <b>${tier}</b> ×${TIERS[tier].tol}</span>` + sup);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -5105,7 +5178,7 @@ let screenEpoch = 0;
 function screenChanged(){
   closeCoachPanel(false); localListener?.stop("screen changed");
   screenEpoch++; coach.reset(); clearBanner();
-  tipEl.textContent = ""; msgEl.scrollTop = 0;
+  setText(tipEl, ""); msgEl.scrollTop = 0;
   queueMicrotask(() => {
     const heading = msgInner.querySelector("h2");
     if(heading && !msgEl.hidden){ heading.tabIndex = -1; heading.focus({preventScroll:true}); }
@@ -5132,9 +5205,9 @@ function showPlanPreview(plan){
   $("planBackBtn").onclick = showHome;
 }
 function updateWorkoutContext(){
-  const box = $("workoutContext"); box.hidden = !running || !!recMode;
-  $("pauseBtn").hidden = !running || !sess || !!calib || !!recMode;
-  $("askCoachBtn").hidden = !running || !!recMode;
+  const box = $("workoutContext"); setHidden(box, !running || !!recMode);
+  setHidden($("pauseBtn"), !running || !sess || !!calib || !!recMode);
+  setHidden($("askCoachBtn"), !running || !!recMode);
   if(box.hidden) return;
   const c = calib?.core || sess?.core;
   if(!c) return;
@@ -5148,7 +5221,7 @@ function updateWorkoutContext(){
     `Workout set ${at} of ${count} · ${next ? "Next: " + (resolveMovementCore(next.ex,c.tierId)?.mv.name || next.ex) : "Last set"}`;
   if($("movementName").textContent !== title) $("movementName").textContent = title;
   if($("movementNext").textContent !== detail) $("movementNext").textContent = detail;
-  skipExBtn.textContent = calib ? "Finish check" : st?.rest != null ? "Ready now" : "Skip ›";
+  setText(skipExBtn, calib ? "Finish check" : st?.rest != null ? "Ready now" : "Skip ›");
 }
 function showPauseDialog(calibrating = false){
   $("sessionDialogTitle").textContent = calibrating ? "Plank check interrupted" : "Workout paused";
@@ -5552,7 +5625,7 @@ async function initModel(){
     runningMode:"VIDEO", numPoses:1 });
 }
 
-let camFacing = "user", wakeLock = null, cameraStage = "permission", cameraSwitchState = "idle";
+let camFacing = "user", wakeLock = null, wakeLockPending = null, cameraStage = "permission", cameraSwitchState = "idle";
 /* Flip and Skip only mean anything with a live feed, and they appear and vanish
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){
@@ -5562,15 +5635,29 @@ function showCamChrome(on){
     $("workoutContext").hidden = true; $("sessionDialog").close(); document.body.classList.remove("following"); }
 }
 async function requestWakeLock(){
-  if(!running || document.hidden || calib?.core.paused || sess?.core.paused || wakeLock && !wakeLock.released) return;
+  if(!running || document.hidden || calib?.core.paused || sess?.core.paused || wakeLockPending || wakeLock && !wakeLock.released) return;
+  const pending = {request:cameraRequest};
+  wakeLockPending = pending;
   try{
     const lock = await navigator.wakeLock?.request("screen");
-    if(!running || document.hidden || calib?.core.paused || sess?.core.paused) await lock?.release();
+    if(wakeLockPending !== pending || pending.request !== cameraRequest || !running || document.hidden || calib?.core.paused || sess?.core.paused) await releaseWakeLock(lock);
     else wakeLock = lock;
   }
   catch(e){ /* Optional platform feature: the workout still works without it. */ }
+  finally{ if(wakeLockPending === pending) wakeLockPending = null; }
 }
-let cameraRequest = 0, cameraStarting = false;
+async function releaseWakeLock(lock){
+  try{ await lock?.release(); }
+  catch(e){ /* Optional platform cleanup must not prevent camera shutdown. */ }
+}
+let cameraRequest = 0, cameraStarting = false, cameraAnimation = null;
+// A switch temporarily owns two streams, even while playback is unresolved.
+const cameraStreams = new Set();
+function releaseCameraStream(stream){
+  if(!stream) return;
+  cameraStreams.delete(stream);
+  for(const track of stream.getTracks()) if(track.readyState !== "ended") track.stop();
+}
 function cameraProgress(title, copy){
   msgInner.innerHTML = `<h2>${title}</h2><p>${copy}</p><button class="ctl" id="cancelCameraBtn">Cancel</button>`;
   msgEl.hidden = false;
@@ -5585,7 +5672,8 @@ async function openCamera(){
   cameraProgress("Requesting camera…", "Allow camera access in your browser. No microphone is requested.");
   const stream = await navigator.mediaDevices.getUserMedia({
     video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
-  if(request !== cameraRequest){ stream.getTracks().forEach(t=>t.stop()); return false; }
+  if(request !== cameraRequest){ releaseCameraStream(stream); return false; }
+  cameraStreams.add(stream);
   video.srcObject = stream;
   cameraStage = "playback";
   await video.play();
@@ -5604,18 +5692,21 @@ async function openCamera(){
   running = true; lastT = 0; lastVideoTime = -1;
   requestWakeLock(); // optional capability must not hold startup hostage
   startBtn.textContent = "End"; startBtn.classList.add("live"); showCamChrome(true);
-  requestAnimationFrame(loop);
+  cameraAnimation = requestAnimationFrame(t => loop(t, request));
   }catch(e){ if(request !== cameraRequest) return false; throw e; }
   finally{ if(request === cameraRequest){ cameraStarting = false; startBtn.disabled = false; $("helpBtn").disabled = false; } }
 }
 function stopCam(){
   localListener?.stop("workout stopped"); closeCoachPanel(false);
   cameraRequest++; cameraStarting = false; startBtn.disabled = false;
+  cancelAnimationFrame(cameraAnimation); cameraAnimation = null;
   $("helpBtn").disabled = false;
   cameraSwitchState = "idle";
   flipBtn.disabled = false; $("resumeBtn").disabled = false; $("coachResumeBtn").disabled = false;
-  if(video.srcObject){ video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
-  try{ wakeLock?.release(); }catch(e){} wakeLock = null;
+  if(video.srcObject) cameraStreams.add(video.srcObject);
+  for(const stream of cameraStreams) releaseCameraStream(stream);
+  video.srcObject = null;
+  wakeLockPending = null; releaseWakeLock(wakeLock); wakeLock = null;
   coach.reset();
 }
 
@@ -5632,18 +5723,19 @@ $("flipBtn").onclick = async () => {
   try{
     stream = await navigator.mediaDevices.getUserMedia({
       video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
-    if(request !== cameraRequest || !running){ stream.getTracks().forEach(t=>t.stop()); return; }
+    if(request !== cameraRequest || !running){ releaseCameraStream(stream); return; }
+    cameraStreams.add(stream);
     video.srcObject = stream;
     await video.play();
-    if(request !== cameraRequest || !running){ original.getTracks().forEach(t=>t.stop()); return; }
-    original.getTracks().forEach(t=>t.stop());
+    if(request !== cameraRequest || !running){ releaseCameraStream(original); return; }
+    releaseCameraStream(original);
     camFacing = facing; flipBtn.style.color = facing === "environment" ? "var(--iris)" : "";
     canvas.width = video.videoWidth || 1280;
     canvas.height = video.videoHeight || 720;
     document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
   }catch(e){
-    stream?.getTracks().forEach(t=>t.stop());
-    if(request !== cameraRequest || !running){ original.getTracks().forEach(t=>t.stop()); return; }
+    releaseCameraStream(stream);
+    if(request !== cameraRequest || !running){ releaseCameraStream(original); return; }
     video.srcObject = original;
     try{
       await video.play();
@@ -5721,7 +5813,7 @@ async function beginCalibration(){
   bigLabel.textContent = "HOLD";
   scoreCol.classList.add("on");
   scoreLab.textContent = "FORM";
-  tipEl.innerHTML = "<b>Calibration plank</b> — hold as long as you comfortably can, up to 30 seconds.";
+  setHTML(tipEl, "<b>Calibration plank</b> — hold as long as you comfortably can, up to 30 seconds.");
   /* The setup bar (Show me / Ghost) used to appear only inside a Session, so a
      beginner met the plank with no visual guide at all. Calibration has a demo
      (hasDemo('plank') is true) — surface it. */
@@ -5937,7 +6029,7 @@ async function beginRefRecording(id){
   bigLabel.textContent = "DEMO";
   setBig("● REC");
   scoreCol.classList.remove("on");
-  tipEl.innerHTML = `<b>Recording reference: ${M[id]?.name}</b> — side-on, whole body in frame. One slow, perfect rep cycle (or a clean hold).`;
+  setHTML(tipEl, `<b>Recording reference: ${M[id]?.name}</b> — side-on, whole body in frame. One slow, perfect rep cycle (or a clean hold).`);
   coach.raw("Get into position. Recording starts in five seconds, and lasts six. Do it slowly, and do it well.", 3);
 }
 
@@ -5979,9 +6071,10 @@ function showRecPicker(){
   $("recBack").onclick = () => showHome();
 }
 
-function loop(t){
-  if(!running) return;
-  requestAnimationFrame(loop);
+function loop(t, request){
+  // Cancellation alone cannot revoke an already-delivered callback after restart.
+  if(!running || request !== cameraRequest) return;
+  cameraAnimation = requestAnimationFrame(next => loop(next, request));
   try{ loopBody(t); }
   catch(e){ reportLoopError(e); }
 }
@@ -6014,13 +6107,15 @@ function loopBody(t){
      stops emitting telemetry, so lastTint would keep its final value and repaint one
      stale frame the moment tracking recovers. Clear it at the source. (Review #2, D.) */
   if(!lms) lastTint = null;
+  // Drawing and evaluation consume the same conversion of this exact image.
+  const frame = lms ? buildFrame(lms, canvas.width / Math.max(1, canvas.height)) : null;
 
   ctx.save();
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(camFacing === "user"){ ctx.translate(canvas.width,0); ctx.scale(-1,1); }   // mirror selfie view only
   ctx.drawImage(video,0,0,canvas.width,canvas.height);
   if(lms){
-    const f = buildFrame(lms, canvas.width / Math.max(1, canvas.height));
+    const f = frame;
     /* form tint — severity by hue AND thickness AND pulse rate, so it still reads
        for anyone with red/green colour deficiency (and in bright sunlight). */
     const tint = lastTint, tnow = performance.now();
@@ -6089,7 +6184,6 @@ function loopBody(t){
   }
   drawDemo(dt);
 
-  const frame = lms ? buildFrame(lms, canvas.width / Math.max(1, canvas.height)) : null;
   if(recMode) recTick(frame, dt);
   else if(calib) calib.tick(frame, dt, now);
   else if(sess) sess.tick(frame, dt, now);
@@ -6097,7 +6191,7 @@ function loopBody(t){
 
 const clock = s => { s = Math.max(0,s);
   return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(Math.floor(s%60)).padStart(2,"0")}`; };
-const setBig = v => { bigEl.textContent = v; };
+const setBig = v => { setText(bigEl, v); };
 const pop = () => { bigEl.classList.add("pop"); setTimeout(()=>bigEl.classList.remove("pop"),130); };
 
 $("diagConsent").onchange = () => { if(!$("diagConsent").checked) diagnosticClear(); else diagnosticControls(); };
@@ -6121,16 +6215,20 @@ $("diagReview").onclick = () => {
   catch(error){ $("diagStatus").textContent = error.message; }
 };
 $("diagImport").onchange = async e => {
-  const file = e.target.files[0], epoch = diagnosticEpoch;
+  const file = e.target.files[0], epoch = diagnosticEpoch, request = ++diagnosticImportRequest;
+  const current = () => epoch === diagnosticEpoch && request === diagnosticImportRequest;
   if(!file) return;
   try{
     if(file.size > DiagnosticBuffer.maxBytes) throw new Error("Diagnostic file exceeds the 4 MiB limit");
-    const data = DiagnosticBuffer.parse(await file.text());
-    if(epoch !== diagnosticEpoch) return;
+    const text = await file.text();
+    if(!current()) return;
+    const data = DiagnosticBuffer.parse(text);
     diagnosticOpen(data);
     $("diagStatus").textContent = "Opened locally for review. Nothing uploaded; imported data is not added to the recording.";
-  }catch(error){ diagnosticStopReplay(); diagnosticReview = null; $("diagViewer").hidden = true; $("diagStatus").textContent = error.message; }
-  e.target.value = "";
+  }catch(error){
+    if(!current()) return;
+    diagnosticStopReplay(); diagnosticReview = null; $("diagViewer").hidden = true; $("diagStatus").textContent = error.message;
+  }finally{ if(current()) e.target.value = ""; }
 };
 $("diagSeek").oninput = () => { diagnosticStopReplay(); diagnosticDraw(); };
 $("diagPlay").onclick = () => {

@@ -80,6 +80,33 @@ test('native TTS is explicitly a waveform coverage gap', () => {
 test('playback errors survive the app swallowing them', () => {
   const e = evidence(); e.events.push({ type: 'clip-error', error: 'decode failed' }); assert.match(failures(e).join(), /playback/);
 });
+test('a playback watchdog timeout cannot pass on earlier audible speech', () => {
+  const e = evidence(); e.events.push({type:'coach-decision',event:'cancelled',reason:'playback timeout',item});
+  assert.match(failures(e).join(), /watchdog/);
+});
+test('a failed recording cannot pass behind earlier audio; unavailable local TTS remains a gap',()=>{
+  const e=evidence();e.events.push({type:'coach-decision',event:'failed',reason:'clip loading stalled',item:{...item,clips:['voice/test.mp3']}});
+  assert.match(failures(e).join(),/recorded utterance fails/);
+  e.events.at(-1).item={...item,clips:null};e.events.at(-1).reason='local voice unavailable';
+  assert.deepEqual(failures(e),[]);
+});
+test('both declared numbers must complete with their own measured signal', () => {
+  const e = evidence();
+  e.events[2].item = {...item,key:'number',text:'1'}; e.events[3].reason = 'ended';
+  const failed = () => auditAudio(e,{numbers:[1,2]}).checks.filter(c=>!c.pass).map(c=>c.label);
+  assert.deepEqual(failed(),['Number 2 actually plays to completion with measured signal']);
+  // A speech request and a queued/start decision still do not prove sound.
+  const second = {...item,key:'number',text:'2'};
+  e.events.push({type:'speech-start',ms:300,item:second,state});
+  assert.deepEqual(failed(),['Number 2 actually plays to completion with measured signal']);
+  e.events.push({type:'clip-start',ms:300,playId:3,item:second,state});
+  e.events.push({type:'clip-end',ms:700,playId:3,reason:'ended',state});
+  assert.deepEqual(failed(),['Number 2 actually plays to completion with measured signal','Clip 3 contains measured signal']);
+  e.levels.push({ms:400,playId:3,rms:.1});
+  assert.deepEqual(failed(),[]);
+  e.events.find(x=>x.playId===3 && x.type==='clip-end').reason='paused';
+  assert.deepEqual(failed(),['Number 2 actually plays to completion with measured signal']);
+});
 test('sound after stop fails', () => {
   const e = evidence(); e.events.push({ type: 'action', action: 'stop', ms: 100, state });
   e.levels.push({ ms: 800, playId: 2, rms: .1 }); assert.match(failures(e).join(), /Stop silences/);

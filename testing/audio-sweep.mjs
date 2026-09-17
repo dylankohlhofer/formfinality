@@ -115,7 +115,7 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         try { evidence.clipHashes[path] = hash(await readFile(resolve(root, path))); }
         catch (e) { evidence.clipHashes[path] = `unavailable: ${e.code}`; }
       }
-      audit = auditAudio(evidence);
+      audit = auditAudio(evidence, {numbers:scenario.kind === 'clips' ? [1,2] : []});
       if (scenario.id === 'tracking-loss') {
         const reminders = evidence.events.filter(e => e.type === 'effect' && e.effect.t === 'say' && ['vis', 'trackingLost'].includes(e.effect.key));
         check('Persistent missing tracking requests at most one reminder in 24 seconds', reminders.length <= 1, true);

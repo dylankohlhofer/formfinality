@@ -47,6 +47,24 @@ test('invalid clocks, oversized entries and malformed imports fail loudly', () =
   assert.throws(()=>BufferClass.parse('x'.repeat(BufferClass.maxBytes+1)));
 });
 
+for(const [schema,kind] of [[1,'frame'],[2,'frame'],[2,'summary']]){
+  const record = blocked => {
+    const b = new BufferClass(); b.start(metadata);
+    return {...b.snapshot(),schema:`formcoach-diagnostic/${schema}`,
+      entries:[{kind,at:0,data:{frame:null,blocked}}]};
+  };
+  test(`schema ${schema} ${kind} rejects malformed replay blocker lists`,()=>{
+    for(const blocked of ['tracking','',0,false,{}, {length:0}, {length:1,0:'tracking'}, ['tracking',null], [1], [{}]])
+      assert.throws(()=>BufferClass.parse(JSON.stringify(record(blocked))),/Invalid diagnostic blocker list/);
+  });
+  test(`schema ${schema} ${kind} retains valid and legacy optional replay blocker lists`,()=>{
+    for(const blocked of [undefined,null,[],['tracking'],['tracking','position']]){
+      const text=JSON.stringify(record(blocked));
+      assert.deepEqual(BufferClass.parse(text),JSON.parse(text));
+    }
+  });
+}
+
 function frames(b,from,to,step=100){
   for(let at=from;at<=to;at+=step)b.add('frame',at,{frame:null,phase:0,movement:'plank',reps:0,held:at/1000,score:null,blocked:['tracking']});
 }
