@@ -1,7 +1,7 @@
 # Form Coach — documentation
 
-**Start here.** Twenty-one tracked root documents (20 Markdown and the narrated HTML),
-plus this index. Session handovers live under `sessions/`. Where any two disagree,
+**Start here.** This index covers the root documents and narrated HTML.
+Session handovers live under `sessions/`. Where any two disagree,
 `project-status.md` wins — it's the only one whose numbers are recomputed rather than
 remembered.
 
@@ -11,6 +11,12 @@ nothing, with a map of where everything lives.
 **Continuing on another device?** Start with `../START-HERE.md` and
 `sessions/device-handover-2026-09-16.md`; the latter records the conversation's
 current next task and distinguishes completed fixes from the proposed voice audit.
+The owner resumed work on their own account on 22 September; the Ethan transfer
+is cancelled. Git clones use the normal test setup, not generated ZIP receipts.
+
+The preserved `HANDOVER.md`, `restructure-plan.md`, `exercise-and-feedback-plan.md`
+and `feasibility-study.md` are historical planning documents. Their proposals and
+old counts do not override current contracts or imply completed implementation.
 
 ---
 

@@ -1,12 +1,23 @@
 # Continue Form Coach on another device
 
+**22 September update:** work is continuing on the owner's account. The planned
+transfer to Ethan is cancelled. For a GitHub checkout, use the
+`codex/automated-test-lab` branch, read `AGENTS.md`, and follow the dependency and
+test commands below. The snapshot verifier and generated receipt files apply only
+to a completed export ZIP; a normal checkout does not contain those receipts.
+The interrupted September export was never verified as a finished handover.
+
 This is a working-source handover, not an account or chat-history export. Start a
 new Codex chat with this folder attached as its local project. Use the account
 holder's own login; no credentials, cookies or account configuration are included.
 
 ## Three steps
 
-1. Extract the supplied ZIP into a **new folder**, not over another checkout.
+1. Clone the current branch, or extract a completed export ZIP into a **new folder**:
+
+   ```sh
+   git clone --branch codex/automated-test-lab https://github.com/dylankohlhofer/formfinality.git
+   ```
 2. Open that extracted `formfinality` folder as the local project in Codex.
 3. Paste the contents of [CONTINUE-PROMPT.md](CONTINUE-PROMPT.md) into a new chat.
 
@@ -18,7 +29,7 @@ permissions, account history, running terminals or installed tools.
 ## Setup and verification
 
 Install Node.js 22 (the CI major version) and Git if absent. In a terminal opened
-inside the extracted folder, first run:
+inside a folder extracted from a completed export ZIP, first run:
 
 ```sh
 node handover/verify-snapshot.mjs

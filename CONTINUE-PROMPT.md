@@ -1,10 +1,12 @@
-Continue development of the Form Coach project in this local folder. This is a
-device handover from a previous Codex conversation, not a new product project.
+Continue development of the Form Coach project in this local folder. The owner
+resumed work on their own account on 22 September; the transfer to Ethan was
+cancelled. The current development branch is codex/automated-test-lab.
 
 First read AGENTS.md, START-HERE.md and
-docs/sessions/device-handover-2026-09-16.md. Check handover/SNAPSHOT.json,
-handover/BASELINE.json and handover/TRANSFER-CHECKS.json. Verify the snapshot with
-node handover/verify-snapshot.mjs before editing. Then read the relevant current
+docs/sessions/device-handover-2026-09-16.md. If this is an extracted export ZIP,
+check handover/SNAPSHOT.json, handover/BASELINE.json and
+handover/TRANSFER-CHECKS.json and run node handover/verify-snapshot.mjs before
+editing. Those generated files are not expected in a Git clone. Read the relevant current
 sections of docs/project-status.md and testing/README.md. Older proposal documents
 are historical context, not automatically authorized changes.
 
@@ -18,7 +20,9 @@ the existing testing/report infrastructure. It has been discussed but NOT built.
 The user reports that the spoken number 2 can sound like "coo". This is unconfirmed
 pronunciation, not a diagnosed decoder fault. Current tests prove playback and
 signal, not the spoken words. There are 1,294 manifest entries and 360 number
-recordings. Pilot all three voices' 2 and numbers 1–20; compare original clips
+recordings. The historical docs/feasibility-study.md names Warm's "two" in Max's
+earlier report; prioritize that clip but verify its current bytes and playback.
+Pilot all three voices' 2 and numbers 1–20; compare original clips
 with actual app playback, use independent wrong-number/truncation controls, then
 batch-screen the library and generate a prioritised listening queue. Assess the
 availability of on-device transcription; no cloud fallback or automatic upload.

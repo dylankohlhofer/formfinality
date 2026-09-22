@@ -1,5 +1,11 @@
 # Device/account handover — 16 September 2026
 
+**22 September resumption:** the owner has cancelled the transfer to Ethan and
+will continue on their own account. The September ZIP export was interrupted and
+was never certified complete. The saved code and these notes remain useful for
+continuation through the `codex/automated-test-lab` Git branch. Export receipts
+are generated artifacts, not files expected in a Git clone.
+
 This document carries the current conversation's engineering context to a fresh
 local chat. It supersedes older conversational next-step lists, not AGENTS.md.
 Use dated verification checkpoints in `docs/project-status.md` for their exact
@@ -74,8 +80,10 @@ a browser `npm test` pass.
 
 ## Immediate next task: speech intelligibility audit — NOT IMPLEMENTED
 
-User report: some numbers, especially **2**, sound like **"coo"**. No voice persona
-or recording has been confirmed as the cause. The outgoing agent could inspect
+User report: some numbers, especially **2**, sound like **"coo"**. On 22 September,
+the preserved `docs/feasibility-study.md` was found to name Warm's "two" in Max's
+earlier report. This is a useful lead, not confirmation of the current clip's
+pronunciation or the cause. The outgoing agent could inspect
 audio metadata and event traces, but its tool context could not directly listen
 to the audio. It did not certify pronunciation or repair the source MP3s.
 

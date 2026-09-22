@@ -3,6 +3,17 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**22 September 2026 — repository continuation.** The owner cancelled the Ethan
+transfer and resumed work on their own account. Runtime fixes are committed on
+`codex/automated-test-lab`; the interrupted ZIP is not a verified export. Original
+planning documents are preserved as historical context. The HTML and all 63
+JavaScript test-source hashes still match the passing full run
+`2026-09-17T03-20-21-942Z-89339` (16 September local time), whose totals match the
+audio-recovery checkpoint below. No new full-run or physical-device result is
+claimed by this documentation cleanup. The next engineering task remains the
+voice-library intelligibility audit; Warm's "two" is specifically named in the
+historical feasibility study and should be investigated first.
+
 **Last updated:** 14 September 2026 — bounded recorded-audio recovery, following architecture review and measured runtime
 optimisations, following authorized lifecycle/import fixes and the adversarial review,
 two full-code-review passes and local
