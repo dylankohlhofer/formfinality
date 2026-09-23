@@ -1,5 +1,11 @@
 # Continue Form Coach on another device
 
+**23 September feature update:** the local Profile & Weekly Goals and explicit
+email drafts are documented in `docs/profile-duo-contract.md`. Read the newest
+`docs/project-status.md` entry for verification. Cloud pairing/accounts and mobile
+integrations are not implemented. The voice intelligibility audit remains open;
+the older device handover is historical, not the only current task.
+
 **22 September update:** work is continuing on the owner's account. The planned
 transfer to Ethan is cancelled. For a GitHub checkout, use the
 `codex/automated-test-lab` branch, read `AGENTS.md`, and follow the dependency and

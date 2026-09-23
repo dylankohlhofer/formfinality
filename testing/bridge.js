@@ -40,6 +40,7 @@ window.__testLab = {
     telemetry:(r,state)=>renderTelemetry(r,(calib || sess).core.ev,state),clock:TelLog }; },
   coachAccess() { return {routeCoachAction,parseCoachCommand,coachMemory,listener:localListener,
     context:coachContextToken,host:calib || sess,preferences:()=>({...coachPreferences})}; },
+  profileAccess() { return {profileGoals,PROFILE_KEY}; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;

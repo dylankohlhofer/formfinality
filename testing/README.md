@@ -61,6 +61,20 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Local profile/weekly goals (23 September):** `profile-goals.test.mjs` and the
+`profile-*` shell cases run in the same default/watch/CI suite. They exercise
+separate opt-in, completed-routine eligibility, unassessed labels, fixed civil
+timezone/week boundaries, day caps, duplicate finishes, next-week goal changes,
+bounded storage/failure/erase and actual desktop/narrow controls. Email-link
+tests intercept navigation: no mail is sent and no account is connected.
+These do not validate CloudKit, Drive, native apps, delivery or fitness progress.
+See [the implemented/planned boundary](../docs/profile-duo-contract.md).
+
+```sh
+node --test testing/profile-goals.test.mjs
+node testing/check-shell.mjs form-coach-v4.11.html 'profile-*'
+```
+
 **Architecture optimisations (14 September):** `architecture.test.mjs` adds 11
 deterministic conversion, no-pressure append complexity, byte-accounting and
 transactional retention checks. Four `architecture-*` cases use the existing

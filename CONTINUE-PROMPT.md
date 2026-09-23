@@ -15,7 +15,14 @@ missing permissions or platform capabilities; don't claim device tests passed
 because they passed on the previous Mac. Preserve all received work, scoring
 honesty and coverage gaps. Never change expected vectors just to get green.
 
-The next development task is a LOCAL, DEVELOPMENT-ONLY voice-library audit using
+The 23 September approved feature work adds a separate opt-in local Profile &
+Weekly Goals and explicit user-approved email drafts. Read
+docs/profile-duo-contract.md and the latest verification in docs/project-status.md.
+Remote Duo, CloudKit/Drive authorization, automatic email, reminder scheduling
+and Android/native profile UI remain proposals, not implemented integrations.
+Do not select a provider, create cloud resources or enable uploads implicitly.
+
+An outstanding development task is a LOCAL, DEVELOPMENT-ONLY voice-library audit using
 the existing testing/report infrastructure. It has been discussed but NOT built.
 The user reports that the spoken number 2 can sound like "coo". This is unconfirmed
 pronunciation, not a diagnosed decoder fault. Current tests prove playback and
@@ -30,8 +37,8 @@ Report transcription as machine evidence, never human pronunciation approval.
 Persist any genuine listening approvals against file hashes. Retain unverified
 clips as gaps. Do not regenerate voices or incur API costs without permission.
 
-Keep the shipped app unchanged until there is evidence of a specific defect and
-an explained fix. Existing audio-stall handling is implemented and tested; do not
+For that audit, keep the shipped audio unchanged until there is evidence of a
+specific defect and an explained fix. Existing audio-stall handling is implemented and tested; do not
 repeat or undo it. Do not start a framework rewrite, Swift session port, hosting
 deployment or unrelated feature work. Ask before externally sharing data, making
 paid calls or replacing recordings. Save new tests and implementation durably in

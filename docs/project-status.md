@@ -3,6 +3,44 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**23 September 2026 — local participation foundation.** The approved first slice
+adds a separate opt-in Profile & Weekly Goals: bounded local records, one
+routine-day credit per day, score-independent participation, labelled optional
+unassessed completions, fixed timezone, next-week target changes and scoped
+export/erase. Completed routines offer an explicit recipient-free email draft;
+no email is sent automatically. The assessment engine, root vectors and Swift
+are unchanged. [The profile/Duo contract](profile-duo-contract.md) separates this
+implementation from proposed CloudKit/Google Drive pairing, storage estimates,
+Android interoperability and notifications. No remote Duo/accounts, scheduled
+reminders, automatic email or native profile UI have been connected.
+
+Initial full run `2026-09-23T12-42-50-429Z-7846` **exited 1**, not green:
+21 regression suites / 1,553 checks, four original harnesses, 55 engine cases,
+110 browser cases and 136 shell cases passed. Three of 16 audio cases failed
+(Warm Learning, Warm Building, Energy Learning); their automatic repeats passed,
+which does not erase the first failures. Twelve missing-video cases remain
+blocked. [The retained audio finding](../testing/findings/audio-startup-intermittent-2026-09-23.md)
+records the timings and unconfirmed cause; playback rules were not changed.
+
+The final profile review adds two checks (48 focused tests total), prevents
+mutation through a returned goal reference and removes “today” from a draft that
+can remain open overnight. **Final `npm test` exited 0**:
+`test-results/2026-09-23T12-55-37-795Z-9855/`. The working HTML SHA-256
+`0044e2f148b693270570682e93b568db7fb269a62a99d9dab1466d92468c2c89` and all 65
+JavaScript test-source hashes match that report. It passed:
+
+- 82 infrastructure tests and 21 regression suites / 1,555 tests;
+- 4,127 original checks, eight caught mutations plus the healthy control,
+  250 drawing checks and 26 skip checks;
+- 55 engine cases / 1,307 checks, 110 browser cases / 942 checks,
+  136 shell cases / 1,167 checks (including seven profile cases / 61 checks);
+- 16 audio cases / 388 checks. The earlier intermittent failures are **not
+  marked resolved** by this passing run; no audio implementation was changed.
+
+Twelve video cases remain blocked without suitable recordings. No physical
+device, provider authentication, mail delivery or beginner validation is claimed.
+The voice-library intelligibility audit remains open, including Warm's "two".
+
 **22 September 2026 — repository continuation.** The owner cancelled the Ethan
 transfer and resumed work on their own account. Runtime fixes are committed on
 `codex/automated-test-lab`; the interrupted ZIP is not a verified export. Original

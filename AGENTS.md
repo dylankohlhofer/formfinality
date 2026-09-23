@@ -299,6 +299,18 @@ numbers complete with their own measured signal; a queue start is not sound.
 Watchdog/recorded-utterance failures cannot pass behind earlier audio. The original
 OS/browser trigger remains unconfirmed; see `docs/sessions/audio-stall-recovery-2026-09-14.md`.
 
+Local profiles/weekly goals use the separate default-off `profile-goals/1` store.
+They consume existing finishes, never alter assessment or infer a fitness level.
+Only complete routines without skipped/ended sets qualify; one credit per civil
+day in the timezone fixed at opt-in. Unassessed guided/Follow Along completions
+require the explicit profile choice and retain their label. Goal edits start
+next week; history gaps are unknown, not failed streaks. Keep bounded storage,
+visible failures, immediate in-memory opt-out, deduplication and scoped erase.
+`profile-goals` and `profile-*` run in default/watch/CI. Email sharing is an
+explicit recipient-free draft, never an automatic send or a synced Duo claim.
+No CloudKit/Drive connection, reminder scheduler or native profile port exists
+yet. Read `docs/profile-duo-contract.md` before adding sharing or account access.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled
@@ -376,7 +388,7 @@ proportions it was authored in, but not that it *reads* as the movement.
 
 ## Documentation
 
-`docs/` is an Obsidian vault — 20 Markdown documents plus a README index and the narrated HTML, wikilinked. Read
+`docs/` is an Obsidian-style documentation vault, with a README index and narrated HTML. Read
 `docs/README.md` for the index and `docs/project-status.md` for current state (its figures are
 recomputed, not remembered; it wins over any other doc).
 Session notes from user testing go in `docs/sessions/`.

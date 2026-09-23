@@ -536,6 +536,12 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
 #coachDemoDock #demoCanvas{ width:min(100%,380px); height:auto; max-height:250px }
 #planRequestResults{ text-align:left; overflow-wrap:anywhere } #planRequestResults button{ margin:6px 0 }
 #memoryHistory li{ padding:8px 0; border-bottom:1px solid var(--line) }
+#profileProgress{ border-left:2px solid var(--iris); padding:4px 12px; margin:16px 0; white-space:pre-line }
+#profileHeader{ position:sticky; top:-24px; z-index:1; background:var(--ground); padding:12px 0; display:flex; align-items:center; gap:12px }
+#profileHeader h2{ flex:1; margin:0 } #profileClose{ flex-shrink:0 }
+#profileName{ width:100%; box-sizing:border-box }
+#profileDialog label{ display:block; margin:12px 0 }
+#profileEraseConfirm{ border:1px solid var(--line-2); border-radius:10px; padding:12px }
 @media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
 </style>
 </head>
@@ -689,6 +695,30 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   <button class="ctl" id="memoryExportBtn">Export saved history</button>
   <button class="ctl" id="memoryEraseBtn">Erase coaching memory…</button>
   <div id="memoryEraseConfirm" hidden><p>Erase all saved coaching preferences and history? This cannot be undone. Diagnostic details and demonstration recordings are separate and will not be changed.</p><button class="ctl" id="memoryEraseYes">Erase now</button><button class="ctl" id="memoryEraseNo">Keep it</button></div>
+</dialog>
+<dialog id="profileDialog" aria-labelledby="profileTitle">
+  <div id="profileHeader"><h2 id="profileTitle">Profile &amp; weekly goals</h2><button class="ctl" id="profileClose">Close</button></div>
+  <p>Optional and private to this browser. No account, cloud sync or upload. Storage and privacy details below.</p>
+  <div id="profileProgress"></div>
+  <label><input type="checkbox" id="profileEnabled"> Save my profile and future completed routines</label>
+  <label for="profileName">Nickname (optional, saved only here)</label><input id="profileName" maxlength="32" autocomplete="off">
+  <label for="profileTarget">My weekly goal · routine-days</label>
+  <select id="profileTarget"><option value="1">1 day</option><option value="2">2 days</option><option value="3" selected>3 days</option><option value="4">4 days</option><option value="5">5 days</option><option value="6">6 days</option><option value="7">7 days</option></select>
+  <p>One credit per day for a completed routine. Choose what suits you; this is not an exercise prescription.</p>
+  <label><input type="checkbox" id="profileUnassessed"> Also count completed unassessed routines</label>
+  <p>Guided sets use a timer; Follow Along sets are finished manually. Neither verifies your reps or form.</p>
+  <button class="ctl" id="profileSaveBtn">Save profile settings</button>
+  <p id="profileStatus" role="status"></p>
+  <details><summary>What counts, and when goals change</summary><p>Finish a routine without skipping or ending sets. At most one credit per day; extra routines are still recorded. Form scores never decide your credit or change your difficulty. Unassessed completions stay labelled.</p><p>Choose your first target before enabling saving. Later target changes start next Monday. Your timezone stays fixed when you travel. Missing records or weeks with saving off are unknown, not failed workouts.</p></details>
+  <p>Duo is not connected yet. No friend pairing, cloud sync, automatic email or scheduled reminders are enabled in this build.</p>
+  <details><summary>Storage &amp; privacy</summary>
+    <p>This browser storage is not encrypted by the app, may be visible to others using this browser, and can be cleared. Export to keep a separate copy; importing it is not available yet.</p>
+    <p>Up to 4,000 compact completion records / 1 MiB on this device. No scores, video, body landmarks or recordings. This is separate from Your coach &amp; history. Turning saving off keeps existing progress until you erase it; missed records are unknown, not failed workouts.</p>
+    <p>Future optional cloud sharing would use a small part of your account storage, which can already be full. Phone storage and cloud storage are different. Review obsolete backups or unwanted files; confirm independent copies before deleting anything. Deleting iCloud Photos also deletes them from synced devices. “Optimise iPhone Storage” saves phone space, not iCloud space.</p>
+    <a href="https://support.apple.com/en-gb/108922" target="_blank" rel="noopener noreferrer">Apple storage guidance (opens Apple's website)</a>
+  </details>
+  <button class="ctl" id="profileExportBtn">Export local profile</button><button class="ctl" id="profileEraseBtn">Erase profile…</button>
+  <div id="profileEraseConfirm" hidden><p>Erase this profile, goals and completion records? This cannot be undone. Coaching history and diagnostics are separate.</p><button class="ctl" id="profileEraseYes">Erase profile now</button><button class="ctl" id="profileEraseNo">Keep profile</button></div>
 </dialog>
 <div id="tel"></div>
 <p id="tip"></p>
@@ -1360,6 +1390,184 @@ class LocalCoachMemory {
       return this.fail("erase-failed","Saving is off in this window, but local memory could not be erased. It may remain after reload; clear this site's browser storage or retry Erase.");
     }
   }
+}
+
+/* Local participation only. No transport, identity provider, assessment or tier
+   authority. Dates use one fixed civil timezone; a day is not always 24 hours. */
+const PROFILE_KEY = "formcoach.profile-goals.v1";
+const PROFILE_MAX_BYTES = 1024*1024;
+const profileInstant = n => Number.isSafeInteger(n) && n >= 0 && n < 253370000000000;
+const profileTarget = n => Number.isInteger(n) && n >= 1 && n <= 7;
+const profileFormatters = new Map();
+function profileFormatter(zone){
+  if(!profileFormatters.has(zone)){
+    const formatter = new Intl.DateTimeFormat("en-GB",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit"});
+    if(profileFormatters.size >= 8) profileFormatters.delete(profileFormatters.keys().next().value);
+    profileFormatters.set(zone,formatter);
+  }
+  return profileFormatters.get(zone);
+}
+function profileZone(zone){
+  if(typeof zone !== "string" || !zone || zone.length > 100) return false;
+  try { profileFormatter(zone); return true; } catch { return false; }
+}
+function profileCalendar(at,zone){
+  if(!profileInstant(at) || !profileZone(zone)) throw new Error("Invalid profile date or timezone");
+  const parts = profileFormatter(zone).formatToParts(at);
+  const value = key => parts.find(p=>p.type === key).value;
+  const day = `${value("year").padStart(4,"0")}-${value("month")}-${value("day")}`;
+  const date = new Date(day+"T00:00:00.000Z"), offset = (date.getUTCDay()+6)%7;
+  date.setUTCDate(date.getUTCDate()-offset);
+  return {day,week:date.toISOString().slice(0,10)};
+}
+function profileNextWeek(week){
+  const date = new Date(week+"T00:00:00.000Z"); date.setUTCDate(date.getUTCDate()+7);
+  return date.toISOString().slice(0,10);
+}
+function profileStateValid(s){
+  if(!localCoachKeys(s,["schema","enabled","name","timeZone","startedAt","enabledAt","updatedAt","includeUnassessed","goals","events"]) ||
+    s.schema !== "profile-goals/1" || typeof s.enabled !== "boolean" || typeof s.includeUnassessed !== "boolean" ||
+    typeof s.name !== "string" || s.name.length > 32 || /[\u0000-\u001f\u007f]/.test(s.name) ||
+    !Array.isArray(s.goals) || s.goals.length > 1024 || !Array.isArray(s.events) || s.events.length > 4000) return false;
+  if(s.startedAt === null) return !s.enabled && s.timeZone === null && s.enabledAt === null && s.updatedAt === null &&
+    !s.name && !s.includeUnassessed && !s.goals.length && !s.events.length;
+  if(!profileZone(s.timeZone) || !profileInstant(s.startedAt) || !profileInstant(s.updatedAt) || s.updatedAt < s.startedAt ||
+    (s.enabled ? !profileInstant(s.enabledAt) || s.enabledAt < s.startedAt || s.enabledAt > s.updatedAt : s.enabledAt !== null) ||
+    !s.goals.length) return false;
+  if(s.goals.some((g,i)=>!localCoachKeys(g,["week","target"]) || !profileTarget(g.target) ||
+    typeof g.week !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(g.week) ||
+    !Number.isFinite(Date.parse(g.week+"T00:00:00.000Z")) ||
+    new Date(g.week+"T00:00:00.000Z").toISOString().slice(0,10) !== g.week ||
+    new Date(g.week+"T00:00:00.000Z").getUTCDay() !== 1 ||
+    i > 0 && g.week <= s.goals[i-1].week)) return false;
+  if(s.goals[0].week !== profileCalendar(s.startedAt,s.timeZone).week) return false;
+  const ids = new Set();
+  return s.events.every(e=>{
+    if(!localCoachKeys(e,["sessionId","planId","finishedAt","basis"]) || !localCoachSessionId(e.sessionId) ||
+      e.sessionId !== e.sessionId.toLowerCase() || ids.has(e.sessionId) || !PLANS.some(p=>p.id === e.planId) ||
+      !profileInstant(e.finishedAt) || e.finishedAt < s.startedAt || e.finishedAt > s.updatedAt ||
+      !["observed","unassessed"].includes(e.basis)) return false;
+    ids.add(e.sessionId); return true;
+  });
+}
+function profileCompletion(sessionId,planId,payload,at){
+  const checked = buildLocalHistoryEntry(sessionId,planId,payload,at);
+  if(checked.status !== "ready") return checked;
+  const e = checked.entry;
+  if(!["completed","completed-with-follow-along"].includes(e.status) || !e.completedSets)
+    return {status:"ineligible",message:"Weekly goal unchanged: finish a routine without skipped or ended sets. Observed work stays in the session summary."};
+  const basis = e.followAlongSets || e.guidedSets ? "unassessed" : "observed";
+  if(basis === "observed" && !e.reps && !e.heldSeconds)
+    return {status:"ineligible",message:"No completed observed work to credit."};
+  return {status:"ready",event:{sessionId:e.sessionId,planId,finishedAt:e.finishedAt,basis}};
+}
+class ProfileGoals {
+  constructor(storage){
+    this.storage = storage; this.state = this.empty(); this.raw = null; this.error = null;
+    try {
+      const raw = storage.getItem(PROFILE_KEY);
+      if(raw === null) return;
+      if(typeof raw !== "string" || localCoachBytes(raw) > PROFILE_MAX_BYTES) throw new Error("Invalid size");
+      const state = JSON.parse(raw); if(!profileStateValid(state)) throw new Error("Invalid profile");
+      this.state = state; this.raw = raw;
+    } catch { this.fail("Profile storage could not be read. Nothing was overwritten; reload or explicitly erase this profile."); }
+  }
+  empty(){ return {schema:"profile-goals/1",enabled:false,name:"",timeZone:null,startedAt:null,enabledAt:null,updatedAt:null,includeUnassessed:false,goals:[],events:[]}; }
+  fail(message){ this.error = {status:"error",message}; return this.read(); }
+  read(){ return {...(this.error || {status:"ready",message:"Profile stays in this browser. Duo is not connected."}),data:localCoachClone(this.state)}; }
+  write(next){
+    if(this.error) return this.read();
+    if(!profileStateValid(next)) return {status:"invalid",message:"Profile settings or date are invalid. Nothing was saved."};
+    const raw = JSON.stringify(next);
+    if(localCoachBytes(raw) > PROFILE_MAX_BYTES) return {status:"full",message:"Profile reached its 1 MiB limit. Export and explicitly erase to reset; nothing was removed."};
+    try {
+      if(this.storage.getItem(PROFILE_KEY) !== this.raw) return this.fail("Profile changed in another window. Reload before saving; nothing was overwritten.");
+      this.storage.setItem(PROFILE_KEY,raw); this.raw = raw; this.state = next;
+      return {...this.read(),message:"Profile saved on this device only."};
+    } catch { return this.fail("Profile could not be saved. Check browser storage; existing saved data was kept."); }
+  }
+  validTime(at){ return profileInstant(at) && (this.state.updatedAt === null || at >= this.state.updatedAt); }
+  setEnabled(enabled,at,options = {}){
+    if(typeof enabled !== "boolean") return {status:"invalid",message:"Choose an explicit on/off setting."};
+    if(enabled === this.state.enabled) return this.read();
+    const next = localCoachClone(this.state);
+    next.enabled = enabled; next.enabledAt = enabled ? at : null;
+    if(!enabled){ this.state.enabled = false; this.state.enabledAt = null; }
+    let result;
+    if(!this.validTime(at)) result = {status:"invalid",message:"Check the device clock before saving profile changes."};
+    else {
+      next.updatedAt = at;
+      if(enabled && next.startedAt === null){
+        if(!profileZone(options.timeZone) || !profileTarget(options.target)) return {status:"invalid",message:"Choose a timezone and a goal of 1–7 days."};
+        next.startedAt = at; next.timeZone = options.timeZone;
+        next.goals = [{week:profileCalendar(at,next.timeZone).week,target:options.target}];
+      }
+      result = this.write(next);
+    }
+    if(!enabled && result.status !== "ready") return this.fail("Profile saving is off in this window, but that change could not be saved. The old setting may return after reload; retry or erase this profile.");
+    return result;
+  }
+  update(name,target,includeUnassessed,at){
+    if(this.error) return this.read();
+    if(!this.state.enabled) return {status:"off",message:"Enable the local profile before saving settings."};
+    if(typeof name !== "string" || name.length > 32 || /[\u0000-\u001f\u007f]/.test(name) || !profileTarget(target) ||
+      typeof includeUnassessed !== "boolean" || !this.validTime(at)) return {status:"invalid",message:"Check the name, weekly target and device clock."};
+    const next = localCoachClone(this.state), week = profileCalendar(at,next.timeZone).week, effective = profileNextWeek(week);
+    const current = next.goals.filter(g=>g.week <= week).at(-1);
+    next.name = name.trim(); next.includeUnassessed = includeUnassessed; next.updatedAt = at;
+    next.goals = next.goals.filter(g=>g.week < effective);
+    if(target !== current.target) next.goals.push({week:effective,target});
+    if(next.goals.length > 1024) return {status:"full",message:"Profile goal history is full. Export before explicitly resetting it."};
+    const result = this.write(next);
+    return result.status === "ready" ? {...result,message:target === current.target ? "Profile saved. This week's goal is unchanged." : "Profile saved. The new goal starts next Monday; this week's goal is unchanged."} : result;
+  }
+  saveSession(sessionId,planId,payload,at){
+    if(!this.state.enabled) return {status:"off",message:"Weekly goal saving is off."};
+    if(this.error) return this.read();
+    if(!this.validTime(at) || at < this.state.enabledAt) return {status:"invalid",message:"Check the device clock. This routine was not added to the weekly goal."};
+    const checked = profileCompletion(sessionId,planId,payload,at);
+    if(checked.status !== "ready") return checked;
+    const event = checked.event;
+    if(this.state.events.some(e=>e.sessionId === event.sessionId)) return {status:"duplicate",message:"This routine was already saved; it has not been counted twice."};
+    if(event.basis === "unassessed" && !this.state.includeUnassessed)
+      return {status:"ineligible",message:"Unassessed routine not added: counting guided or Follow Along routines is off in Profile. Your session summary is unchanged."};
+    if(this.state.events.length >= 4000) return {status:"full",message:"Profile has 4,000 completions. Saving stopped; export before explicitly erasing. Existing progress was kept."};
+    const day = profileCalendar(at,this.state.timeZone).day;
+    const already = this.state.events.some(e=>profileCalendar(e.finishedAt,this.state.timeZone).day === day);
+    const next = localCoachClone(this.state); next.events.push(event); next.updatedAt = at;
+    const result = this.write(next);
+    return result.status === "ready" ? {...result,message:already ? "Routine saved. Today already has its one weekly-goal credit." :
+      `One routine-day added to your local weekly goal${event.basis === "unassessed" ? " (unassessed completion)" : ""}.`} : result;
+  }
+  summary(at){
+    const s = this.state;
+    if(s.startedAt === null || !profileInstant(at)) return null;
+    const {week} = profileCalendar(at,s.timeZone), target = s.goals.filter(g=>g.week <= week).at(-1)?.target;
+    if(!target) return null;
+    const days = new Set(), totalDays = new Set(); let unassessed = 0;
+    for(const e of s.events){
+      const date = profileCalendar(e.finishedAt,s.timeZone); totalDays.add(date.day);
+      if(date.week === week){ days.add(date.day); if(e.basis === "unassessed") unassessed++; }
+    }
+    return {week,target,days:days.size,totalDays:totalDays.size,completions:s.events.length,unassessed,
+      met:days.size >= target,next:localCoachClone(s.goals.find(g=>g.week > week) || null)};
+  }
+  export(){ return this.error ? this.read() : {status:"ready",data:localCoachClone(this.state),message:"Personal profile export prepared. No upload was made."}; }
+  erase(){
+    this.state = this.empty();
+    try { this.storage.removeItem(PROFILE_KEY); this.raw = null; this.error = null;
+      return {...this.read(),message:"Profile erased and saving disabled. Coaching history and other settings were kept."};
+    } catch { return this.fail("Saving is off in this window, but profile erase failed. Data may remain after reload; retry Erase."); }
+  }
+}
+function profileEmailDraft(sessionId,planId,payload,at){
+  const checked = profileCompletion(sessionId,planId,payload,at);
+  if(checked.status !== "ready") return null;
+  // Fixed text, no recipient, name, score, diagnostic data or unsupported Duo claim.
+  const body = "I finished a routine in Form Coach."+
+    (checked.event.basis === "unassessed" ? " It included unassessed guided or Follow Along sets." : "")+
+    "\n\nThis is a personal update, not a fitness assessment or a synced Duo streak.";
+  return "mailto:?subject="+encodeURIComponent("My Form Coach workout")+"&body="+encodeURIComponent(body);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -4690,6 +4898,7 @@ class Coach {
 }
 let localListener = null;
 const coachMemory = new LocalCoachMemory({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
+const profileGoals = new ProfileGoals({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
 let coachPreferences = {...coachMemory.read().preferences};
 const coach = new Coach();
 voiceChk.onchange = () => {
@@ -4983,9 +5192,13 @@ function applyFx(host, E){
       case "regressHide": regBox.classList.remove("on"); break;
       case "pop": pop(); break;
       case "log": TelLog.log(e.row, !!e.force); break;
-      case "finish":
-        host.historyResult = coachMemory.saveSession(host.sessionId,host.core.plan.id,e.payload,Date.now());
+      case "finish": {
+        const finishedAt = Date.now();
+        host.historyResult = coachMemory.saveSession(host.sessionId,host.core.plan.id,e.payload,finishedAt);
+        host.profileResult = profileGoals.saveSession(host.sessionId,host.core.plan.id,e.payload,finishedAt);
+        host.emailDraft = profileEmailDraft(host.sessionId,host.core.plan.id,e.payload,finishedAt);
         renderFinish(e.payload); break;
+      }
       case "calibFinish": renderCalibFinish(e.payload); break;
     }
   }
@@ -5077,6 +5290,8 @@ function renderFinish(p){
       <details class="summaryNote"><summary>What this summary can tell you</summary><p>${esc(summary.coverage)}</p></details>
       <div class="phases">${rows}</div>
       <p id="historySaveStatus"></p>
+      <p id="profileSaveStatus"></p>
+      <div id="workoutEmailShare" hidden><a class="ctl" id="workoutEmailLink">Share completion by email…</a><p>Requires a configured email app. Choose the recipient and press Send yourself. Nothing is sent automatically; this browser cannot confirm the email app opened or the message was delivered.</p></div>
       <button class="ctl primary" id="againBtn">Choose another workout</button>
       <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;
   msgEl.hidden = false;
@@ -5084,6 +5299,8 @@ function renderFinish(p){
   $("againBtn").onclick = () => showHome();
   $("csvDlBtn").onclick = downloadTelemetry;
   $("historySaveStatus").textContent = sess?.historyResult?.message || "History saving is off.";
+  $("profileSaveStatus").textContent = sess?.profileResult?.message || "Weekly goal saving is off.";
+  if(sess?.emailDraft){ $("workoutEmailLink").href = sess.emailDraft; $("workoutEmailShare").hidden = false; }
 
   const finishEpoch = ++screenEpoch;
   if(voiceChk.checked && !p.stopped){
@@ -5320,7 +5537,7 @@ function routeCoachAction(action){
   if(!running || recMode || document.hidden || !c || c.done) return false;
   if(action === "pause"){ closeCoachPanel(false); if(c.paused) showPauseDialog(!!calib); else pauseCurrent("command"); return true; }
   // Other dialogs retain ownership. Voice must not operate behind help/diagnostics.
-  if($("helpDialog").open || $("diagPanel").open || $("memoryDialog").open) return false;
+  if($("helpDialog").open || $("diagPanel").open || $("memoryDialog").open || $("profileDialog").open) return false;
   if(action === "resume"){ if(!canResumeCurrent()) return false; resumeCurrent(); return true; }
   if(["explain","demo","repeat"].includes(action)){ cancelCoachConfirmation(); return showCoachPanel(action); }
   if(action === "cancel"){ cancelCoachConfirmation(); $("coachActionStatus").textContent = "Cancelled. Your workout remains paused."; return true; }
@@ -5526,13 +5743,15 @@ function showHome(){
       <div id="planRequestResults" aria-live="polite" data-plan-source="deterministic"></div>
     </details>
     <button class="ctl" id="coachSettingsBtn">Coach style and setup</button>
-    <button class="ctl" id="coachMemoryBtn">Your coach &amp; history</button>`;
+    <button class="ctl" id="coachMemoryBtn">Your coach &amp; history</button>
+    <button class="ctl" id="profileOpenBtn">Profile &amp; weekly goals</button>`;
   msgInner.querySelectorAll(".plancard").forEach(c => c.onclick = () => {
     const plan = PLANS.find(p => p.id === c.dataset.plan);
     showPlanPreview(plan);
   });
   $("coachSettingsBtn").onclick = showWelcome;
   $("coachMemoryBtn").onclick = () => { renderCoachMemory(); $("memoryEraseConfirm").hidden = true; $("memoryDialog").showModal(); };
+  $("profileOpenBtn").onclick = () => { renderProfile(); $("profileEraseConfirm").hidden = true; $("profileDialog").showModal(); };
   $("planRequestInput").oninput = () => $("planRequestResults").replaceChildren();
   $("planRequestForm").onsubmit = e => {
     e.preventDefault(); const result = searchLocalPlans($("planRequestInput").value,tier);
@@ -5555,6 +5774,44 @@ function showHome(){
     }
   };
 }
+
+function renderProfile(result = null){
+  const saved = profileGoals.read(), s = saved.data, summary = profileGoals.summary(Date.now());
+  $("profileEnabled").checked = s.enabled; $("profileName").value = s.name;
+  $("profileName").disabled = !s.enabled; $("profileUnassessed").disabled = !s.enabled;
+  $("profileTarget").value = summary?.next?.target || summary?.target || 3;
+  $("profileUnassessed").checked = s.includeUnassessed;
+  $("profileSaveBtn").disabled = !s.enabled || saved.status === "error";
+  $("profileExportBtn").disabled = s.startedAt === null || saved.status === "error";
+  $("profileStatus").textContent = result?.message || saved.message;
+  $("profileProgress").textContent = summary
+    ? `${summary.days} / ${summary.target} routine-days this week${summary.met ? " · Goal met" : ""}\n`+
+      `Week of ${summary.week} · ${s.timeZone}\n`+
+      `${summary.unassessed} unassessed completions this week.\n`+
+      `${summary.totalDays} routine-days / ${summary.completions} completions recorded since setup. Participation, not a fitness level.\n`+
+      (summary.next ? `Next target: ${summary.next.target} days, from ${summary.next.week}.\n` : "")+
+      (s.enabled ? "" : "Saving is off; existing records are kept.")
+    : "No profile progress saved yet. Enabling starts from now; old workout history is not imported.";
+}
+$("profileClose").onclick = () => $("profileDialog").close();
+$("profileEnabled").onchange = () => {
+  const enabled = $("profileEnabled").checked;
+  let zone;
+  try { if(enabled) zone = Intl.DateTimeFormat().resolvedOptions().timeZone; }
+  catch { renderProfile({message:"Device timezone unavailable. Profile saving cannot be enabled yet."}); return; }
+  renderProfile(profileGoals.setEnabled(enabled,Date.now(),{timeZone:zone,target:Number($("profileTarget").value)}));
+};
+$("profileSaveBtn").onclick = () => renderProfile(profileGoals.update($("profileName").value,Number($("profileTarget").value),$("profileUnassessed").checked,Date.now()));
+$("profileEraseBtn").onclick = () => { $("profileEraseConfirm").hidden = false; };
+$("profileEraseNo").onclick = () => { $("profileEraseConfirm").hidden = true; };
+$("profileEraseYes").onclick = () => { const result = profileGoals.erase(); $("profileEraseConfirm").hidden = true; renderProfile(result); };
+$("profileExportBtn").onclick = () => {
+  const result = profileGoals.export();
+  if(result.status !== "ready"){ renderProfile(result); return; }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(result.data,null,2)],{type:"application/json"}));
+  const link = document.createElement("a"); link.href = url; link.download = "formcoach-local-profile.json"; link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000); renderProfile(result);
+};
 
 function renderCoachMemory(result = null){
   const saved = coachMemory.read();

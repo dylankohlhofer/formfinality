@@ -97,6 +97,10 @@ silently overwriting records. LocalStorage is not a cross-tab transaction, and a
 failed write cannot promise durable consent changes after reload. Workouts cannot
 be resumed from this compact history after reloading.
 
+The newer **Profile & weekly goals** is a separate opt-in participation store.
+It does not inherit this history's consent or copy its records, and its scoped
+erase does not touch this feature. See [the profile/Duo contract](profile-duo-contract.md).
+
 ## Optional native AI
 
 `coach-choice/1` is the HTML-first boundary for explanation, plan and test-review

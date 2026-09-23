@@ -43,6 +43,7 @@ thing standing between here and the Swift port.
 | `movement-evidence-contract.md` | Which visible evidence is required for movement, which form targets are optional, and what partial-view results do not prove |
 | `workout-summary-contract.md` | Evidence-backed debriefs, optional on-device AI highlight selection and mandatory fallback/claim boundaries |
 | `local-coach-contract.md` | On-demand explanations, local speech controls, authored-plan requests, opt-in memory and bounded AI review |
+| `profile-duo-contract.md` | Local profiles/weekly goals, user-approved email sharing, storage estimates and the proposed CloudKit/Google Drive/Android Duo routes |
 | `interface-principles.md` | The nine UI rules, and why each exists |
 | `concepts-deep-dive.md` | The computing and ML fundamentals, from zero |
 | `concepts-narrated.html` | The same, read aloud with sentence highlighting (~38 min) |
