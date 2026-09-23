@@ -3,6 +3,28 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**23 September 2026 — five code-review findings repaired.**
+[The repair record](sessions/code-review-fixes-2026-09-23.md) covers Duo's
+queued-versus-confirmed status, strict upload envelopes, the Drive incomplete-scan
+field, atomic validated demo-reference imports and honest failed-save/export/retry
+controls. Invalid stored references use authored demos until explicit recovery.
+The judgement engine, root vectors and Swift are unchanged; Duo remains a
+disconnected prototype. The existing loop gains 32 focused regression tests
+and five browser cases / 30 checks.
+
+**Final `npm test` exited 0** in `test-results/2026-09-23T15-35-19-891Z-26714/`:
+82 infrastructure tests; 25 regression suites / 1,625 tests; all four original
+harnesses (4,127 conformance checks, eight caught mutations with a healthy control,
+250 drawing checks and 26 skip checks); 55 engine cases / 1,307 checks;
+110 browser cases / 942 checks; 141 shell cases / 1,197 checks; and 16 audio
+cases / 388 checks. The final HTML SHA-256 is
+`fb5ae9755c6155f632912e51c27499e878541d812a87245c1ffa52d1c8b64662`.
+It and all **80** recorded source hashes match the working files.
+Twelve video cases remain blocked; native speech, recognition, intelligibility
+and physical-device/beginner coverage are still incomplete. The first full run
+was deliberately interrupted to add a legacy-coordinate round-trip bound;
+its partial evidence is retained and identified in the repair record.
+
 **23 September 2026 — commercial model and local web release preparation.**
 [The updated decision](business-model-2026-09.md) keeps a one-time paid app,
 recommends testing a useful free browser starter and £7.99 willingness to pay,

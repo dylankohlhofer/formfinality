@@ -139,6 +139,17 @@ multi-device transactional database, secure identity layer or permanent cloud
 backup. Weekly counts from cached data are not proof a partner is currently
 online or that an unmet week has failed.
 
+`week()` keeps `credits` as the cached total, separates `confirmedCredits`
+(previously acknowledged routine-days) from `pendingCredits` (additional days
+known only locally), and returns `confirmedMet: null` before a successful sync
+or while work is pending, refreshing, conflicted or failed. A true/false verdict
+is explicitly as of `lastSyncAt`, never proof of current partner activity.
+An extra pending routine on an already acknowledged day does not add a second
+pending credit. No stored-schema migration is required.
+The Drive adapter independently validates a snapshot of the exact minimal
+completion envelope before fetch, rejecting extra personal fields. Its list
+request includes `incompleteSearch` so a partial provider scan fails visibly.
+
 ### Live two-account gate, still open
 
 Use two consented Google test accounts and platform OAuth clients restricted to

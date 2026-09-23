@@ -1,5 +1,6 @@
 // Foreground-only Google Drive transport spike. No OAuth flow, token persistence,
 // pairing UI or background notification service is included.
+import { validDuoEnvelope } from './sync.mjs';
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const FOLDER = /^[A-Za-z0-9_-]{10,200}$/;
@@ -46,7 +47,7 @@ export class DriveDuoTransport {
     for (let page = 0; page < 20; page++) {
       const url = new URL(API);
       url.searchParams.set('q', `'${this.folderId}' in parents and trashed = false`);
-      url.searchParams.set('fields', 'nextPageToken,files(id,name,mimeType,size,owners(permissionId))');
+      url.searchParams.set('fields', 'nextPageToken,incompleteSearch,files(id,name,mimeType,size,owners(permissionId))');
       url.searchParams.set('pageSize', '1000');
       if (pageToken) url.searchParams.set('pageToken', pageToken);
       const listing = await (await this.request(url)).json();
@@ -71,7 +72,8 @@ export class DriveDuoTransport {
     throw new DriveDuoError('error'); // An incomplete page scan is never a clean sync.
   }
   async create(event) {
-    if (!event || typeof event.sessionId !== 'string' || typeof event.memberId !== 'string') throw Error('Invalid Duo upload');
+    event = structuredClone(event); // Validate exactly the snapshot we will send.
+    if (!validDuoEnvelope(event)) throw Error('Invalid Duo upload');
     const metadata = {name: `${FILE_PREFIX}${event.memberId}-${event.sessionId}.json`,
       mimeType: 'application/json', parents: [this.folderId]};
     const content = JSON.stringify(event);

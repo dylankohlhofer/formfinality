@@ -54,6 +54,7 @@ thing standing between here and the Swift port.
 | Document | Question it answers |
 |---|---|
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
+| `sessions/code-review-fixes-2026-09-23.md` | Duo confirmation/upload boundaries and transactional demo-reference import/save recovery |
 | `sessions/code-review-fixes-2026-09-14.md` | Two review passes: view/hold reliability, camera and microphone lifecycle, complete speech, demo animation, supported plans and test provenance |
 | `sessions/adversarial-review-2026-09-14.md` | Seeded controls, long sessions, five reproduced lifecycle/import defects and their authorized repair follow-up |
 | `sessions/architecture-optimisations-2026-09-14.md` | Architecture assessment, measured conversion/DOM/diagnostic optimisations, regression evidence and deferred platform work |

@@ -61,6 +61,15 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Review fixes (23 September):** `references.test.mjs` and `references-*` shell
+cases cover the developer demo recorder's malformed/oversized/atomic imports,
+legacy coordinate conversion, corrupt-store fallback, scoped reset, quota/stale
+writes, export/retry and late file-read callbacks. No recorded people are used.
+`duo-sync.test.mjs` also requires unknown confirmation before successful sync,
+separate acknowledged/pending routine-days, strict upload field validation and
+a Drive response mock that respects the requested incomplete-search field.
+Both use the existing default/watch/CI loop; provider access remains simulated.
+
 **Web release/economics (23 September):** `web-release.test.mjs` and
 `economics.test.mjs` run in default/watch/CI. They protect allowlisted packaging,
 model hashes, symlink/path and size rejection, no overwrite, unchanged engine

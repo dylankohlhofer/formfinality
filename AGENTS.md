@@ -315,6 +315,13 @@ adapter, but no OAuth flow, UI, connected accounts or verified provider access.
 `duo-sync` runs in default/watch/CI with two simulated accounts. Do not advertise
 pairing or remote delivery until two real accounts prove `drive.file` folder
 visibility, ownership, consent, quota/revocation and account-switch behaviour.
+Duo weekly confirmation is null until a complete successful sync; queued and
+acknowledged routine-days are separate. Validate the exact minimal completion
+envelope at the upload boundary and request Drive's `incompleteSearch` field.
+Developer demo references use bounded, validated, atomic imports. Invalid saved
+overrides fall back to authored demos without overwriting stored data. Failed
+saves must show failure, retain an exportable draft and offer explicit retry;
+reset removes only `fc_refs`. Keep `references` and `references-*` in default CI.
 
 `release/` builds unpublished static review artifacts from the same HTML, pinned
 runtime/model and allowlisted voice assets. Never publish the repo root or treat

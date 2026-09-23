@@ -94,6 +94,56 @@ test('The combined target is met by three distinct member-days without a per-per
   assert.equal(a.week('2026-09-21').confirmedMet, true);
   assert.equal(b.week('2026-09-21').credits, 3);
 });
+test('A target-one week is unknown until queued work is acknowledged by a successful sync', async () => {
+  const policy = {...alice, target: 1}, storage = new Storage(), a = new DuoLedger(storage, policy), remote = new Remote();
+  a.enable();
+  assert.equal(a.week('2026-09-21').confirmedMet, null, 'Never synced is not confirmed failure');
+  enqueue(a, 100);
+  assert.equal(a.week('2026-09-21').credits, 1);
+  assert.equal(a.week('2026-09-21').confirmedCredits, 0);
+  assert.equal(a.week('2026-09-21').pendingCredits, 1);
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  const reloaded = new DuoLedger(storage, policy); reloaded.enable();
+  for (const error of ['offline','storage-full','share-revoked','sign-in-required']) {
+    await reloaded.sync({...remote.transport(policy), create: async () => { throw {code: error}; }}, now);
+    assert.equal(reloaded.week('2026-09-21').confirmedMet, null, error);
+    assert.equal(reloaded.week('2026-09-21').pendingCredits, 1);
+  }
+  await reloaded.sync(remote.transport(policy), now);
+  assert.equal(reloaded.week('2026-09-21').confirmedMet, true);
+  assert.equal(reloaded.week('2026-09-21').confirmedCredits, 1);
+  assert.equal(reloaded.week('2026-09-21').pendingCredits, 0);
+  assert.equal(reloaded.week('2026-09-28').confirmedMet, false, 'As of the successful sync, no remote credit for this week');
+  enqueue(reloaded, 101, now + 1); // Duplicate day, distinct routine.
+  assert.equal(reloaded.week('2026-09-21').confirmedCredits, 1);
+  assert.equal(reloaded.week('2026-09-21').pendingCredits, 0, 'A pending extra routine is not another routine-day');
+  assert.equal(reloaded.week('2026-09-21').confirmedMet, null, 'Incomplete reconciliation stays explicit');
+});
+test('Failed, in-flight and conflicting refreshes cannot retain a current confirmed verdict', async () => {
+  const policy = {...alice, target: 1}, storage = new Storage(), a = new DuoLedger(storage, policy), remote = new Remote();
+  a.enable(); enqueue(a, 102); await a.sync(remote.transport(policy), now);
+  let release;
+  const active = a.sync({...remote.transport(policy), list: () => new Promise(resolve => { release = resolve; })}, now + 1);
+  await Promise.resolve();
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  assert.equal(a.week('2026-09-21').syncStatus, 'syncing');
+  release(structuredClone(remote.files)); await active;
+  assert.equal(a.week('2026-09-21').confirmedMet, true);
+  await a.sync({...remote.transport(policy), accountId: 'wrong-account'}, now + 2);
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  assert.equal(a.week('2026-09-21').syncStatus, 'sign-in-required');
+  await a.sync(remote.transport(policy), now + 3);
+  remote.offline = true; await a.sync(remote.transport(policy), now + 4);
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  assert.equal(a.week('2026-09-21').confirmedCredits, 1, 'Known work remains in the cached count');
+  remote.offline = false; remote.files[0].ownerId = 'wrong-owner';
+  await a.sync(remote.transport(policy), now + 5);
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  remote.files[0].ownerId = policy.ownerId; await a.sync(remote.transport(policy), now + 6);
+  storage.fail = true; enqueue(a, 103, now + 86400000);
+  assert.equal(a.week('2026-09-21').confirmedMet, null);
+  assert.equal(a.week('2026-09-21').syncStatus, 'error');
+});
 test('Unsaved session IDs and disabled profile records cannot enter the outbox', () => {
   const {a} = peers(), profile = savedProfile(16);
   assert.equal(a.enqueue(profile, id(17)).status, 'ineligible');
@@ -217,6 +267,30 @@ test('Drive adapter uses ordinary shared-folder files, page-safe reads and injec
   assert.match(calls[1].options.body, /"parents":\["sharedFolder12345"\]/);
   assert.ok(calls[2].url.includes('in+parents'));
   assert.doesNotMatch(calls[1].options.body, /score|planId|landmarks|diagnostic/);
+});
+test('Drive uploads reject extra personal data and malformed envelopes before making a request', async () => {
+  const event = duoEvent(savedProfileEvent(110), alice); let requests = 0;
+  const transport = new DriveDuoTransport({accessToken: 'token', accountId: alice.accountId, folderId: 'sharedFolder12345',
+    fetchFn: async () => { requests++; return {ok: true, json: async () => ({id: 'createdFile12345'})}; }});
+  for (const extra of ['landmarks','score','diagnostic','email','planId','accessToken'])
+    await assert.rejects(transport.create({...event, [extra]: 'private'}));
+  for (const change of [{sessionId: 's'}, {memberId: 'm'}, {pairId: 'p'}, {schema: 'wrong'}, {finishedAt: NaN},
+    {policyVersion: 0}, {basis: 'self-reported'}, {day: '2026-02-30'}, {week: '2026-09-22'}, {week: '2026-09-28'}])
+    await assert.rejects(transport.create({...event, ...change}));
+  const {day, ...missing} = event; await assert.rejects(transport.create(missing));
+  await assert.rejects(transport.create({memberId: 'm', sessionId: 's', landmarks: [1,2,3]}));
+  assert.equal(requests, 0, 'Rejected inputs never reach fetch');
+  await transport.create(event); assert.equal(requests, 1, 'A valid minimal envelope still uploads');
+});
+test('Drive requests the incomplete-search flag and rejects an incomplete response filtered to requested fields', async () => {
+  const fields = [];
+  const transport = new DriveDuoTransport({accessToken: 'token', accountId: alice.accountId, folderId: 'sharedFolder12345',
+    fetchFn: async url => {
+      const requested = new URL(url).searchParams.get('fields'); fields.push(requested);
+      return {ok: true, json: async () => ({files: [], ...(requested.split(',').includes('incompleteSearch') ? {incompleteSearch: true} : {})})};
+    }});
+  await assert.rejects(transport.list(), error => error.code === 'error');
+  assert.ok(fields[0].split(',').includes('incompleteSearch'));
 });
 for (const [status, reason, expected] of [[401, '', 'sign-in-required'], [403, 'storageQuotaExceeded', 'storage-full'],
   [403, '', 'share-revoked'], [403, 'rateLimitExceeded', 'error'], [404, '', 'share-revoked'], [429, '', 'error']])

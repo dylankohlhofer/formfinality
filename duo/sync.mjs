@@ -28,7 +28,7 @@ export function validDuoPolicy(p) {
       typeof p.ownerId !== 'string' || !p.ownerId || p.ownerId.length > 200 ||
       typeof p.partnerOwnerId !== 'string' || !p.partnerOwnerId || p.partnerOwnerId.length > 200 ||
       p.ownerId === p.partnerOwnerId || !Number.isInteger(p.target) || p.target < 1 || p.target > 14 ||
-      typeof p.includeUnassessed !== 'boolean' || !Number.isInteger(p.version) || p.version < 1 ||
+      typeof p.includeUnassessed !== 'boolean' || !Number.isSafeInteger(p.version) || p.version < 1 ||
       !instant(p.startedAt)) return false;
   try { duoCalendar(0, p.timeZone); return true; } catch { return false; }
 }
@@ -43,12 +43,24 @@ export function pairPolicies(a, b) {
     a.accountId !== b.accountId;
 }
 
+// Enforce the minimal wire shape at the transport too, even for direct callers.
+export function validDuoEnvelope(event) {
+  if (!keys(event, ['schema','pairId','memberId','sessionId','finishedAt','day','week','basis','policyVersion']) ||
+      event.schema !== DUO_SCHEMA || !uuid(event.pairId) || !uuid(event.memberId) || !uuid(event.sessionId) ||
+      !instant(event.finishedAt) || !['observed','unassessed'].includes(event.basis) ||
+      !Number.isSafeInteger(event.policyVersion) || event.policyVersion < 1) return false;
+  for (const date of [event.day, event.week]) {
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const time = Date.parse(date + 'T00:00:00.000Z');
+    if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 10) !== date) return false;
+  }
+  const monday = Date.parse(event.week + 'T00:00:00.000Z'), day = Date.parse(event.day + 'T00:00:00.000Z');
+  return new Date(monday).getUTCDay() === 1 && day >= monday && day < monday + 7 * 86400000;
+}
+
 export function validDuoEvent(event, policy) {
-  if (!validDuoPolicy(policy) || !keys(event, ['schema','pairId','memberId','sessionId','finishedAt','day','week','basis','policyVersion']) ||
-      event.schema !== DUO_SCHEMA || event.pairId !== policy.pairId ||
-      ![policy.memberId, policy.partnerId].includes(event.memberId) || !uuid(event.sessionId) ||
-      !instant(event.finishedAt) || event.finishedAt < policy.startedAt ||
-      !['observed','unassessed'].includes(event.basis) ||
+  if (!validDuoPolicy(policy) || !validDuoEnvelope(event) || event.pairId !== policy.pairId ||
+      ![policy.memberId, policy.partnerId].includes(event.memberId) || event.finishedAt < policy.startedAt ||
       event.policyVersion !== policy.version ||
       (event.basis === 'unassessed' && !policy.includeUnassessed)) return false;
   const calendar = duoCalendar(event.finishedAt, policy.timeZone);
@@ -136,18 +148,25 @@ export class DuoLedger {
   }
   week(week) {
     if (typeof week !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(week)) throw Error('Invalid week');
-    const days = new Set(this.state.events.filter(e => e.week === week).map(e => `${e.memberId}/${e.day}`));
+    const events = this.state.events.filter(e => e.week === week), pending = new Set(this.state.pending);
+    const dayKey = e => `${e.memberId}/${e.day}`;
+    const days = new Set(events.map(dayKey));
+    const confirmed = new Set(events.filter(e => e.memberId !== this.policy.memberId || !pending.has(e.sessionId)).map(dayKey));
+    const current = !this.error && !this.busy && this.state.lastStatus === 'synced' && this.state.lastSyncAt !== null && !pending.size;
     return {week, credits: days.size, target: this.policy.target,
-      confirmedMet: this.state.lastStatus === 'conflict' ? null : days.size >= this.policy.target,
+      confirmedCredits: confirmed.size, pendingCredits: days.size - confirmed.size,
+      // true/false describes the last successful reconciliation; every incomplete
+      // state is unknown, including a fresh installation and a failed upload.
+      confirmedMet: current ? confirmed.size >= this.policy.target : null,
       pending: this.state.pending.length, lastSyncAt: this.state.lastSyncAt,
-      syncStatus: this.state.lastStatus};
+      syncStatus: this.error ? 'error' : this.busy ? 'syncing' : this.state.lastStatus};
   }
   async sync(transport, at) {
     if (!this.enabled) return {status: 'off'};
     if (this.error) return this.read();
     if (this.busy) return {status: 'busy'};
     if (!instant(at) || transport.accountId !== this.policy.accountId || typeof transport.identity !== 'function')
-      return {status: 'sign-in-required'};
+      return this.save({...clone(this.state), lastStatus: 'sign-in-required'});
     this.busy = true; const epoch = this.epoch;
     try {
       // Account label is local routing, not authentication: verify the bearer

@@ -3976,9 +3976,9 @@ const REF = {
 };
 
 /** Recorded references override the hand-authored ones. */
-const RECORDED = {};
+let referenceStore;
 
-function refFor(id){ return RECORDED[id] || REF[id] || null; }
+function refFor(id){ return referenceStore?.refs[id] || REF[id] || null; }
 
 /* ═══ ONE COORDINATE SPACE FOR REFERENCES ═════════════════════════════════
    REF is authored ISOTROPICALLY: x and y in the same units, so a femur is the
@@ -4009,23 +4009,82 @@ function toIsoRef(ref){
   }) };
 }
 
-/* Recordings persist in localStorage (this file runs from your own server, not
-   inside claude.ai, so storage works). Export/import keeps them portable. */
+const REFERENCE_KEY = "fc_refs", REFERENCE_MAX_BYTES = 1024 * 1024;
+function parseReferenceBundle(raw){
+  if(typeof raw !== "string" || localCoachBytes(raw) > REFERENCE_MAX_BYTES) throw new Error("Reference file exceeds 1 MiB.");
+  const data = JSON.parse(raw), refs = Object.create(null);
+  if(!localCoachObject(data) || Object.keys(data).length > Object.keys(M).length) throw new Error("Invalid reference collection.");
+  for(const [id,ref] of Object.entries(data)){
+    if(!Object.hasOwn(M,id) || !localCoachObject(ref) ||
+      Object.keys(ref).some(k=>!["loop","fps","frames","recorded","space","aspect","labels","props"].includes(k)) ||
+      !Number.isFinite(ref.fps) || ref.fps <= 0 || ref.fps > 120 ||
+      !Array.isArray(ref.frames) || !ref.frames.length || ref.frames.length > 600 ||
+      ref.space !== undefined && ref.space !== "iso" ||
+      ref.aspect !== undefined && (!Number.isFinite(ref.aspect) || ref.aspect < .1 || ref.aspect > 10) ||
+      ["loop","recorded"].some(k=>ref[k] !== undefined && typeof ref[k] !== "boolean"))
+      throw new Error("Invalid reference shape or timing.");
+    for(const frame of ref.frames){
+      if(!localCoachObject(frame) || !JOINTS.some(j=>Object.hasOwn(frame,j)) ||
+        Object.entries(frame).some(([j,p])=>![...JOINTS,"spine"].includes(j) || !Array.isArray(p) || p.length !== 2 ||
+          p.some(n=>!Number.isFinite(n) || Math.abs(n) > 8))) throw new Error("Invalid reference joints.");
+    }
+    if(ref.labels !== undefined && (!Array.isArray(ref.labels) || ref.labels.length > ref.frames.length ||
+      ref.labels.some(s=>typeof s !== "string" || s.length > 160))) throw new Error("Invalid reference labels.");
+    if(ref.props !== undefined && (!localCoachObject(ref.props) ||
+      Object.entries(ref.props).some(([k,v])=>!["wallBehind","wallFront","chair"].includes(k) || typeof v !== "boolean") ||
+      ref.props.chair && !ref.frames[0].hip)) throw new Error("Invalid reference props.");
+    const converted = toIsoRef(ref);
+    if(converted.frames.some(frame=>Object.values(frame).some(p=>p.some(n=>!Number.isFinite(n) || Math.abs(n) > 8))))
+      throw new Error("Converted reference joints are outside the supported range.");
+    refs[id] = converted;
+  }
+  return refs;
+}
+class ReferenceStore {
+  constructor(storage){
+    this.storage = storage; this.refs = Object.create(null); this.raw = null; this.error = null; this.pending = null;
+    this.message = "References stay in this browser. Export a copy to keep them.";
+    try{
+      this.raw = storage.getItem(REFERENCE_KEY);
+      this.refs = parseReferenceBundle(this.raw === null ? "{}" : this.raw);
+    }catch(e){
+      this.error = "Saved references could not be read. Built-in demos are being used. Reset saved references to recover; the stored data has not been overwritten.";
+      this.message = this.error;
+    }
+  }
+  save(bundle){
+    let refs;
+    try{ refs = parseReferenceBundle(JSON.stringify(bundle)); }
+    catch(e){ return {ok:false,message:this.message = "Nothing saved: " + e.message}; }
+    this.pending = refs;
+    if(this.error) return {ok:false,message:this.message = this.error};
+    const next = {...this.refs,...refs}, raw = JSON.stringify(next);
+    if(localCoachBytes(raw) > REFERENCE_MAX_BYTES)
+      return {ok:false,message:this.message = "References exceed the 1 MiB limit. Nothing was replaced. Export the unsaved references to keep them."};
+    try{
+      if(this.storage.getItem(REFERENCE_KEY) !== this.raw){
+        this.error = "References changed in another window. Reload before saving; export the unsaved references first.";
+        return {ok:false,message:this.message = this.error};
+      }
+      this.storage.setItem(REFERENCE_KEY,raw);
+    }catch(e){
+      return {ok:false,message:this.message = "References could not be saved in this browser. Existing demos were kept. Retry saving or export the unsaved references before leaving."};
+    }
+    this.refs = next; this.raw = raw; this.pending = null;
+    return {ok:true,message:this.message = "References saved in this browser. Export a copy to keep them."};
+  }
+  erase(){
+    try{ this.storage.removeItem(REFERENCE_KEY); }
+    catch(e){ return {ok:false,message:this.message = "Saved references could not be reset. Nothing was removed; check browser storage and try again."}; }
+    this.refs = Object.create(null); this.raw = null; this.error = null;
+    return {ok:true,message:this.message = "Saved references reset. Built-in demos are restored."};
+  }
+}
 function loadSavedRefs(){
-  try{
-    const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
-    for(const [id, ref] of Object.entries(saved)) RECORDED[id] = toIsoRef(ref);
-  }catch(e){}
+  referenceStore = new ReferenceStore({getItem:key=>localStorage.getItem(key),
+    setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
 }
-function saveRef(id, ref){
-  ref = toIsoRef(ref);                 // idempotent — imports arrive here too
-  RECORDED[id] = ref;
-  try{
-    const saved = JSON.parse(localStorage.getItem("fc_refs") || "{}");
-    saved[id] = ref;
-    localStorage.setItem("fc_refs", JSON.stringify(saved));
-  }catch(e){}
-}
+function saveRef(id,ref){ return referenceStore.save({[id]:ref}); }
 
 /** Interpolate a reference at time t (seconds). Returns a joint→[x,y] map. */
 function refPose(ref, t){
@@ -6261,18 +6320,23 @@ function recTick(frame, dt){
   }
   if(recMode.t >= 6){
     const ref = { loop:true, fps:15, frames:recMode.frames, recorded:true, space:"iso" };
-    saveRef(recMode.id, ref);
+    const result = saveRef(recMode.id, ref);
     const id = recMode.id;
     recMode = null;
-    running = false; stopCam();
+    running = false; stopCam(); showCamChrome(false); screenChanged();
     startBtn.textContent = "Workouts"; startBtn.classList.remove("live");
     msgEl.hidden = false;
     msgInner.innerHTML = `
-      <h2>Saved</h2>
-      <p>"Show me how" and the ghost overlay for <b>${M[id]?.name || id}</b> now replay
-         <b>your</b> movement — ${ (RECORDED[id]?.frames||[]).length } frames of it.</p>
+      <h2>${result.ok ? "Saved" : "Recording not saved"}</h2>
+      <p role="status">${esc(result.message)}</p>
+      ${result.ok ? `<p>"Show me how" and the ghost overlay for <b>${esc(M[id].name)}</b> now replay
+         <b>your</b> movement — ${referenceStore.refs[id].frames.length} frames of it.</p>` : ""}
+      <button class="ctl" id="recExportUnsaved" ${referenceStore.pending ? "" : "hidden"}>Export unsaved references</button>
+      <button class="ctl" id="recRetry" ${referenceStore.pending ? "" : "hidden"}>Review and retry saving</button>
       <button class="ctl primary" id="recMore">Record another</button>
       <button class="ctl" id="recDone">Done</button>`;
+    $("recExportUnsaved").onclick = () => downloadRefs(referenceStore.pending);
+    $("recRetry").onclick = () => showRecPicker();
     $("recMore").onclick = () => showRecPicker();
     $("recDone").onclick = () => showHome();
   }
@@ -6290,40 +6354,56 @@ async function beginRefRecording(id){
   coach.raw("Get into position. Recording starts in five seconds, and lasts six. Do it slowly, and do it well.", 3);
 }
 
+function downloadRefs(refs){
+  if(!refs) return;
+  const blob = new Blob([JSON.stringify(refs)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "formcoach-refs.json";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+let refImportRequest = 0;
 function showRecPicker(){
+  screenChanged(); refImportRequest++;
   msgEl.hidden = false;
   msgInner.innerHTML = `
     <h2>Record demo references</h2>
     <p>Perform each movement once, well — "Show me how" and the ghost then replay
        <b>your real movement</b> instead of a stick-figure guess.<br>
        <span style="font-size:12px">Saved in this browser. Export to keep them or move them.</span></p>
+    <p id="refStatus" role="status">${esc(referenceStore.message)}</p>
     <div class="plans" style="max-height:300px;overflow:auto">${Object.entries(M).map(([id,mv]) => `
       <button class="plancard" data-rec="${id}">
-        <b>${mv.name}</b><span class="disc">${RECORDED[id] ? "✓ RECORDED" : "stick figure"}</span>
+        <b>${mv.name}</b><span class="disc">${referenceStore.refs[id] ? "✓ RECORDED" : "stick figure"}</span>
       </button>`).join("")}</div>
     <div class="row" style="justify-content:center;margin-top:12px">
       <button class="ctl" id="refExport">Export refs</button>
       <label class="ctl" style="cursor:pointer">Import refs<input type="file" id="refImport" accept=".json" hidden></label>
+      <button class="ctl" id="refExportPending" ${referenceStore.pending ? "" : "hidden"}>Export unsaved references</button>
+      <button class="ctl" id="refRetry" ${referenceStore.pending ? "" : "hidden"}>Retry saving</button>
+      <button class="ctl" id="refReset">Reset saved references</button>
       <button class="ctl" id="recBack">Back</button>
     </div>`;
   msgInner.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => beginRefRecording(b.dataset.rec));
-  $("refExport").onclick = () => {
-    const blob = new Blob([JSON.stringify(RECORDED)], {type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = "formcoach-refs.json";
-    a.click(); URL.revokeObjectURL(a.href);
+  $("refExport").onclick = () => downloadRefs(referenceStore.refs);
+  $("refExportPending").onclick = () => downloadRefs(referenceStore.pending);
+  $("refRetry").onclick = () => { referenceStore.save(referenceStore.pending); showRecPicker(); };
+  $("refReset").onclick = () => {
+    if(!confirm("Reset saved demo references in this browser? Built-in demos will return. Unsaved references, workouts and diagnostics are kept.")) return;
+    referenceStore.erase(); showRecPicker();
   };
-  $("refImport").onchange = e => {
-    const f = e.target.files[0]; if(!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try{
-        const data = JSON.parse(r.result);
-        for(const [id, ref] of Object.entries(data)) saveRef(id, ref);
-        showRecPicker();
-      }catch(err){ alert("Not a valid refs file."); }
-    };
-    r.readAsText(f);
+  $("refImport").onchange = async e => {
+    const input = e.currentTarget, f = input.files[0]; if(!f) return;
+    const request = ++refImportRequest, current = () => request === refImportRequest && input.isConnected;
+    try{
+      if(f.size > REFERENCE_MAX_BYTES) throw new Error("Reference file exceeds 1 MiB.");
+      const raw = await f.text();
+      if(!current()) return;
+      referenceStore.save(parseReferenceBundle(raw));
+    }catch(err){
+      if(!current()) return;
+      referenceStore.message = "Nothing imported: " + err.message;
+    }
+    if(current()) showRecPicker();
   };
   $("recBack").onclick = () => showHome();
 }

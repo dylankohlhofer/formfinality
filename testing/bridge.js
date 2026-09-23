@@ -41,6 +41,7 @@ window.__testLab = {
   coachAccess() { return {routeCoachAction,parseCoachCommand,coachMemory,listener:localListener,
     context:coachContextToken,host:calib || sess,preferences:()=>({...coachPreferences})}; },
   profileAccess() { return {profileGoals,PROFILE_KEY}; },
+  referenceAccess() { return {store:referenceStore,open:showRecPicker,record:beginRefRecording,tick:recTick,reference:refFor}; },
   snapshot() {
     const core = testCore || calib?.core || sess?.core;
     const last = t => testEffects.findLast(e => e.t === t)?.payload ?? null;
