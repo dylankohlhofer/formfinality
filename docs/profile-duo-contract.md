@@ -96,7 +96,68 @@ Android can use its user-controlled email/share UI. Test cancellation, missing
 mail app, accessibility and external-app return on both actual platforms before
 claiming mobile support. This browser change is not a native mail integration.
 
-## Future Duo contract: transport-independent first
+## Implemented prototype: transport-independent Duo reconciliation
+
+`duo/sync.mjs` now contains a **development-only** two-client ledger and
+durable local outbox. It consumes only completions already committed by the
+opted-in `ProfileGoals` store; it does not inspect workout scores, camera data,
+plans, diagnostics or names. The remote completion envelope contains an opaque
+pair/member/session ID, completion timestamp, fixed shared civil day/week,
+observed/unassessed label and policy version. One credit is allowed per member
+per civil day, with no per-member quota. Both local policy objects must match
+timezone, target, unassessed inclusion, pair start time and version before a host may establish
+a pair. This equality check is **not** proof of real-world consent or identity.
+Local completions from before pair opt-in are ineligible for automatic upload;
+there is no silent backfill.
+
+`duo/drive.mjs` is an injected-token, foreground Google Drive REST adapter for
+ordinary shared-folder JSON files, not `appDataFolder`. It has no Google sign-in,
+token storage, folder creation, invitation acceptance, UI or background sync.
+The browser app does not import this module or show a connected Duo. Two
+**simulated** accounts exercise the adapter and reconciliation in
+`testing/duo-sync.test.mjs`; no real Google accounts were accessed or files
+uploaded. The adapter checks Drive file ownership metadata against provider
+IDs supplied by a future authenticated host, and queries
+[Drive's current-user endpoint](https://developers.google.com/workspace/drive/api/reference/rest/v3/about/get)
+before each sync to reject a token for the wrong owner. That detects some accidental
+cross-member files, but it does not protect against a shared-folder writer
+editing another member's file or guarantee that `drive.file` can list files
+created by the partner. Both issues must be tested and the integrity design
+settled before production.
+
+The outbox is persisted before an upload attempt. A lost upload reply is
+resolved by listing before retry; identical duplicate files add no credit,
+conflicting UUID payloads are flagged. Offline/quota/sign-in/revocation states
+retain pending work. A disappearing previously seen partner file is flagged,
+not silently subtracted. Disabling sync prevents a pending read from starting
+an upload and invalidates later callbacks, including disable/re-enable races.
+An upload already dispatched before opt-out may still reach Drive; remote
+deletion is not implemented and must be explained by the future consent UI.
+The sync store is scoped by opaque account, pair and
+member IDs. It is a prototype localStorage-style store, **not** a proven
+multi-device transactional database, secure identity layer or permanent cloud
+backup. Weekly counts from cached data are not proof a partner is currently
+online or that an unmet week has failed.
+
+### Live two-account gate, still open
+
+Use two consented Google test accounts and platform OAuth clients restricted to
+the narrow `drive.file` scope. Explicitly approve and create a private ordinary
+folder, grant only the named partner, then verify on both accounts that each can
+list/read the other's files, create their own, and see reliable owner metadata.
+Before shipping, prefer reciprocal member-owned folders with partner read-only
+access if the narrow scope supports them; a shared writer folder gives both
+members edit access to inherited child files.
+Test simultaneous offline uploads, ambiguous replies, late Sunday completion,
+quota denial for each account, revoked access, deleted/edited files, reinstall,
+account switching and cross-platform consent screens. Measure actual record
+size/permissions. If `drive.file` cannot provide the required partner visibility
+and ownership guarantees, do **not** widen scope silently; revisit the transport
+or switch to a provider with a sound shared-record contract. No production
+pairing, user notifications or remote-success claim is authorized by green
+simulated tests alone.
+
+## Duo contract: transport-independent rules
 
 Keep a local completion ledger authoritative for what this device recorded,
 and derive the shared week from deduplicated contributions. Proposed envelope:
@@ -119,9 +180,9 @@ time must not move a late completion into the wrong week. Retries and identical
 UUIDs must not create extra credit; conflicting payloads for one UUID must be
 flagged rather than merged silently. Logout/account changes isolate ledgers.
 
-Nothing above is connected to a cloud provider yet. The present local event
-list is **not** advertised as a working outbox. A native host needs durable
-transactional storage and an explicit migration/consent path before sync.
+The separate prototype above is not connected to a user's account. The current
+browser profile event list is **not** itself a working outbox. A native host
+still needs durable transactional storage and explicit migration/consent.
 
 ## CloudKit route (iOS-first)
 
@@ -258,9 +319,10 @@ deduplication, target edits, malformed/full/unavailable storage, stale writers,
 export/erase, mobile-width controls and intercepted email-link activation.
 No email is sent, no provider is authenticated and no physical device is tested.
 
-Next: choose one transport spike and use two explicit test accounts. Reconcile
-simultaneous/offline/late completions across a week boundary, quota exhaustion,
-revoked share, reinstall, account switch and conflicting events. Verify actual
-storage and consent screens. Only then wire production pairing/notifications.
+The Google Drive transport spike and simulated two-account reconciliation are
+now in the default test loop. Next: satisfy the real two-account gate above,
+especially `drive.file` partner visibility and shared-writer integrity, before
+wiring production pairing/notifications. Verify actual storage and consent
+screens, not just mock HTTP responses.
 Retain the voice intelligibility audit and independent beginner/device trials as
 open quality work; participation features do not close those gaps.

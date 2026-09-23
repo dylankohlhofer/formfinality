@@ -70,8 +70,19 @@ tests intercept navigation: no mail is sent and no account is connected.
 These do not validate CloudKit, Drive, native apps, delivery or fitness progress.
 See [the implemented/planned boundary](../docs/profile-duo-contract.md).
 
+**Duo transport spike (23 September):** `duo-sync.test.mjs` runs two simulated
+accounts through the existing profile completion path, a durable local outbox,
+weekly reconciliation and a mocked Google Drive HTTP adapter. It covers offline
+and lost replies, duplicate/conflicting UUIDs, DST/week rollover, quota and
+revoked access, account isolation, no pre-pair backfill and a
+disable-during-request race. It does
+**not** connect Google accounts, send data, prove `drive.file` cross-owner
+visibility or validate native OAuth/consent. The real-account gate is documented
+in [the Duo contract](../docs/profile-duo-contract.md).
+
 ```sh
 node --test testing/profile-goals.test.mjs
+node --test testing/duo-sync.test.mjs
 node testing/check-shell.mjs form-coach-v4.11.html 'profile-*'
 ```
 

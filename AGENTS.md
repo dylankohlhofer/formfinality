@@ -310,6 +310,11 @@ visible failures, immediate in-memory opt-out, deduplication and scoped erase.
 explicit recipient-free draft, never an automatic send or a synced Duo claim.
 No CloudKit/Drive connection, reminder scheduler or native profile port exists
 yet. Read `docs/profile-duo-contract.md` before adding sharing or account access.
+The separate `duo/` prototype has a durable outbox and a Google Drive REST
+adapter, but no OAuth flow, UI, connected accounts or verified provider access.
+`duo-sync` runs in default/watch/CI with two simulated accounts. Do not advertise
+pairing or remote delivery until two real accounts prove `drive.file` folder
+visibility, ownership, consent, quota/revocation and account-switch behaviour.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 

@@ -3,6 +3,28 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**23 September 2026 — Duo reconciliation/Drive transport prototype.** A separate
+`duo/` module now takes already-saved, opted-in profile completions, forbids
+pre-pair backfill, persists a bounded outbox and reconciles two simulated
+members' weekly routine-days. It retains work across offline, quota, revoked
+access and ambiguous-upload cases; detects conflicting UUIDs and disappearing
+partner events. Its injected-token Google Drive adapter uses ordinary files,
+checks the bearer token's Drive user ID and file owners, and is covered by
+mocked HTTP tests. `duo-sync` is in the default/watch/CI loop. Neither the
+browser app nor Swift imports it. **No Google account, actual Drive folder,
+OAuth flow, invitation, native UI or remote Duo notification was connected or
+tested.** The [live two-account gate](profile-duo-contract.md#live-two-account-gate-still-open)
+must prove `drive.file` partner visibility and an integrity-safe permission
+layout before any user-facing pairing claim. The workout engine and root
+vectors are unchanged. **Final `npm test` exited 0** against
+`test-results/2026-09-23T14-08-51-007Z-15215/`: 82 infrastructure tests,
+22 regression suites (including 23 Duo checks), four original harnesses,
+55 engine cases / 1,307 checks, 110 browser cases / 942 checks,
+136 shell cases / 1,167 checks, and 16 audio cases / 388 checks. The saved
+build hash and all 68 JavaScript source hashes match the working files.
+Twelve video cases are still blocked without suitable recordings; the older
+audio intelligibility question and physical-device/beginner gates remain open.
+
 **23 September 2026 — local participation foundation.** The approved first slice
 adds a separate opt-in Profile & Weekly Goals: bounded local records, one
 routine-day credit per day, score-independent participation, labelled optional
