@@ -316,6 +316,15 @@ adapter, but no OAuth flow, UI, connected accounts or verified provider access.
 pairing or remote delivery until two real accounts prove `drive.file` folder
 visibility, ownership, consent, quota/revocation and account-switch behaviour.
 
+`release/` builds unpublished static review artifacts from the same HTML, pinned
+runtime/model and allowlisted voice assets. Never publish the repo root or treat
+noindex as access control. Packaging must not change judgement, silently replace
+a model, copy private evidence, overwrite an existing output or claim offline/PWA
+support. `web-release` and `economics` run in default/watch/CI; the actual-artifact
+smoke is separate after model setup. Read `docs/web-release.md` before deployment.
+Current cost/pricing assumptions are in `docs/business-model-2026-09.md`; the July
+business plan is historical, not proof of profitability or a shipped native app.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled

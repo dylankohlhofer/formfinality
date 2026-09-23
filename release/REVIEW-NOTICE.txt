@@ -1,0 +1,17 @@
+FORM COACH — LOCAL REVIEW ARTIFACT, NOT A PUBLIC RELEASE
+
+No distribution or licensing clearance is implied by building this folder.
+Keep it local until docs/web-release.md's release gates are satisfied.
+
+MediaPipe Tasks Vision 0.10.14: The MediaPipe Authors; package declares Apache-2.0.
+Upstream: https://github.com/google-ai-edge/mediapipe
+Retain upstream headers; public distribution additionally requires the applicable
+full licence, notices and model redistribution terms to be reviewed and included.
+
+Pose Landmarker Lite version 1: model bytes match testing/model.json's SHA-256.
+Generated voice recordings: confirm original voice/provider commercial rights;
+the presence of a clip here is not proof of redistribution rights or intelligibility.
+
+Source privacy: camera frames are processed locally. A host can still receive
+ordinary HTTP metadata (for example IP addresses). No ads/analytics/auth added.
+This package does not install offline or sync Duo, and is not a paid product yet.

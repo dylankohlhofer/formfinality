@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: test-lab-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   swift:
     runs-on: macos-26
@@ -40,6 +43,8 @@ jobs:
       - name: Real inference on synthetic blank video (no people)
         if: always() && steps.dependencies.outcome == 'success'
         run: npm run test:setup-video && npm run test:video
+      - name: Local web artifact and same-origin inference smoke (no deployment)
+        run: npm run build:web -- --out dist/web-review && npm run test:release:smoke -- --dir dist/web-review
       - name: Preserve review evidence even when tests fail
         if: always()
         uses: actions/upload-artifact@v4

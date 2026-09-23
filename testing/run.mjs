@@ -65,8 +65,11 @@ for (const name of (await readdir(resolve(root, 'testing'))).filter(n => /\.(mjs
   run.testSourceHashes[name] = hash(await readFile(resolve(root, 'testing', name)));
 for (const name of (await readdir(resolve(root, 'duo'))).filter(name => name.endsWith('.mjs')))
   run.testSourceHashes[`duo/${name}`] = hash(await readFile(resolve(root, 'duo', name)));
+for (const folder of ['release', 'commercial'])
+  for (const name of (await readdir(resolve(root, folder))).sort())
+    run.testSourceHashes[`${folder}/${name}`] = hash(await readFile(resolve(root, folder, name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'review-regressions', 'adversarial', 'architecture', 'audio-stalls', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'profile-goals', 'duo-sync', 'local-command-listener', 'ai-review', 'review-workflow']) {
+  for (const suite of ['coach-regressions', 'review-regressions', 'adversarial', 'architecture', 'audio-stalls', 'setup-prompt', 'diagnostics', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'profile-goals', 'duo-sync', 'local-command-listener', 'ai-review', 'review-workflow', 'web-release', 'economics']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });

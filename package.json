@@ -13,7 +13,11 @@
     "test:worker": "node --test testing/worker-queue.test.mjs && node testing/worker-benchmark.mjs",
     "test:video": "node testing/video-smoke.mjs form-coach-v4.11.html",
     "test:setup-video": "node testing/setup-video.mjs",
-    "test:review": "node testing/run-ai-review.mjs"
+    "test:review": "node testing/run-ai-review.mjs",
+    "business:model": "node commercial/economics.mjs",
+    "build:web": "node release/build-web.mjs --build form-coach-v4.11.html",
+    "test:release": "node --test testing/web-release.test.mjs testing/economics.test.mjs",
+    "test:release:smoke": "node testing/web-release-smoke.mjs"
   },
   "devDependencies": {
     "@mediapipe/tasks-vision": "0.10.14",

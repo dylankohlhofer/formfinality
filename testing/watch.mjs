@@ -18,7 +18,7 @@ function run() {
   });
 }
 const watcher = watch('.', { recursive: true }, (_event, file) => {
-  if (!file || !/^(form-coach-[^/]+\.html|verify(?:-[^/]+)?\.mjs|package(?:-lock)?\.json|conformance-vectors\.json|voice\/.+\.(mp3|json)|duo\/.+\.mjs|testing\/(?!private\/|assets\/).+\.(mjs|js|json))$/.test(file)) return;
+  if (!file || !/^(form-coach-[^/]+\.html|verify(?:-[^/]+)?\.mjs|package(?:-lock)?\.json|conformance-vectors\.json|voice\/.+\.(mp3|json)|duo\/.+\.mjs|(?:release|commercial)\/[^/]+|testing\/(?!private\/|assets\/).+\.(mjs|js|json))$/.test(file)) return;
   clearTimeout(timer); timer = setTimeout(run, 500);
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {

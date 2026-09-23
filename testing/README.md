@@ -61,6 +61,16 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Web release/economics (23 September):** `web-release.test.mjs` and
+`economics.test.mjs` run in default/watch/CI. They protect allowlisted packaging,
+model hashes, symlink/path and size rejection, no overwrite, unchanged engine
+module and explicit commercial assumptions. Fake asset fixtures are not inference
+evidence. `npm run test:release:smoke -- --dir dist/<exact-build>` separately
+checks the emitted artifact with real local runtime/model bytes and blank CPU
+inference; CI runs it after model setup. It records same-origin requests, UI
+preview, screenshot and clip decoding, not pronunciation or physical-device QA.
+See [build/release gates](../docs/web-release.md).
+
 **Local profile/weekly goals (23 September):** `profile-goals.test.mjs` and the
 `profile-*` shell cases run in the same default/watch/CI suite. They exercise
 separate opt-in, completed-routine eligibility, unassessed labels, fixed civil

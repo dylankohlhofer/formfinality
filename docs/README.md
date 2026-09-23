@@ -31,6 +31,7 @@ thing standing between here and the Swift port.
 |---|---|
 | `next-steps-guide.md` | You want the phase-by-phase task list, with exact commands |
 | `../testing/README.md` | Run the automated scenario loop and review saved evidence, failures and coverage gaps |
+| `web-release.md` | Build/test the private static review artifact, excluded data, hosting and launch gates |
 | `beginner-test-protocol.md` | You're running the beginner test — **test 02 is the current priority** |
 | `swift-port.md` | You're deciding whether to start the port, or doing it |
 
@@ -71,7 +72,8 @@ thing standing between here and the Swift port.
 
 | Document | Covers |
 |---|---|
-| `business-plan.md` | The £4.99 one-time model, positioning, launch |
+| `business-model-2026-09.md` | Current low-cost model, price/support sensitivity, evidence gates and provider costs |
+| `business-plan.md` | Historical July positioning/launch plan; economics superseded by the September decision |
 | `competitive-landscape.md` | Who else is in this space, and the niche |
 | `backlog.md` | Every idea triaged, including the ones rejected and why |
 

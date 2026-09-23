@@ -21,3 +21,4 @@ node_modules/
 test-results/
 testing/private/
 testing/assets/
+dist/

@@ -1,0 +1,13 @@
+{
+  "currency": "GBP",
+  "prices": [4.99, 7.99, 9.99],
+  "taxRate": 0.2,
+  "storeFeeRate": 0.15,
+  "refundRate": 0.05,
+  "supportMinutesPerPurchase": 2,
+  "hourlyCost": 20,
+  "otherVariableCost": 0,
+  "acquisitionCostPerPurchase": 0,
+  "annualCashOverhead": 200,
+  "annualDevelopmentHours": 200
+}

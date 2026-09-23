@@ -3,6 +3,56 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**23 September 2026 — commercial model and local web release preparation.**
+[The updated decision](business-model-2026-09.md) keeps a one-time paid app,
+recommends testing a useful free browser starter and £7.99 willingness to pay,
+and defers ads/provider proliferation until demand supports their cost. No price,
+entitlement, paid service or public offer has been changed. The July business
+plan is labelled historical; fee recovery is no longer called profitability.
+`npm run business:model` computes explicit price/tax/refund/support/time assumptions.
+
+`release/` builds a **local-only review artifact** with pinned local MediaPipe JS/
+WASM/model assets and 1,294 allowlisted voice clips (65.43 MiB plus receipt).
+No font/CDN requests are needed by that artifact. It excludes private evidence
+and repository/development files; output checksums, fresh-directory-only writes,
+path/symlink checks and byte budgets are tested. There is no service worker,
+offline-install claim, public deployment, ad integration, native app or Duo login.
+Licence/voice redistribution rights, real devices, support/privacy disclosures
+and beginner test 02 remain release gates. See [the build guide](web-release.md).
+
+**Verification:** full `npm test` exited 0 in
+`test-results/2026-09-23T14-48-03-561Z-19335/`: 82 infrastructure tests,
+24 regression suites, four original harnesses, 55 engine cases / 1,307 checks,
+110 browser cases / 942 checks, 136 shell cases / 1,167 checks, and
+16 audio cases / 388 checks. Twelve video cases remain blocked. This report
+captured earlier versions of **three packaging files** (`release/web.mjs`,
+`release/build-web.mjs`, `testing/web-release-smoke.mjs`); bounded parallel reads
+and execution deadlines were finalized during that run. It is not a fully fresh
+AI-review input for the final packaging tooling. All other recorded source hashes
+and the unchanged source HTML hash match. Final `npm run test:release` passed
+all **15** packaging/economics tests after those adjustments.
+
+The **final actual-artifact smoke** passed in
+`test-results/web-release-1790175621377-24081/`: original onboarding/preview,
+three blank CPU inference frames with zero detections, Warm “two” clip decoding
+with non-zero signal, and only same-origin browser requests. The screenshot was
+reviewed. Both source and packaged build pass all **4,127** vector checks.
+Source HTML SHA-256 remains
+`0044e2f148b693270570682e93b568db7fb269a62a99d9dab1466d92468c2c89`;
+packaged HTML is
+`f90d97f2fc2874b8ec4732bc426dabd1a310b69fb2d15f8dda26f393880ee1bc`.
+The receipt SHA-256 is
+`fb5e80491f69285da2644b9964d5735e956a374c6cecfc757de6ac5f26a152fa`.
+The earlier two three-minute packaging attempts timed out reading local clips;
+the final bounded ten-minute attempt completed. The sandbox denied the smoke's
+loopback listener; its approved unsandboxed run passed. Neither is an app fix.
+Existing intermittent audio, intelligibility, partial-recognition, physical-device
+and beginner gaps are not closed by these passes. Engine/vectors/Swift unchanged.
+
+CI adds same-ref/event obsolete-run cancellation and an artifact smoke, but no
+deployment. Remote execution remains unconfirmed: the previous GitHub push was
+rejected for missing workflow permission. This phase does not change credentials.
+
 **23 September 2026 — Duo reconciliation/Drive transport prototype.** A separate
 `duo/` module now takes already-saved, opted-in profile completions, forbids
 pre-pair backfill, persists a bounded outbox and reconciles two simulated

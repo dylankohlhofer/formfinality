@@ -1,5 +1,10 @@
 # Form Coach — Business Plan
 
+> Historical July plan. Read [the September commercial decision](business-model-2026-09.md)
+> for current economics and launch sequencing. Claims below of zero marginal cost,
+> profitability at ~45 sales, a shipped PWA and retired technology risk are not
+> current facts. `project-status.md` controls implementation/verification status.
+
 **July 2026 · Solo founder · Pre-launch**
 **Product:** an on-device AI exercise coach for beginners training at home.
 **Model:** one-time purchase (~£4.99), zero marginal cost, no subscription.
