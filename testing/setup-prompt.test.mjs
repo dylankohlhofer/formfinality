@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 // FC-LAB-007 proposed prompt policy, deliberately red against the old build.
 // Run: node --test testing/setup-prompt.test.mjs
 // FORM_COACH_TEST_BUILD selects an alternate build, as in the existing regressions.
@@ -420,7 +421,7 @@ for (const size of [
           await page.locator('#goBtn').click();
           await page.locator('[data-plan="demo-prompt"]').click(); await page.locator('#planStartBtn').click();
           if (size.name === 'portrait') {
-            await page.locator('#diagToggle').click();
+            await reveal(page, '#diagToggle'); await page.locator('#diagToggle').click();
             await page.locator('#diagConsent').check();
             await page.locator('#diagStart').click();
             await page.waitForFunction(() => __testLab.diagnosticAccess().diagnostics.active && !document.querySelector('#diagPanel').open);

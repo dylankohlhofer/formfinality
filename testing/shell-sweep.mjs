@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { serve } from './browser.mjs';
@@ -149,8 +150,8 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         };
       });
       await page.locator('#skipBtn').click(); await page.locator('#goBtn').click();
-      await page.locator('[data-plan="first-steps"]').click(); await page.locator('#planStartBtn').click(); await page.locator('#flipBtn').waitFor({ state: 'visible' });
-      await page.locator('#flipBtn').click(); await page.waitForFunction(() => window.testMedia.opened === 2);
+      await page.locator('[data-plan="first-steps"]').click(); await page.locator('#planStartBtn').click(); await reveal(page, '#flipBtn'); await page.locator('#flipBtn').waitFor({ state: 'visible' });
+      await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click(); await page.waitForFunction(() => window.testMedia.opened === 2);
       await page.waitForFunction(() => !document.getElementById('flipBtn').disabled);
       check('Switching view pauses assessment', await page.locator('#sessionDialog').isVisible(), true);
       await page.locator('#resumeBtn').click();
@@ -166,7 +167,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         check('Only plans with supported resolved movements are offered', await page.locator('.plancard').evaluateAll(xs => xs.map(x => x.dataset.plan).sort()),
           engine.PLANS.filter(p => p.tiers.includes(tier) && !unavailable.includes(p.id)).map(p => p.id).sort());
         if(unavailable.includes(plan.id)){
-          await page.getByText('Find a workout in your own words',{exact:true}).click();
+          await page.getByText('Help me choose a workout',{exact:true}).click();
           await page.locator('#planRequestInput').fill(plan.name);await page.locator('#planRequestForm button').click();
           check('Search agrees with picker exclusion',await page.locator('[data-coach-plan]').count(),0);
           check('No camera starts for unsupported tier',await page.locator('#skipExBtn').isVisible(),false);

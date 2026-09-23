@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 // Open product expectations from the 7 September user review. These currently
 // expose current application failures, not expected-failure whitelists. Included
 // in the default loop so green cannot conceal these findings. No personal recordings.
@@ -64,7 +65,7 @@ test('FC-LAB-008: diagnostic recording can start before the workout on a narrow 
     await page.route('**/*',r=>new URL(r.request().url()).origin===server.url?r.continue():r.abort());
     await page.goto(server.url);await page.waitForFunction(()=>!!window.__testLab);
     // Normal clicks, never force or direct DOM events: covered controls are a failure.
-    await page.locator('#diagPanel > summary').click({timeout:3000});
+    await reveal(page, '#diagPanel > summary'); await page.locator('#diagPanel > summary').click({timeout:3000});
     await page.locator('#diagConsent').check({timeout:3000});
     await page.locator('#diagStart').click({timeout:3000});
     await page.waitForFunction(()=>window.__testLab.diagnosticAccess().diagnostics.active);

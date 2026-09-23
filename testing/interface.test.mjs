@@ -124,7 +124,9 @@ test('Paint-aligned geometry assertion still rejects a real portrait overlap',as
   try{
     // Hold the dial across the controls after layout, reproducing the genuine
     // old overlap. Waiting for a painted frame must not make this pass.
-    const mutated=html.replace('</style>','#hud{bottom:150px!important}</style>');
+    // The smaller control shelf no longer intersects a dial 150px from the
+    // bottom. Put the mutant across the current shelf; keep both assertions.
+    const mutated=html.replace('</style>','#hud{bottom:100px!important}</style>');
     const [r]=await shellSweep({root,html:mutated,engine:E,browser,dir,only:'follow-along-portrait'});
     assert.equal(r.error,undefined); assert.equal(r.status,'failed');
     assert.equal(r.checks.find(x=>x.label==='Phone tracking warning, counter and fallback choice do not overlap').pass,false);

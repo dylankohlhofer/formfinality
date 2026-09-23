@@ -3,6 +3,35 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**23 September 2026 — interface simplification.** The
+[workflow review](sessions/interface-simplification-2026-09-23.md) documents a
+task-first welcome/workout picker, expandable previews and secondary tools,
+direct live controls, clearer debrief, goals/history navigation and responsive
+phone layouts. Iris/dark styling is retained; body-feedback colours, judgement,
+consent, interruption and storage contracts are unchanged. The extracted engine
+is byte-identical to the pre-redesign commit; no vectors or Swift were changed.
+
+**Full `npm test` exited 0** in `test-results/2026-09-23T16-26-18-735Z-31714/`:
+82 infrastructure tests; 25 regression suites / 1,625 tests; four original
+harnesses; 55 engine cases / 1,307 checks; 110 browser cases / 942 checks;
+143 shell cases / 1,239 checks; 16 audio cases / 388 checks. Twelve video cases
+remain blocked. This full-run HTML hash is
+`7adca659cf7ddbddf08e46a163888e826c73016a13bfb82f1e57273aa937e9d5`.
+
+The **final** HTML hash is
+`d6664bd716992f31bf1b612e06ad6878094d50e26896fec1a7e34620bf862fef`.
+After the full snapshot, the onboarding question/font was clarified and two
+technical-readout assertions were added to each disclosure workflow. Final
+verification passed all **15 UI cases / 152 checks** in
+`test-results/shell-focused-QTE7Ec/`, all **56 interface tests**, and the four
+original harnesses: **4,127** conformance checks, **8** caught mutations plus
+healthy control, **250** drawing checks and **26** skip checks. Screenshots were
+visually reviewed. The full report's HTML and `interface-cases.mjs` are therefore
+not fresh AI-review inputs for the final checkpoint; its other **80** source
+hashes match. The earlier deliberate-overlap mutation adjustment is documented
+in the workflow review. Physical phones, screen readers, beginner usability,
+audio intelligibility and partial-body recognition remain separate coverage gaps.
+
 **23 September 2026 — five code-review findings repaired.**
 [The repair record](sessions/code-review-fixes-2026-09-23.md) covers Duo's
 queued-versus-confirmed status, strict upload envelopes, the Drive incomplete-scan

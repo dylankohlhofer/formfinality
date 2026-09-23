@@ -543,27 +543,130 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
 #profileDialog label{ display:block; margin:12px 0 }
 #profileEraseConfirm{ border:1px solid var(--line-2); border-radius:10px; padding:12px }
 @media(prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important } }
+
+/* Task-first chrome: workout actions stay in reach; occasional tools disclose
+   in place without resizing the camera. Iris is choice, never a form verdict. */
+:root{ --void:#0C0C10; --ground:#17171E; --ground-2:#20202A;
+  --bone:#F0EFF5; --bone-2:#C8C6D2; --bone-3:#A3A0B2; --r:18px }
+header{ gap:8px; padding:12px var(--pad) }
+header h1{ font-size:16px; letter-spacing:-.03em }
+header h1 small{ font-size:9px; letter-spacing:0 }
+.ctl,.chip,#tierSeg button{ font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:13px }
+.ctl{ justify-content:center; border-radius:12px; padding:10px 16px }
+.ctl.primary{ background:var(--iris); border-color:var(--iris); color:var(--void) }
+summary{ cursor:pointer; min-height:44px; padding:12px 0 }
+summary:focus-visible,a:focus-visible{ outline:2px solid var(--iris); outline-offset:3px }
+#sessionControls{ display:flex; gap:8px }
+#sessionControls:has(>button:not([hidden])){ margin-left:auto }
+#sessionControls:not(:has(>button:not([hidden]))){ display:none }
+#toolsMenu{ flex-shrink:0 }
+#toolsToggle{ list-style:none; padding:10px 16px }
+#toolsToggle::-webkit-details-marker{ display:none }
+#toolsToggle::after{ content:"⌄"; font-size:16px }
+#toolsMenu[open]>summary{ border-color:var(--iris); background:var(--ground-2) }
+#toolsBody{ position:fixed; z-index:50; top:calc(var(--chrome-height) + 6px); right:var(--pad);
+  width:min(350px,calc(100vw - 24px)); max-height:calc(100dvh - var(--chrome-height) - 24px);
+  overflow:auto; padding:18px; border:1px solid var(--line-2); border-radius:18px;
+  background:var(--ground); box-shadow:0 16px 60px #0009; text-align:left }
+#toolsBody>.ctl,#toolsBody>#diagPanel>summary{ display:flex; width:100%; justify-content:flex-start; margin:6px 0 }
+#toolsBody #tierSeg{ margin:8px 0 16px; width:100% }
+#toolsBody #tierSeg button{ flex:1; padding:8px; font-size:12px }
+#toolsBody p{ color:var(--bone-3); font-size:12px; margin:0 0 12px }
+#toolsBody .menuLabel{ color:var(--bone); font-size:14px; font-weight:600 }
+#msg{ background:radial-gradient(ellipse at 50% 0%,#9D8DF110,transparent 65%),var(--void) }
+#msg .inner{ width:min(760px,100%); text-align:left }
+#msg h2{ font-size:clamp(28px,4vw,42px); letter-spacing:-.045em; line-height:1.15; margin:12px 0 16px }
+#msg h2:focus{ outline:none }
+#msg p{ margin:0 0 18px; max-width:40em; line-height:1.65 }
+#msg .eyebrow{ color:var(--iris); font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:.15em; margin:0 0 12px }
+#msg .chips,#msg .row{ justify-content:flex-start }
+#msg .ctl{ margin:0 }
+.screenActions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:24px 0 }
+.disclosure{ border-top:1px solid var(--line); margin:20px 0; text-align:left; scroll-margin-top:calc(var(--chrome-height) + 16px) }
+.disclosure>summary{ font-size:14px; font-weight:600; padding:16px 0 }
+.disclosure[open]>summary{ color:var(--iris) }
+.quietNote{ font-size:12px!important; color:var(--bone-3)!important }
+.lab.pick{ font-family:var(--sans); font-size:13px; text-transform:none; letter-spacing:0 }
+.homeNav{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-bottom:20px; border-bottom:1px solid var(--line); margin-bottom:28px }
+.homeNav>span{ margin-right:auto; font-size:14px; font-weight:650; color:var(--iris) }
+.homeNav .ctl{ border:0; color:var(--bone-2); padding:8px 12px }
+.plans{ width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:24px 0 }
+.plancard{ position:relative; padding:22px; display:flex; flex-direction:column; align-items:flex-start }
+.plancard b{ font-size:19px; letter-spacing:-.025em; padding-right:20px }
+.plancard::after{ content:"↗"; position:absolute; right:20px; top:20px; font-size:18px; color:var(--iris) }
+.plancard .disc{ display:block; order:-1; margin:0 0 12px; padding:0; border:0; color:var(--iris); font-size:10px; letter-spacing:.08em }
+.plancard .blurb{ font-size:14px; margin:10px 0 16px }
+.plancard .seq{ font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:12px; line-height:1.5; margin-top:auto }
+.tiercards{ width:100%; margin:24px 0 }
+.tiercard{ padding:20px }
+.stats{ text-align:center }
+.planSteps{ margin:4px 0 20px }
+dialog .disclosure{ margin:16px 0 }
+dialog .screenActions{ margin-bottom:0 }
+.dialogHeader{ position:sticky; top:-24px; z-index:2; display:flex; align-items:center; gap:12px;
+  padding:12px 0; background:var(--ground); margin-bottom:12px }
+.dialogHeader h2{ flex:1; margin:0 }
+.dialogHeader #coachClose,.dialogHeader #memoryClose,.dialogHeader #helpClose{ float:none; margin:0; flex-shrink:0 }
+body:not(.live) #tip{ display:none }
+/* Telemetry remains available in Tools, not a second coaching channel. */
+#tel{ display:none }
+body:has(#telemetryToggle:checked) #tel{ display:block }
+@media(max-width:900px){
+  header{ padding:calc(env(safe-area-inset-top) + 8px) 12px 10px; background:var(--void) }
+  header h1{ font-size:15px }
+  #sessionControls{ order:5; flex:1 0 100% }
+  #sessionControls .ctl{ flex:1; padding:8px; min-width:0 }
+  #msg{ padding-top:calc(var(--chrome-height) + 28px) }
+  #msg h2{ font-size:32px }
+  .homeNav{ margin-bottom:24px }
+  #speechStatus:not([hidden]){ position:fixed; z-index:31; bottom:0; left:0; right:0; background:var(--ground); max-height:25dvh; overflow:auto }
+}
+@media(max-width:560px){
+  header{ gap:6px }
+  header h1{ font-size:14px; gap:6px }
+  header>.ctl,#toolsToggle{ padding:8px 10px; font-size:12px }
+  .plans{ grid-template-columns:1fr }
+  .plancard{ padding:20px }
+  .plancard .blurb{ margin-bottom:12px }
+  .screenActions>.primary{ flex:1 0 100% }
+  .homeNav{ gap:0 }
+  .homeNav .ctl{ padding:8px }
+  dialog{ padding:20px; border-radius:20px; max-height:calc(100dvh - 24px) }
+}
+@media(max-height:560px) and (orientation:landscape){
+  header{ padding:6px max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left)) }
+  #sessionControls{ order:0; flex:0 1 auto; margin-left:auto }
+  #msg h2{ font-size:26px }
+}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Form Coach <small><b id="verTag">v4.11</b><span class="subtitle"> · tiered coaching model</span></small></h1>
+  <h1>Form Coach <small><b id="verTag">v4.11</b></small></h1>
+  <div id="sessionControls" role="group" aria-label="Workout controls">
+    <button class="ctl" id="pauseBtn" hidden>Pause</button>
+    <button class="ctl" id="skipExBtn" title="Skip this movement (S)" hidden>Skip &#8250;</button>
+    <button class="ctl" id="askCoachBtn" hidden>Ask coach</button>
+  </div>
+  <button class="ctl" id="startBtn">Workouts</button>
+  <button class="ctl" id="listenOffBtn" hidden>Mic off</button>
+  <button class="ctl" id="diagQuickFlag" hidden>Flag moment</button>
+  <details id="toolsMenu">
+  <summary class="ctl" id="toolsToggle">More</summary>
+  <div id="toolsBody">
+  <p class="menuLabel">Settings &amp; tools</p>
   <div class="seg" id="tierSeg" role="group" aria-label="Workout level" hidden>
     <button data-tier="learning" aria-pressed="false">Learning</button>
     <button data-tier="building" aria-pressed="true">Building</button>
     <button data-tier="strong" aria-pressed="false">Strong</button>
   </div>
-  <label class="ctl"><input type="checkbox" id="voice" checked> Voice</label>
-  <button class="ctl" id="pauseBtn" hidden>Pause</button>
-  <button class="ctl" id="flipBtn" aria-label="Switch camera" title="Switch camera" hidden>&#10227;</button>
-  <button class="ctl" id="skipExBtn" title="Skip this movement (S)" hidden>Skip &#8250;</button>
+  <label class="ctl"><input type="checkbox" id="voice" checked> Spoken coaching</label>
+  <button class="ctl" id="flipBtn" aria-label="Switch camera" title="Switch camera" hidden>&#10227; Switch camera</button>
+  <label class="ctl" id="outlineControl" hidden title="A drawing guide, not a body-size target"><input type="checkbox" id="ghostChk"> Guide outline</label>
   <button class="ctl" id="csvBtn" hidden>&#8595; CSV</button>
-  <button class="ctl" id="startBtn">Workouts</button>
-  <button class="ctl" id="helpBtn">Help</button>
-  <button class="ctl" id="askCoachBtn" hidden>Ask coach</button>
-  <button class="ctl" id="listenOffBtn" hidden>Mic off</button>
-  <button class="ctl" id="diagQuickFlag" hidden>Flag moment</button>
+  <button class="ctl" id="helpBtn">Help &amp; controls</button>
+  <label class="ctl"><input type="checkbox" id="telemetryToggle"> Show technical readout</label>
   <details id="diagPanel">
     <summary class="ctl" id="diagToggle">Diagnostics</summary>
     <div id="diagBody" role="region" aria-label="Private diagnostics">
@@ -589,6 +692,8 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
         <details><summary>Technical details</summary><pre id="diagReadout"></pre></details>
       </div>
     </div>
+  </details>
+  </div>
   </details>
   <p id="diagNotice" role="status" hidden></p>
 </header>
@@ -625,7 +730,6 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   </div>
   <div id="setupBar">
     <button class="ctl" id="showBtn" aria-expanded="false" aria-controls="demo">&#9654; Show me how</button>
-    <label class="ctl" title="Show a reference outline; it is a guide, not a body-size target"><input type="checkbox" id="ghostChk"> Guide outline</label>
     <button class="ctl" id="followAlongBtn" hidden>Follow along (unassessed)</button>
     <button class="ctl" id="finishAlongBtn" hidden>Finish this set</button>
   </div>
@@ -639,7 +743,7 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   <button class="ctl" id="pauseMicOffBtn" hidden>Turn microphone off</button></div>
 </dialog>
 <dialog id="helpDialog" aria-labelledby="helpTitle">
-  <button class="ctl" id="helpClose">Close help</button><h2 id="helpTitle">Make yourself comfortable</h2>
+  <div class="dialogHeader"><h2 id="helpTitle">Help &amp; controls</h2><button class="ctl" id="helpClose">Close help</button></div>
   <button class="ctl" id="helpMicOffBtn" hidden>Turn microphone off</button>
   <p>Prop the camera securely. Start with a view of the movement, then follow the framing hints. There is no single correct distance for every phone or body.</p>
   <h3>What the controls mean</h3>
@@ -653,8 +757,7 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
 </dialog>
 
 <dialog id="coachDialog" aria-labelledby="coachTitle">
-  <button class="ctl" id="coachClose">Close coach</button>
-  <h2 id="coachTitle">Your coach</h2>
+  <div class="dialogHeader"><h2 id="coachTitle">Your coach</h2><button class="ctl" id="coachClose">Close coach</button></div>
   <p id="coachContextNote">The workout is paused while you read.</p>
   <button class="ctl primary" id="coachResumeBtn">Resume workout</button>
   <div id="coachAnswer" aria-live="polite" data-coach-source="template"></div>
@@ -664,11 +767,11 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
     <button class="ctl" id="coachRepeatBtn">Repeat teaching</button>
   </div>
   <div id="coachDemoDock" hidden></div>
-  <form id="coachCommandForm">
+  <details class="disclosure" id="typedCommands"><summary>Type a workout command</summary><form id="coachCommandForm">
     <label for="coachCommandInput">Or type a command</label>
     <input id="coachCommandInput" maxlength="120" autocomplete="off" placeholder="Show me · repeat that · skip this set">
     <button class="ctl" type="submit">Do this</button>
-  </form>
+  </form></details>
   <div id="coachConfirmation" hidden>
     <p id="coachConfirmText"></p>
     <button class="ctl" id="coachConfirmBtn">Confirm</button>
@@ -683,33 +786,35 @@ body.following #hud{ bottom:calc(98px + var(--controls-height)) }
   </details>
 </dialog>
 <dialog id="memoryDialog" aria-labelledby="memoryTitle">
-  <button class="ctl" id="memoryClose">Close settings</button><h2 id="memoryTitle">Your coach &amp; history</h2>
+  <div class="dialogHeader"><h2 id="memoryTitle">History &amp; preferences</h2><button class="ctl" id="memoryClose">Close settings</button></div>
   <p>Optional local memory. This browser storage is not encrypted by the app, can be visible to others using this browser, and may be cleared by your browser. No account, sync or upload.</p>
   <label><input type="checkbox" id="rememberPrefs"> Remember my coaching preferences</label>
   <div class="field"><label for="explanationPref">Coaching amount</label><select id="explanationPref"><option value="standard">Standard coaching</option><option value="minimal">Less encouragement and breathing reminders</option></select></div>
   <p>Counting, rejected-rep explanations, form corrections and readiness instructions are kept in both modes.</p>
   <div class="field"><label for="demoPref">Demonstrations</label><select id="demoPref"><option value="on-request">When I ask</option><option value="always">Show at the start of each movement</option></select></div>
   <label><input type="checkbox" id="rememberHistory"> Save future workout summaries on this device</label>
-  <p>Up to 100 compact entries / 128 KiB. No video, joints, name, diagnostic details or full coaching transcript. Turning saving off keeps existing history until you erase it. Sessions in progress cannot be restored after reloading.</p>
+  <details class="disclosure"><summary>What is saved?</summary><p>Up to 100 compact entries / 128 KiB. No video, joints, name, diagnostic details or full coaching transcript. Turning saving off keeps existing history until you erase it. Sessions in progress cannot be restored after reloading.</p></details>
   <p id="memoryStatus" role="status"></p><div id="memoryHistory"></div>
   <button class="ctl" id="memoryExportBtn">Export saved history</button>
   <button class="ctl" id="memoryEraseBtn">Erase coaching memory…</button>
   <div id="memoryEraseConfirm" hidden><p>Erase all saved coaching preferences and history? This cannot be undone. Diagnostic details and demonstration recordings are separate and will not be changed.</p><button class="ctl" id="memoryEraseYes">Erase now</button><button class="ctl" id="memoryEraseNo">Keep it</button></div>
 </dialog>
 <dialog id="profileDialog" aria-labelledby="profileTitle">
-  <div id="profileHeader"><h2 id="profileTitle">Profile &amp; weekly goals</h2><button class="ctl" id="profileClose">Close</button></div>
+  <div id="profileHeader"><h2 id="profileTitle">Weekly goals</h2><button class="ctl" id="profileClose">Close</button></div>
   <p>Optional and private to this browser. No account, cloud sync or upload. Storage and privacy details below.</p>
   <div id="profileProgress"></div>
-  <label><input type="checkbox" id="profileEnabled"> Save my profile and future completed routines</label>
-  <label for="profileName">Nickname (optional, saved only here)</label><input id="profileName" maxlength="32" autocomplete="off">
   <label for="profileTarget">My weekly goal · routine-days</label>
   <select id="profileTarget"><option value="1">1 day</option><option value="2">2 days</option><option value="3" selected>3 days</option><option value="4">4 days</option><option value="5">5 days</option><option value="6">6 days</option><option value="7">7 days</option></select>
   <p>One credit per day for a completed routine. Choose what suits you; this is not an exercise prescription.</p>
+  <label><input type="checkbox" id="profileEnabled"> Save my profile and future completed routines</label>
+  <details class="disclosure" id="profileOptions"><summary>Nickname &amp; unassessed routines</summary>
+  <label for="profileName">Nickname (optional, saved only here)</label><input id="profileName" maxlength="32" autocomplete="off">
   <label><input type="checkbox" id="profileUnassessed"> Also count completed unassessed routines</label>
   <p>Guided sets use a timer; Follow Along sets are finished manually. Neither verifies your reps or form.</p>
-  <button class="ctl" id="profileSaveBtn">Save profile settings</button>
+  </details>
+  <button class="ctl primary" id="profileSaveBtn">Save profile settings</button>
   <p id="profileStatus" role="status"></p>
-  <details><summary>What counts, and when goals change</summary><p>Finish a routine without skipping or ending sets. At most one credit per day; extra routines are still recorded. Form scores never decide your credit or change your difficulty. Unassessed completions stay labelled.</p><p>Choose your first target before enabling saving. Later target changes start next Monday. Your timezone stays fixed when you travel. Missing records or weeks with saving off are unknown, not failed workouts.</p></details>
+  <details><summary>What counts, and when goals change</summary><p>Finish a routine without skipping or ending sets. At most one credit per day; extra routines are still recorded. Form scores never decide your credit or change your difficulty. Unassessed completions stay labelled.</p><p>Saving starts from opt-in; old workout history is not imported. Choose your first target before enabling saving. Later target changes start next Monday. Your timezone stays fixed when you travel. Missing records or weeks with saving off are unknown, not failed workouts.</p></details>
   <p>Duo is not connected yet. No friend pairing, cloud sync, automatic email or scheduled reminders are enabled in this build.</p>
   <details><summary>Storage &amp; privacy</summary>
     <p>This browser storage is not encrypted by the app, may be visible to others using this browser, and can be cleared. Export to keep a separate copy; importing it is not available yet.</p>
@@ -4656,7 +4761,7 @@ async function diagnosticStart(){
   if(!$("diagConsent").checked || diagnostics.active || diagnostics.stopReason) return;
   if(diagnostics.meta){
     diagnostics.active = true; diagnosticEvent("control", {action:"recording resumed"}); diagnosticControls();
-    $("diagStatus").textContent = "Recording resumed locally; earlier retained details are preserved."; diagnosticClose(); return;
+    $("diagStatus").textContent = "Recording resumed locally; earlier retained details are preserved."; diagnosticClose(); closeTools(true); return;
   }
   const epoch = ++diagnosticEpoch; $("diagStart").disabled = true;
   try{
@@ -4669,7 +4774,7 @@ async function diagnosticStart(){
       poseSource:{...POSE_SOURCE}, modelBytesHash:"not measured", timestampUnit:"milliseconds since diagnostic start", capture:"joint coordinates and intended speech text; no pixels or audio"});
     diagnosticEvent("control", {action:"recording started", duringSession:running}); diagnosticControls();
     $("diagStatus").textContent = "Recording locally. Use Flag moment during exercise to protect available detail around a problem. Pause or clear at any time.";
-    diagnosticClose();
+    diagnosticClose(); closeTools(true);
   }catch(error){
     console.error("Cannot start diagnostics", error); $("diagStatus").textContent = "Cannot start diagnostics: " + error.message; diagnosticControls();
   }
@@ -5337,7 +5442,7 @@ function renderFinish(p){
   const observedBestHold = Math.max(0,...p.out.filter(o=>o.kind === "hold").map(o=>o.achieved));
 
   msgInner.innerHTML = `
-      <h2>${p.stopped ? "Workout ended" : "Session complete"}</h2>
+      <p class="eyebrow">Your workout, in review</p><h2>${p.stopped ? "Workout ended" : "Session complete"}</h2>
       <p>Camera-observed totals · not a complete assessment of your form</p>
       <div class="stats">
         <div><b>${clock(observedBestHold)}</b><span>BEST HOLD</span></div>
@@ -5347,12 +5452,13 @@ function renderFinish(p){
       <div class="headline">${esc(summary.headline)}</div>
       ${detail}
       <details class="summaryNote"><summary>What this summary can tell you</summary><p>${esc(summary.coverage)}</p></details>
-      <div class="phases">${rows}</div>
-      <p id="historySaveStatus"></p>
-      <p id="profileSaveStatus"></p>
-      <div id="workoutEmailShare" hidden><a class="ctl" id="workoutEmailLink">Share completion by email…</a><p>Requires a configured email app. Choose the recipient and press Send yourself. Nothing is sent automatically; this browser cannot confirm the email app opened or the message was delivered.</p></div>
-      <button class="ctl primary" id="againBtn">Choose another workout</button>
-      <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button>`;
+      <div class="screenActions"><button class="ctl primary" id="againBtn">Choose another workout</button></div>
+      <div class="phases" aria-label="Set-by-set results">${rows}</div>
+      <div id="workoutEmailShare" hidden><a class="ctl" id="workoutEmailLink">Share completion by email…</a><p class="quietNote">Requires a configured email app. Choose the recipient and press Send yourself. Nothing is sent automatically; this browser cannot confirm the email app opened or the message was delivered.</p></div>
+      <p class="quietNote" id="historySaveStatus"></p>
+      <p class="quietNote" id="profileSaveStatus"></p>
+      <details class="disclosure" id="summaryStorage"><summary>Export technical details</summary>
+      <button class="ctl" id="csvDlBtn">&#8595; Telemetry CSV</button></details>`;
   msgEl.hidden = false;
   TelLog.stop(); $("csvBtn").hidden = TelLog.rows.length === 0;
   $("againBtn").onclick = () => showHome();
@@ -5451,7 +5557,27 @@ function renderCalibFinish(p){
    11 · SCREENS
    ═══════════════════════════════════════════════════════════════ */
 let screenEpoch = 0;
+function closeTools(returnFocus = false){
+  if(!$('toolsMenu').open) return;
+  $('diagPanel').open = false; diagnosticStopReplay();
+  $('toolsMenu').open = false;
+  if(returnFocus) $('toolsToggle').focus();
+}
+// Native disclosures keep keyboard semantics. Outside clicks dismiss only the
+// tools, never Pause/Resume, consent, or a diagnostic recording itself.
+document.addEventListener('pointerdown', e => {
+  if(!e.target.closest('#toolsMenu,dialog')) closeTools();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('dialog[open]') && $('toolsMenu').open){
+    e.preventDefault(); closeTools(true);
+  }
+});
+$('toolsMenu').addEventListener('toggle', () => {
+  if(!$('toolsMenu').open){ $('diagPanel').open = false; diagnosticStopReplay(); }
+});
 function screenChanged(){
+  closeTools();
   closeCoachPanel(false); localListener?.stop("screen changed");
   screenEpoch++; coach.reset(); clearBanner();
   setText(tipEl, ""); msgEl.scrollTop = 0;
@@ -5466,17 +5592,19 @@ function showPlanPreview(plan){
   const steps = expandPlanSteps(plan.steps, tier);
   const sets = steps.filter(s => s.ex).length;
   const rest = steps.filter(s => s.rest != null).reduce((n,s) => n + scaledCore(s.rest,true,tier),0);
-  msgInner.innerHTML = `<h2>${esc(plan.name)}</h2><p>${esc(plan.blurb || "Your workout, one set at a time.")}</p>
+  msgInner.innerHTML = `<p class="eyebrow">Your workout</p><h2>${esc(plan.name)}</h2><p>${esc(plan.blurb || "Your workout, one set at a time.")}</p>
     <p><b class="choiceLabel">${TIERS[tier].label}</b> · ${sets} sets · ${clock(rest)} planned rest<br>
     Your pace and camera setup determine total time.</p>
+    <div class="screenActions"><button class="ctl primary" id="planStartBtn">Start workout</button>
+    <button class="ctl" id="planBackBtn">Back to workouts</button></div>
+    <p class="quietNote">Camera access starts when you do. Demonstrations, pause and skip are always available.</p>
+    <details class="disclosure" id="planDetails"><summary>Movement-by-movement plan · ${sets} sets</summary>
     <ol class="planSteps">${steps.map(s => {
       if(s.rest != null) return `<li class="planRest">Rest · ${scaledCore(s.rest,true,tier)} seconds</li>`;
       const r = resolveMovementCore(s.ex,tier); if(!r) return "";
       return `<li><b>${r.mv.name}</b><span>${s.setTotal > 1 ? `Set ${s.setNo} of ${s.setTotal} · ` : ""}${s.pre === "switchsides" ? "Other side · " : ""}${scaledCore(s.t,false,tier)} ${r.mv.kind === "reps" ? "reps" : "seconds"} · ${r.mv.view === "front" ? "face the camera" : "side view"}${r.mv.kind === "guided" ? " · guided, no form score" : ""}</span></li>`;
-    }).join("")}</ol>
-    <p>A demonstration is available for each movement. You can pause, skip or follow along without camera assessment.</p>
-    <button class="ctl primary" id="planStartBtn">Start workout</button>
-    <button class="ctl" id="planBackBtn">Back to workouts</button>`;
+    }).join("")}</ol></details>
+    <p class="quietNote">If camera counting isn't working for you, Follow along keeps the teaching and lets you finish each set manually, without a form score.</p>`;
   $("planStartBtn").onclick = () => beginSession(plan);
   $("planBackBtn").onclick = showHome;
 }
@@ -5682,15 +5810,19 @@ function showWelcome(){
   tierSegEl.hidden = true;
   msgEl.hidden = false;
   msgInner.innerHTML = `
-    <h2>A coach that actually watches</h2>
-    <p>Work out at your own pace, with demonstrations and coaching from your camera.
-       Prop your phone securely. For the plank check, turn sideways; I'll help you adjust the view.<br>
-       Nothing is uploaded — the video never leaves this browser.</p>
+    <p class="eyebrow">Your space. Your pace.</p>
+    <h2>A little guidance.<br>A stronger start.</h2>
+    <p>Simple home workouts with demonstrations and coaching from your camera. No equipment needed to get started.</p>
+    <p>Find a starting level with an optional plank check, up to 30 seconds. Or choose a level yourself.</p>
     <div class="lab pick">Do you know how to plank?</div>
     <div class="chips" id="plankKnow">
       <button class="chip" data-know="yes" aria-pressed="${plankKnown}">Yes, I've got it</button>
       <button class="chip" data-know="no" aria-pressed="${!plankKnown}">Show me first</button>
     </div>
+    <div class="screenActions"><button class="ctl primary" id="calBtn">Try the plank check</button>
+    <button class="ctl" id="skipBtn">Choose my level instead</button></div>
+    <p class="quietNote">Prop your device securely. Turn sideways for the plank check; on-screen hints help with framing. Video stays on this device.</p>
+    <details class="disclosure" id="welcomePreferences"><summary>Make the coach yours <span class="quietNote">· optional</span></summary>
     <div class="field"><label for="nameIn">What should I call you? <span>(optional)</span></label><input id="nameIn" placeholder="Your name" autocomplete="given-name" maxlength="20" value="${esc(userName)}"></div>
     <div class="lab pick">Coach style</div>
     <div class="chips">${Object.entries(PERSONAS).map(([k,p]) =>
@@ -5700,9 +5832,7 @@ function showWelcome(){
       <select id="voiceSel" aria-label="Local fallback voice" style="max-width:210px" hidden></select>
     </div>
     <div id="voiceNote" class="lab pick" style="margin:8px 0 16px;letter-spacing:.08em;text-transform:none"></div>
-    <p style="font-size:13px">To find your level, I'll watch you hold a <b>plank</b> for up to 30 seconds.</p>
-    <button class="ctl primary" id="calBtn">Try the plank check</button>
-    <button class="ctl" id="skipBtn">Choose my level instead</button>`;
+    <p class="quietNote">You can change these choices later. Preferences are only saved if you enable local memory.</p></details>`;
   msgInner.querySelectorAll("#plankKnow .chip, .chips:not(#plankKnow) .chip").forEach(() => {});
   /* two independent single-select chip groups on one screen — scope each toggle to
      its own container so choosing a coach doesn't clear the plank answer */
@@ -5757,13 +5887,14 @@ function showTierPicker(){
   tierSegEl.hidden = false;
   msgEl.hidden = false;
   msgInner.innerHTML = `
-    <h2>Where are you starting from?</h2>
+    <p class="eyebrow">A starting point, not a test</p><h2>Where are you starting from?</h2>
+    <p>Choose what feels comfortable. You can change your level before any workout.</p>
     <div class="tiercards">${Object.entries(TIERS).map(([k,t]) => `
       <button class="tiercard" data-t="${k}" aria-pressed="${k===tier}">
         <b>${t.label}</b><span>${t.blurb}</span>
       </button>`).join("")}</div>
-    <button class="ctl primary" id="goBtn">Continue</button>
-    <button class="ctl" id="welcomeBackBtn">Back to welcome</button>`;
+    <div class="screenActions"><button class="ctl primary" id="goBtn">Continue</button>
+    <button class="ctl" id="welcomeBackBtn">Back to welcome</button></div>`;
   msgInner.querySelectorAll(".tiercard").forEach(c => c.onclick = () => {
     setTier(c.dataset.t);
     msgInner.querySelectorAll(".tiercard").forEach(x =>
@@ -5779,36 +5910,39 @@ function showHome(){
   msgEl.hidden = false;
   const avail = PLANS.filter(p => planAvailable(p,tier));
   msgInner.innerHTML = `
-    <h2>${userName ? `Hi, ${esc(userName)}` : "Choose a session"}</h2>
-    <p><b class="choiceLabel">${TIERS[tier].label}</b> — ${TIERS[tier].blurb.toLowerCase()}<br>
-       Preview a workout to see its sets, rest and camera setup before starting.</p>
+    <nav class="homeNav" aria-label="Your space"><span>Workouts</span>
+      <button class="ctl" id="profileOpenBtn">Weekly goals</button>
+      <button class="ctl" id="coachMemoryBtn" title="History and saved coaching preferences">History</button></nav>
+    <p class="eyebrow">${TIERS[tier].label} level</p>
+    <h2>${userName ? `Ready, ${esc(userName)}?` : "Make time for you."}</h2>
+    <p>Choose a workout. Take it one movement at a time.</p>
+    <div class="screenActions"><button class="ctl" id="changeLevelBtn">Change level</button>
+    <button class="ctl" id="coachSettingsBtn">Coach style &amp; setup</button></div>
     <div class="plans">${avail.map(p => {
-      const seq = p.steps.filter(s => s.ex).map(s => {
-        const r = resolveMovementCore(s.ex, tier);
-        if(!r) return null;
-        const t = scaledCore(s.t, false, tier);
-        return `${r.mv.name.toUpperCase()} ${r.mv.kind === "reps" ? "×"+t : t+"s"}`;
-      }).filter(Boolean).join(" · ");
+      const expanded = expandPlanSteps(p.steps,tier).filter(s=>s.ex);
+      const names = [...new Set(expanded.map(s=>resolveMovementCore(s.ex,tier)?.mv.name).filter(Boolean))];
+      const seq = `${names.length} movements · ${expanded.length} sets · Preview workout`;
       return `<button class="plancard" data-plan="${p.id}" aria-label="Preview ${p.name}">
         <b>${p.name}</b><span class="disc">${p.disc}</span>
         <span class="blurb">${p.blurb}</span>
         <span class="seq">${seq}</span></button>`;
     }).join("")}</div>
-    <details><summary>Find a workout in your own words</summary>
+    <details class="disclosure"><summary>Help me choose a workout</summary>
       <form id="planRequestForm"><label for="planRequestInput">What would suit you today?</label>
       <input id="planRequestInput" maxlength="500" autocomplete="off" placeholder="About ten minutes, quiet, no equipment">
       <button class="ctl" type="submit">Find authored workouts</button></form>
       <p>Supported: a plan name, minutes, standing only, no floor, quiet, no equipment. No routine is invented. Fixed finish times or medical suitability cannot be promised.</p>
       <div id="planRequestResults" aria-live="polite" data-plan-source="deterministic"></div>
-    </details>
-    <button class="ctl" id="coachSettingsBtn">Coach style and setup</button>
-    <button class="ctl" id="coachMemoryBtn">Your coach &amp; history</button>
-    <button class="ctl" id="profileOpenBtn">Profile &amp; weekly goals</button>`;
+    </details>`;
   msgInner.querySelectorAll(".plancard").forEach(c => c.onclick = () => {
     const plan = PLANS.find(p => p.id === c.dataset.plan);
     showPlanPreview(plan);
   });
-  $("coachSettingsBtn").onclick = showWelcome;
+  $("coachSettingsBtn").onclick = () => {
+    showWelcome(); $("welcomePreferences").open = true;
+    $("welcomePreferences").scrollIntoView({block:"start"});
+  };
+  $("changeLevelBtn").onclick = showTierPicker;
   $("coachMemoryBtn").onclick = () => { renderCoachMemory(); $("memoryEraseConfirm").hidden = true; $("memoryDialog").showModal(); };
   $("profileOpenBtn").onclick = () => { renderProfile(); $("profileEraseConfirm").hidden = true; $("profileDialog").showModal(); };
   $("planRequestInput").oninput = () => $("planRequestResults").replaceChildren();
@@ -5850,7 +5984,7 @@ function renderProfile(result = null){
       `${summary.totalDays} routine-days / ${summary.completions} completions recorded since setup. Participation, not a fitness level.\n`+
       (summary.next ? `Next target: ${summary.next.target} days, from ${summary.next.week}.\n` : "")+
       (s.enabled ? "" : "Saving is off; existing records are kept.")
-    : "No profile progress saved yet. Enabling starts from now; old workout history is not imported.";
+    : "No progress saved yet. Your first week starts when you turn saving on.";
 }
 $("profileClose").onclick = () => $("profileDialog").close();
 $("profileEnabled").onchange = () => {
@@ -5946,6 +6080,7 @@ let camFacing = "user", wakeLock = null, wakeLockPending = null, cameraStage = "
    together — one call, so neither can be left stranded on the home screen. */
 function showCamChrome(on){
   flipBtn.hidden = !on; skipExBtn.hidden = !on;
+  $("outlineControl").hidden = !on;
   $("askCoachBtn").hidden = !on;
   if(!on){ $("followAlongBtn").hidden = true; $("finishAlongBtn").hidden = true; $("pauseBtn").hidden = true;
     $("workoutContext").hidden = true; $("sessionDialog").close(); document.body.classList.remove("following"); }

@@ -14,8 +14,9 @@ Two lanes, never crossed:
 - **Iris (#9D8DF1) — your choices and your progress.** Selection, focus, the dial's
   arc. Small doses.
 
-Everything else is monochrome: warm graphite ground, bone text, hairlines. If a new
-element wants colour, it must say which lane it belongs to — and if it belongs to
+Everything else is near-black graphite, off-white text and hairlines. Primary
+actions also use iris, so the next step is clear without adding another colour.
+If a new element wants colour, it must say which lane it belongs to — and if it belongs to
 neither, it's monochrome.
 
 ## 2 · Designed for three metres, not thirty centimetres
@@ -29,6 +30,20 @@ without requiring the person to remember a spoken instruction.
 
 ## 3 · Controls appear when their question exists
 
+The 23 September decluttering pass separates three layers: choosing a workout,
+doing it, and occasional tools. The idle header shows Workouts and More. During
+exercise, Pause, Skip, Ask coach and End remain directly reachable. An active
+microphone's Off control and a diagnostic recorder's quick flag are never buried.
+More contains speech, camera switching, guide outline, Help and technical tools;
+opening it must not resize the camera. Native disclosures retain keyboard
+operation; Escape closes tools and returns focus, and navigation dismisses them.
+
+Welcome asks for a starting route before optional name/style preferences. Home
+separates workouts from weekly goals and history. Preview puts Start before an
+expandable exact plan. Debrief keeps observed results and save failures visible,
+but technical exports are optional. Optional does not mean hidden consent: all
+storage/microphone/diagnostic opt-ins remain explicit and off by default.
+
 The tier control answers "how hard should this be?" — a question calibration exists
 to answer by watching. So it is hidden until the verdict lands or the user chooses to
 skip — and hidden again while a workout is live, because changing difficulty mid-set
@@ -37,9 +52,10 @@ that show scores. An always-visible control implies an always-open question.
 
 ## 4 · Card grammar
 
-Every selectable card reads the same three lines: **NAME + tag** · one-sentence blurb
-· the detail line (sequence, in mono, generous line-height). Cards are left-aligned
-even inside centred overlays — headings centre; reading matter never does. Overlay
+Workout cards use **category · name · short description · movement/set counts**.
+The full sequence, doses, rests and camera views belong in the expandable preview,
+not every picker card. Two columns on wide screens become one on phones. Headings
+and reading matter are left-aligned inside a bounded content column. Overlay
 content centres with `margin:auto`, never `align-items:center`: a centred flex child
 that overflows loses its top above the scroll origin, unreachably.
 
@@ -91,8 +107,9 @@ names the incomplete set without grading it or pretending future sets happened.
 Calibration interruption offers a fresh check or the observed result, not a resumed
 continuous hold. These are core policies that the native shell must preserve.
 
-The current feature inventory, tests and remaining device checks are in
-[[sessions/interface-review-2026-09-14]].
+The current navigation inventory and remaining device checks are in
+[[sessions/interface-simplification-2026-09-23]]; the interruption contract and
+earlier inventory are in [[sessions/interface-review-2026-09-14]].
 
 ---
 

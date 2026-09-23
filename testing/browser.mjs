@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { readFile, realpath, stat, writeFile } from 'node:fs/promises';
@@ -115,7 +116,8 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
             let lit = 0; for (let i = 0; i < data.length; i += 4) if (data[i] > 100) lit++;
             return lit > 100;
           });
-          await page.locator('#ghostChk').check();
+          await reveal(page,'#ghostChk'); await page.locator('#ghostChk').check();
+          await page.keyboard.press('Escape');
           await page.evaluate(() => window.__testLab.drawGhost());
           const ghost = await page.locator('#overlay').evaluate(c => c.getContext('2d').getImageData(0, 0, c.width, c.height).data.some((v, i) => i % 4 === 3 && v > 0));
           await page.screenshot({ path: resolve(dir, `step-${index}.png`), fullPage: true });
@@ -124,7 +126,7 @@ export async function runBrowser({ root, html, scenario, frameFor, dir, viewport
         }
         if (step.do === 'csv') {
           const downloading = page.waitForEvent('download');
-          await page.locator('#csvDlBtn').click();
+          await reveal(page, '#csvDlBtn'); await page.locator('#csvDlBtn').click();
           const download = await downloading;
           const path = resolve(dir, 'telemetry.csv'); await download.saveAs(path);
           const csv = await readFile(path, 'utf8'), header = csv.split(/\r?\n/)[0];

@@ -61,6 +61,16 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Interface simplification (23 September):** the existing `ui-*` cases now cover
+More, optional preferences, expanded plans and exports, goals/history navigation,
+camera sizing and keyboard dismissal. `ui-navigation.mjs` clicks native ancestor
+summaries before operating moved controls; it never forces clicks or changes
+hidden/disabled state. Both outcome assertions in the deliberate portrait overlap
+test remain: its injected position is now 100px, since 150px no longer overlaps
+the smaller control shelf. New phone/desktop workflow checks and existing camera,
+microphone, recorder, profile, summary and audio cases run in default/watch/CI.
+See [the workflow review](../docs/sessions/interface-simplification-2026-09-23.md).
+
 **Review fixes (23 September):** `references.test.mjs` and `references-*` shell
 cases cover the developer demo recorder's malformed/oversized/atomic imports,
 legacy coordinate conversion, corrupt-store fallback, scoped reset, quota/stale

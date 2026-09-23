@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 // Integration regressions from the second September 14 review. These use the
 // existing shell runner and local synthetic streams, never a real microphone.
 import {readFile} from 'node:fs/promises';
@@ -51,7 +52,7 @@ export async function reviewFollowupCases(runCase){
   await runCase('review-camera-command-race','Voice/typed routes cannot resume or advance an assessed set while camera replacement is pending.',async(page,check,capture)=>{
     await fakeCamera(page);await start(page);
     await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{window.reviewGrant=()=>resolve(reviewCamera());});});
-    await page.locator('#flipBtn').click();
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();
     check('Touch resume is disabled during replacement',await page.locator('#resumeBtn').isDisabled(),true);
     const resumed=await page.evaluate(()=>__testLab.coachAccess().routeCoachAction('resume'));
     check('Command resume is rejected too',resumed,false);
@@ -71,7 +72,7 @@ export async function reviewFollowupCases(runCase){
   await runCase('review-camera-playback-failure','If replacement and original playback both fail, End remains usable but no control can resume a dead camera.',async(page,check)=>{
     await fakeCamera(page);await start(page);
     await page.evaluate(()=>{document.getElementById('cam').play=()=>Promise.reject(new DOMException('Synthetic playback failure','NotSupportedError'));});
-    await page.locator('#flipBtn').click();await page.getByText('Neither camera could resume playback.',{exact:false}).waitFor();
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();await page.getByText('Neither camera could resume playback.',{exact:false}).waitFor();
     check('Failed playback disables Resume',await page.locator('#resumeBtn').isDisabled(),true);
     check('Command Resume cannot bypass playback failure',await page.evaluate(()=>__testLab.coachAccess().routeCoachAction('resume')),false);
     check('Failed camera leaves the core paused',await page.evaluate(()=>__testLab.coachAccess().host.core.paused),true);
@@ -97,7 +98,7 @@ export async function reviewFollowupCases(runCase){
       video.play=()=>++calls===1?Promise.reject(new DOMException('Replacement failed','NotSupportedError')):
         new Promise((_resolve,reject)=>{window.reviewRejectRecovery=()=>reject(new DOMException('Old recovery failed','NotSupportedError'));});
     });
-    await page.locator('#flipBtn').click();await page.waitForFunction(()=>typeof window.reviewRejectRecovery==='function');
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();await page.waitForFunction(()=>typeof window.reviewRejectRecovery==='function');
     await page.locator('#endSessionBtn').click();
     await page.evaluate(()=>{document.getElementById('cam').play=reviewPlay;});
     await page.locator('#againBtn').click();await page.locator('[data-plan="first-steps"]').click();await page.locator('#planStartBtn').click();

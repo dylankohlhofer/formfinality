@@ -45,7 +45,7 @@ thing standing between here and the Swift port.
 | `workout-summary-contract.md` | Evidence-backed debriefs, optional on-device AI highlight selection and mandatory fallback/claim boundaries |
 | `local-coach-contract.md` | On-demand explanations, local speech controls, authored-plan requests, opt-in memory and bounded AI review |
 | `profile-duo-contract.md` | Local profiles/weekly goals, email sharing, Duo sync prototype/live-account gate, storage estimates and CloudKit/Google Drive/Android routes |
-| `interface-principles.md` | The nine UI rules, and why each exists |
+| `interface-principles.md` | UI hierarchy, colour, responsive layout and interruption rules |
 | `concepts-deep-dive.md` | The computing and ML fundamentals, from zero |
 | `concepts-narrated.html` | The same, read aloud with sentence highlighting (~38 min) |
 
@@ -53,6 +53,7 @@ thing standing between here and the Swift port.
 
 | Document | Question it answers |
 |---|---|
+| `sessions/interface-simplification-2026-09-23.md` | Feature-by-feature decluttering, desktop/phone navigation and verification limits |
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
 | `sessions/code-review-fixes-2026-09-23.md` | Duo confirmation/upload boundaries and transactional demo-reference import/save recovery |
 | `sessions/code-review-fixes-2026-09-14.md` | Two review passes: view/hold reliability, camera and microphone lifecycle, complete speech, demo animation, supported plans and test provenance |

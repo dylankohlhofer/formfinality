@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { reveal } from './ui-navigation.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';
 const frame = exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json', import.meta.url))).poses).frame('plank');
 
@@ -15,6 +16,7 @@ const stageSize = page => page.locator('#stage').evaluate(el => {
   const { width, height } = el.getBoundingClientRect(); return { width, height };
 });
 async function openRecorder(page) {
+  await reveal(page, summary);
   await page.locator(summary).click();
   await page.locator('#diagBody').waitFor({ state: 'visible' });
 }
@@ -189,7 +191,7 @@ export async function diagnosticCases(runCase) {
         el.tagName === 'DETAILS' && el.firstElementChild?.tagName === 'SUMMARY' && !!el.closest('header')), true);
       check('Quick flag belongs to the header', await page.locator('header #diagQuickFlag').count(), 1);
       check('Quick flag is hidden before recording', await page.locator('#diagQuickFlag').isVisible(), false);
-      await reachable(page, check, [summary], 'Before recording');
+      await reveal(page, summary); await reachable(page, check, [summary], 'Before recording');
       const initialSize = await stageSize(page), initialWorkout = await workout(page);
       await openRecorder(page);
       check('Drawer is fixed and scrollable', await page.locator('#diagBody').evaluate(el => {

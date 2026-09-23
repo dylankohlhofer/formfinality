@@ -332,6 +332,14 @@ smoke is separate after model setup. Read `docs/web-release.md` before deploymen
 Current cost/pricing assumptions are in `docs/business-model-2026-09.md`; the July
 business plan is historical, not proof of profitability or a shipped native app.
 
+The September 23 interface uses task-first disclosure: idle Workouts/More; live
+Pause/Skip/Ask coach/End remain direct. More never resizes the camera; recording
+start closes both tools and diagnostics, while quick flag and Mic off stay direct.
+Consent and save failures must not be hidden to reduce clutter. Keep `ui-*` in
+the existing loop, including disclosure/focus/phone navigation. Tests use
+`testing/ui-navigation.mjs` for real summary clicks, never forced hidden controls.
+See `docs/sessions/interface-simplification-2026-09-23.md` for the workflow review.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled

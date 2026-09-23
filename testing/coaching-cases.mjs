@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 import { readFile } from 'node:fs/promises';
 import { exerciseInputs } from './exercise-inputs.mjs';
 
@@ -29,7 +30,7 @@ async function controlledPlayback(page, mode = 'recorded') {
 export async function coachingCases(runCase){
   await runCase('coaching-stalled-calibration','Never-starting recorded teaching fails visibly and releases actual calibration without manually clearing the coach.',async(page,check)=>{
     await controlledPlayback(page);
-    await page.locator('#voice').check();await page.locator('#calBtn').click();
+    await reveal(page, '#voice'); await page.locator('#voice').check();await page.locator('#calBtn').click();
     check('Actual calibration teaching owns the queue',await page.evaluate(()=>__testLab.audioAccess().coach.cur?.key),'teach.plank');
     await page.waitForFunction(()=>!__testLab.audioAccess().coach.speaking(),null,{timeout:6000});
     check('One fresh-element retry, no unplayed instruction tail',await page.evaluate(()=>__coaching.started.length),2);
@@ -88,13 +89,13 @@ export async function coachingCases(runCase){
   for (const mode of ['recorded', 'native']) {
     await runCase(`coaching-voice-toggle-${mode}`, 'Actual Voice and Hear it handlers: explicit preview while muted, immediate cancellation, stale callbacks and fresh speech after re-enabling.', async (page, check) => {
       await controlledPlayback(page, mode);
-      await page.locator('#voicePrev').click();
+      await reveal(page, '#voicePrev'); await page.locator('#voicePrev').click();
       check('Explicit Hear it works with automatic Voice off', await page.evaluate(() => {
         const { coach } = __testLab.audioAccess();
         return !document.getElementById('voice').checked && coach.cur?.key === 'preview';
       }), true);
       await page.evaluate(() => __testLab.audioAccess().coach.reset());
-      await page.locator('#voice').check();
+      await reveal(page, '#voice'); await page.locator('#voice').check();
       await page.locator('#calBtn').click();
       const before = await page.evaluate(mode => {
         const { coach, AudioBank } = __testLab.audioAccess(), p = __coaching;
@@ -106,7 +107,7 @@ export async function coachingCases(runCase){
       }, mode);
       check('Production calibration teaching is current', before.current, 'teach.plank');
       check('Another instruction is pending', before.pending, 'getset');
-      await page.locator('#voice').uncheck();
+      await reveal(page, '#voice'); await page.locator('#voice').uncheck();
       const stopped = await page.evaluate(async mode => {
         const { coach } = __testLab.audioAccess(), p = __coaching;
         const calls = p.started.length + p.spoken.length;
@@ -118,7 +119,7 @@ export async function coachingCases(runCase){
           noStaleError: document.getElementById('speechStatus').hidden };
       }, mode);
       for (const [key, value] of Object.entries(stopped)) check(key, value, true);
-      await page.locator('#voice').check();
+      await reveal(page, '#voice'); await page.locator('#voice').check();
       check('Enabling Voice does not replay abandoned speech', await page.evaluate(() => !__testLab.audioAccess().coach.speaking()), true);
       check('Fresh speech survives old completion callbacks', await page.evaluate(() => {
         const { coach } = __testLab.audioAccess(); coach.say('go', { pri: 3 });
@@ -138,7 +139,7 @@ export async function coachingCases(runCase){
       await page.locator('#skipBtn').click(); await page.locator('[data-t="building"]').click();
       await page.locator('#goBtn').click(); await page.locator('[data-plan="view-audit"]').click(); await page.locator('#planStartBtn').click();
       await page.evaluate(good => { for (let i = 0; i < 90; i++) __testLab.feed(good, 1 / 30); }, good);
-      await page.locator('#voice').check();
+      await reveal(page, '#voice'); await page.locator('#voice').check();
       const result = await page.evaluate(({ good, limited, pending, key, exercise }) => {
         const { coach, AudioBank } = __testLab.audioAccess(), p = __coaching;
         if (pending) coach.say(`teach.${exercise}`, { vars: { t: 100 }, pri: 3 });
@@ -168,7 +169,7 @@ export async function coachingCases(runCase){
 
   await runCase('coaching-recorded-error-visible', 'Actual calibration teaching and AudioBank rejection release the queue with visible failure, no native retry, and successful later playback.', async (page, check) => {
     await controlledPlayback(page);
-    await page.locator('#voice').check(); await page.locator('#calBtn').click();
+    await reveal(page, '#voice'); await page.locator('#voice').check(); await page.locator('#calBtn').click();
     const failed = await page.evaluate(async () => {
       const { coach } = __testLab.audioAccess(), p = __coaching;
       const key = coach.cur?.key;

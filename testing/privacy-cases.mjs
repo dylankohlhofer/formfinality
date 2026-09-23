@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 import { readFile } from 'node:fs/promises';
 import { exerciseInputs } from './exercise-inputs.mjs';
 
@@ -60,7 +61,7 @@ function released(check, state) {
 export async function privacyCases(runCase) {
   for (const [id, voices, count] of [['local', [local, remote], 1], ['remote', [remote], 0]]) {
     await runCase(`privacy-preview-${id}`, 'The Hear it preview obeys the same local-only boundary as session speech.', async (page, check) => {
-      await setup(page, voices); await page.locator('#voicePrev').click();
+      await setup(page, voices); await reveal(page, '#voicePrev'); await page.locator('#voicePrev').click();
       check('Preview invokes only an explicitly local voice', await page.evaluate(() => window.__privacy.spoken.map(u => u.voice?.localService)), count ? [true] : []);
       if (!count) await unavailableStatus(page, check);
     });
@@ -191,6 +192,7 @@ export async function privacyCases(runCase) {
     await setup(page, [remote, local, foreign, enhanced, voice('Unknown English', undefined)]);
     await page.evaluate(() => speechSynthesis.dispatchEvent(new Event('voiceschanged')));
     const sel = page.locator('#voiceSel');
+    await reveal(page,'#voiceSel');
     check('Local fallback picker is visible', await sel.isVisible(), true);
     check('Picker offers exactly the local English voices', await sel.locator('option').allTextContents().then(xs => xs.sort()),
       [local.name, enhanced.name].sort());

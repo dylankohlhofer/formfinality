@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 // Feature-by-feature UI contracts in the existing shell runner. Synthetic camera
 // input and Chromium viewports are not physical-phone or beginner validation.
 import {readFile} from 'node:fs/promises';
@@ -13,12 +14,58 @@ async function feed(page,seconds,frame=inputs.frame('plank')){
   await page.evaluate(({seconds,frame})=>{for(let i=0;i<seconds*30;i++)__testLab.feed(frame,1/30);},{seconds,frame});
 }
 export async function interfaceCases(runCase){
+  for(const [name,viewport] of [['phone',{width:320,height:640}],['desktop',{width:1280,height:800}]]){
+    await runCase(`ui-disclosures-${name}`,'Secondary features disclose through real controls; navigation, consent and urgent workout actions remain explicit.',async(page,check,capture)=>{
+      await page.setViewportSize(viewport);
+      check('Only Workouts and More occupy the idle header',await page.locator('header button:visible,header summary:visible,header input:visible').allTextContents(),['Workouts','More']);
+      check('Optional preferences start collapsed',await page.locator('#welcomePreferences').evaluate(el=>el.open),false);
+      await reveal(page,'#nameIn'); await page.locator('#nameIn').fill('Sam'); await capture('preferences');
+      await page.locator('#welcomePreferences > summary').click();
+      await page.locator('#toolsToggle').focus(); await page.keyboard.press('Enter');
+      check('Keyboard opens native More disclosure',await page.locator('#toolsMenu').evaluate(el=>el.open),true);
+      check('No consent granted by navigation',await page.evaluate(()=>({diagnostics:__testLab.diagnosticAccess().diagnostics.active,profile:document.getElementById('profileEnabled').checked,history:document.getElementById('rememberHistory').checked})),{diagnostics:false,profile:false,history:false});
+      await capture('tools'); await page.keyboard.press('Escape');
+      check('Escape closes tools and returns focus',await page.locator('#toolsToggle').evaluate(el=>el===document.activeElement&&!document.getElementById('toolsMenu').open),true);
+      await home(page); await capture('workouts');
+      await page.locator('#profileOpenBtn').click(); await capture('weekly-goals'); await page.locator('#profileClose').click();
+      check('Closing weekly goals restores its trigger',await page.locator('#profileOpenBtn').evaluate(el=>el===document.activeElement),true);
+      await page.locator('#coachMemoryBtn').click(); await capture('history'); await page.locator('#memoryClose').click();
+      await page.locator('#coachSettingsBtn').click();
+      check('Coach setup opens its settings instead of another closed disclosure',await page.locator('#welcomePreferences').evaluate(el=>el.open),true);
+      await page.locator('#startBtn').click();
+      await page.locator('[data-plan="first-steps"]').click();
+      check('Detailed plan is optional; Start remains visible',await page.locator('#planDetails').evaluate(el=>!el.open)&&await page.locator('#planStartBtn').isVisible(),true);
+      await reveal(page,'.planSteps'); check('Every set is still available',await page.locator('.planSteps li:not(.planRest)').count(),5);
+      await page.locator('#planDetails > summary').click(); await capture('preview');
+      await page.locator('#planStartBtn').click();
+      check('Live essentials do not require a menu',await page.locator('#sessionControls button:visible').allTextContents(),['Pause','Skip ›','Ask coach']);
+      check('Outline is not a competing workout control',await page.locator('#ghostChk').isVisible(),false);
+      check('Technical readout is off by default',await page.locator('#tel').isVisible(),false);
+      const before=await page.locator('#stage').boundingBox();
+      await reveal(page,'#ghostChk'); await page.locator('#ghostChk').check();
+      check('Tools do not resize the camera',await page.locator('#stage').boundingBox(),before);
+      await feed(page,1,null); await page.locator('#telemetryToggle').check();
+      check('Technical readout remains available by explicit choice',await page.locator('#tel').isVisible(),true);
+      await page.locator('#telemetryToggle').uncheck();
+      check('Technical readout can be dismissed again',await page.locator('#tel').isVisible(),false);
+      await page.keyboard.press('Escape'); await capture('live');
+      await page.locator('#askCoachBtn').click();
+      check('Typed command field starts out of the way',await page.locator('#coachCommandInput').isVisible(),false);
+      await reveal(page,'#coachCommandInput'); await page.locator('#coachCommandInput').fill('repeat that'); await capture('coach');
+      await page.locator('#coachResumeBtn').click();
+      check('Coach help returns to explicit resumed workout',await page.locator('#coachDialog').isVisible(),false);
+      await page.locator('#pauseBtn').click(); await page.locator('#endSessionBtn').click(); await capture('summary');
+      check('Save status is not buried with optional exports',await page.locator('#historySaveStatus').isVisible(),true);
+      check('CSV is available without cluttering the summary',await page.locator('#csvDlBtn').isVisible(),false);
+      await reveal(page,'#csvDlBtn'); check('CSV is revealed by a real click',await page.locator('#csvDlBtn').isVisible(),true);
+    });
+  }
   await runCase('ui-startup','Welcome and help open without first loading the pose library.',async(page,check,capture)=>{
     check('Welcome visible without camera',await page.locator('#calBtn').isVisible(),true);
     check('Pose module not requested before starting',await page.evaluate(()=>performance.getEntriesByType('resource').some(x=>x.name.includes('vision_bundle'))),false);
     check('Optional name has a real label',await page.getByLabel('What should I call you?',{exact:false}).count(),1);
     check('Workouts is an honest action label',await page.locator('#startBtn').textContent(),'Workouts');
-    await page.locator('#helpBtn').click();
+    await reveal(page, '#helpBtn'); await page.locator('#helpBtn').click();
     check('Help is a modal',await page.locator('#helpDialog').evaluate(el=>el.matches(':modal')),true);
     await capture('help'); await page.keyboard.press('Escape');
     check('Escape closes help',await page.locator('#helpDialog').isVisible(),false);
@@ -29,6 +76,7 @@ export async function interfaceCases(runCase){
     await home(page,'strong');
     check('Unsupported Core Strength tier cannot be previewed',await page.locator('[data-plan="core-strength"]').count(),0);
     await page.locator('[data-plan="full-body"]').click();
+    await reveal(page,'.planSteps');
     check('12 Strong work sets, not the four authored groups',await page.locator('.planSteps li:not(.planRest)').count(),12);
     check('11 expanded rest intervals',await page.locator('.planRest').count(),11);
     check('Scaled hold',await page.locator('.planSteps li').filter({hasText:'Plank'}).first().innerText(),'Plank\nSet 1 of 3 · 53 seconds · side view');
@@ -36,7 +84,8 @@ export async function interfaceCases(runCase){
     check('Camera remains closed during preview',await page.locator('#skipExBtn').isVisible(),false);
     await capture('plan-preview'); await page.locator('#planBackBtn').click();
     check('Back preserves level',await page.locator('[data-tier="strong"]').getAttribute('aria-pressed'),'true');
-    await page.locator('[data-tier="building"]').click();await page.locator('[data-plan="core-strength"]').click();
+    await reveal(page, '[data-tier="building"]'); await page.locator('[data-tier="building"]').click();await page.locator('[data-plan="core-strength"]').click();
+    await reveal(page,'.planSteps');
     check('Core Strength has eight supported Building sets',await page.locator('.planSteps li:not(.planRest)').count(),8);
     check('Second side is still explicitly named',await page.locator('.planSteps').innerText().then(x=>x.includes('Other side')),true);
     await capture('second-side-preview');
@@ -57,7 +106,9 @@ export async function interfaceCases(runCase){
       await page.locator('#planStartBtn').click(); await feed(page,3,null);
       check('Current movement is named',await page.locator('#movementName').innerText(),'Plank');
       check('Next movement is named',await page.locator('#movementNext').innerText().then(x=>x.includes('Glute Bridge')),true);
-      for(const id of ['pauseBtn','skipExBtn','startBtn','helpBtn'])check(`${id} touch target`,await reachable('#'+id),true);
+      for(const id of ['pauseBtn','skipExBtn','startBtn','toolsToggle'])check(`${id} touch target`,await reachable('#'+id),true);
+      await reveal(page,'#helpBtn'); check('Help touch target in More',await reachable('#helpBtn'),true);
+      await page.keyboard.press('Escape');
       await capture('live'); await page.locator('#pauseBtn').click();
       check('Pause dialog fits and Resume is reachable',await reachable('#resumeBtn'),true); await capture('paused');
       await page.locator('#endSessionBtn').click();
@@ -144,10 +195,10 @@ export async function interfaceCases(runCase){
     check('No retained cancelled stream',await page.locator('#cam').evaluate(v=>v.srcObject===null),true);
   });
   await runCase('ui-camera-flip-failure','A failed camera switch keeps the original stream and core, with explicit recovery.',async(page,check)=>{
-    await fakeCamera(page); await start(page); await page.locator('#flipBtn').waitFor();
+    await fakeCamera(page); await start(page); await reveal(page, '#flipBtn'); await page.locator('#flipBtn').waitFor();
     await page.evaluate(()=>{window.originalCamera=document.getElementById('cam').srcObject;
       navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('Unavailable lens','NotReadableError');};});
-    await page.locator('#flipBtn').click();
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();
     await page.getByText('Couldn’t switch cameras.',{exact:false}).waitFor();
     check('Original stream remains live',await page.evaluate(()=>document.getElementById('cam').srcObject===originalCamera && originalCamera.getVideoTracks()[0].readyState==='live'),true);
     check('No measured work discarded',await page.evaluate(()=>__testLab.snapshot().done),false);
@@ -157,7 +208,7 @@ export async function interfaceCases(runCase){
       const v=document.getElementById('cam'),play=v.play.bind(v);let first=true;
       v.play=()=>{if(first){first=false;return Promise.reject(new DOMException('Replacement playback failed','NotSupportedError'));}return play();};
     });
-    await page.locator('#flipBtn').click(); await page.waitForFunction(()=>!document.getElementById('flipBtn').disabled);
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click(); await page.waitForFunction(()=>!document.getElementById('flipBtn').disabled);
     check('Playback failure restores a playing original stream',await page.evaluate(()=>{
       const v=document.getElementById('cam'); return v.srcObject===originalCamera && !v.paused;
     }),true);
@@ -167,9 +218,9 @@ export async function interfaceCases(runCase){
     check('Original track released on End',await page.evaluate(()=>mediaAudit),{opened:2,stopped:2});
   });
   await runCase('ui-camera-late-flip','Ending while a camera switch is pending cannot leak a late stream or reopen a finished session.',async(page,check)=>{
-    await fakeCamera(page); await start(page); await page.locator('#flipBtn').waitFor();
+    await fakeCamera(page); await start(page); await reveal(page, '#flipBtn'); await page.locator('#flipBtn').waitFor();
     await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{window.grantCamera=()=>resolve(makeCamera());});});
-    await page.locator('#flipBtn').click();
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();
     check('Pending camera switch cannot resume into a changing view',await page.locator('#resumeBtn').isDisabled(),true);
     await page.locator('#endSessionBtn').click();
     await page.evaluate(()=>grantCamera()); await page.waitForFunction(()=>mediaAudit.stopped===2);

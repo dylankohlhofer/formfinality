@@ -1,3 +1,4 @@
+import { reveal } from './ui-navigation.mjs';
 // Adversarial integration cases use the existing shell/report runner. All streams,
 // wake locks and imported data are local synthetic substitutes, not user devices.
 async function start(page){
@@ -33,7 +34,7 @@ export async function adversarialCases(runCase){
   await runCase('adversarial-pending-camera-end','End must release every acquired track before an unresolved replacement play promise settles.',async(page,check,capture)=>{
     await fakeCamera(page);await start(page);
     await page.evaluate(()=>{document.getElementById('cam').play=()=>new Promise(resolve=>{window.adversarialResolvePlay=resolve;});});
-    await page.locator('#flipBtn').click();await page.waitForFunction(()=>typeof adversarialResolvePlay==='function');
+    await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();await page.waitForFunction(()=>typeof adversarialResolvePlay==='function');
     check('Two actual synthetic streams were acquired',await page.evaluate(()=>adversarialTracks.length),2);
     await page.locator('#endSessionBtn').click();
     check('Debrief is reachable during hung replacement',await page.locator('#msg h2').innerText(),'Workout ended');
@@ -72,7 +73,7 @@ export async function adversarialCases(runCase){
         const video=document.getElementById('cam');window.adversarialOriginalPlay=video.play;
         video.play=()=>new Promise((resolve,reject)=>{window.adversarialPlay={resolve,reject};});
       });
-      await page.locator('#flipBtn').click();await page.waitForFunction(()=>!!window.adversarialPlay);
+      await reveal(page, '#flipBtn'); await page.locator('#flipBtn').click();await page.waitForFunction(()=>!!window.adversarialPlay);
       await page.locator('#endSessionBtn').click();
       check('Both pending-switch streams end before settlement',await page.evaluate(()=>adversarialTracks.map(t=>t.readyState)),['ended','ended']);
       await page.evaluate(()=>{document.getElementById('cam').play=adversarialOriginalPlay;});
@@ -137,7 +138,7 @@ export async function adversarialCases(runCase){
     });
   for(const [suffix,blocked]of [['string','tracking'],['object',{length:1,0:'tracking'}]])
     await runCase(`adversarial-diagnostic-shape-${suffix}`,'Malformed imported blocker lists must be rejected before replay can throw.',async(page,check)=>{
-      await page.locator('#diagToggle').click();
+      await reveal(page, '#diagToggle'); await page.locator('#diagToggle').click();
       await page.locator('#diagImport').setInputFiles(file('malformed.json',diagnostic('malformed',blocked)));
       await page.waitForFunction(()=>document.getElementById('diagImport').value==='');
       const rejected=await page.locator('#diagViewer').isHidden();
@@ -149,7 +150,7 @@ export async function adversarialCases(runCase){
       check('Import gives a useful validation error',/invalid|malformed|blocker/i.test(await page.locator('#diagStatus').innerText()),true);
     });
   await runCase('adversarial-diagnostic-valid','Valid diagnostic lists and markup-like text remain readable without script execution.',async(page,check)=>{
-    await page.locator('#diagToggle').click();
+    await reveal(page, '#diagToggle'); await page.locator('#diagToggle').click();
     const data=diagnostic('<img src=x onerror=alert(1)>',['tracking']);
     await page.locator('#diagImport').setInputFiles(file('valid.json',data));await page.locator('#diagViewer').waitFor();
     await page.locator('#diagSeek').evaluate(el=>{el.value='1';el.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -159,7 +160,7 @@ export async function adversarialCases(runCase){
   });
   for(const reset of ['clear','replace']) for(const outcome of ['resolve','reject'])
     await runCase(`adversarial-diagnostic-${reset==='clear'?'stale':'replace'}-${outcome}`,'A pending import must not replace or erase a newer import, with or without Clear.',async(page,check)=>{
-      await page.locator('#diagToggle').click();
+      await reveal(page, '#diagToggle'); await page.locator('#diagToggle').click();
       await page.evaluate(()=>{
         const original=File.prototype.text;
         File.prototype.text=function(){
@@ -181,7 +182,7 @@ export async function adversarialCases(runCase){
     });
   for(const outcome of ['resolve','reject'])
     await runCase(`adversarial-diagnostic-pending-${outcome}`,'Stale completion cannot clear a newer file selection while that file is still loading.',async(page,check)=>{
-      await page.locator('#diagToggle').click();
+      await reveal(page, '#diagToggle'); await page.locator('#diagToggle').click();
       await page.evaluate(()=>{
         window.adversarialReads={};
         File.prototype.text=function(){return new Promise((resolve,reject)=>{adversarialReads[this.name]={resolve,reject};});};

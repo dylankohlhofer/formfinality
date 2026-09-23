@@ -1,6 +1,7 @@
 // Real controls in the existing shell runner. Never launch mail, authorize an
 // account or send user data. Test-only short plans are synthetic policy probes.
 import {readFile} from 'node:fs/promises';
+import {reveal} from './ui-navigation.mjs';
 import {exerciseInputs} from './exercise-inputs.mjs';
 const inputs=exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json',import.meta.url))).poses);
 async function home(page){
@@ -21,7 +22,7 @@ export async function profileGoalCases(runCase){
     check('Saving starts off',await page.locator('#profileEnabled').isChecked(),false);
     check('Merely opening profile does not persist anything',await page.evaluate(()=>localStorage.getItem(__testLab.profileAccess().PROFILE_KEY)),null);
     await page.locator('#profileTarget').selectOption('2'); await page.locator('#profileEnabled').check();
-    await page.locator('#profileName').fill('<Sam>'); await page.locator('#profileTarget').selectOption('4');
+    await reveal(page,'#profileName'); await page.locator('#profileName').fill('<Sam>'); await page.locator('#profileTarget').selectOption('4');
     await page.locator('#profileSaveBtn').click();
     check('Current target is not rewritten',await page.evaluate(()=>__testLab.profileAccess().profileGoals.summary(Date.now()).target),2);
     check('Pending next-week target saved',await page.evaluate(()=>__testLab.profileAccess().profileGoals.summary(Date.now()).next.target),4);
@@ -66,7 +67,7 @@ export async function profileGoalCases(runCase){
     check('Default does not silently credit manual completion',await page.evaluate(()=>__testLab.profileAccess().profileGoals.summary(Date.now()).days),0);
     check('Reason explains the unassessed choice',/Unassessed routine not added/.test(await page.locator('#profileSaveStatus').innerText()),true);
     check('Sharing still identifies unassessed work',decodeURIComponent(await page.locator('#workoutEmailLink').getAttribute('href')).includes('unassessed'),true);
-    await page.locator('#againBtn').click(); await profile(page); await page.locator('#profileUnassessed').check();
+    await page.locator('#againBtn').click(); await profile(page); await reveal(page,'#profileUnassessed'); await page.locator('#profileUnassessed').check();
     await page.locator('#profileSaveBtn').click(); await page.locator('#profileClose').click();
     await start(page); await page.locator('#followAlongBtn').click(); await page.locator('#finishAlongBtn').click();
     check('Explicit choice credits participation, not observation',await page.evaluate(()=>__testLab.profileAccess().profileGoals.read().data.events.map(e=>e.basis)),['unassessed']);

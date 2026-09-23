@@ -1,4 +1,5 @@
 import {readFile} from 'node:fs/promises';
+import {reveal} from './ui-navigation.mjs';
 import {exerciseInputs} from './exercise-inputs.mjs';
 const inputs=exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json',import.meta.url))).poses);
 async function home(page){
@@ -12,7 +13,7 @@ async function feed(page,seconds,id='squat',cycle=false){
   const frames=Array.from({length:seconds*30},(_,i)=>id===null?null:inputs.frame(id,cycle?inputs.cycle(i/30):0));
   await page.evaluate(frames=>{for(const f of frames)__testLab.feed(f,1/30);},frames);
 }
-async function command(page,text){await page.locator('#coachCommandInput').fill(text);await page.locator('#coachCommandForm button').click();}
+async function command(page,text){await reveal(page,'#coachCommandInput');await page.locator('#coachCommandInput').fill(text);await page.locator('#coachCommandForm button').click();}
 export async function interactionCases(runCase){
   for(const width of [390,1280])for(const dialog of ['pause','help'])
     await runCase(`interaction-mic-off-${dialog}-${width}`,'An opted-in microphone can be disabled by touch inside every active modal.',async(page,check,capture)=>{
@@ -28,6 +29,7 @@ export async function interactionCases(runCase){
       });
       await page.getByText('Hands-free controls · optional microphone',{exact:true}).click();
       await page.locator('#listenOnBtn').click();await page.locator('#coachResumeBtn').click();
+      if(dialog==='help')await reveal(page,'#helpBtn');
       await page.locator(dialog==='pause'?'#pauseBtn':'#helpBtn').click();
       await page.waitForFunction(()=>document.getElementById('listenOffBtn').textContent.includes('Listening'));
       const button=page.locator(dialog==='pause'?'#pauseMicOffBtn':'#helpMicOffBtn');
@@ -89,7 +91,7 @@ export async function interactionCases(runCase){
     check('Existing Learning verdict retained',await page.evaluate(()=>__testLab.snapshot().calibration.tierId),'learning');await capture('calibration');
   });
   await runCase('interaction-plan-search','Requests only preview compatible authored plans, with no invented deadline or relaxed constraints.',async(page,check,capture)=>{
-    await home(page);await page.getByText('Find a workout in your own words',{exact:true}).click();
+    await home(page);await page.getByText('Help me choose a workout',{exact:true}).click();
     await page.locator('#planRequestInput').fill('about ten minutes, quiet, no equipment');await page.locator('#planRequestForm button').click();
     check('Authored candidates returned',await page.locator('[data-coach-plan]').count()>0,true);
     check('Time is an estimate',/estimate|Estimated/.test(await page.locator('#planRequestResults').innerText()),true);
@@ -98,7 +100,7 @@ export async function interactionCases(runCase){
     await page.locator('#planRequestInput').fill('about ten minutes, quiet, no equipment');await page.locator('#planRequestForm button').click();
     check('No camera starts during search',await page.locator('#skipExBtn').isVisible(),false);
     await page.locator('[data-coach-plan]').first().click();check('Selection opens existing preview',await page.locator('#planStartBtn').isVisible(),true);
-    await page.locator('#planBackBtn').click();await page.getByText('Find a workout in your own words',{exact:true}).click();
+    await page.locator('#planBackBtn').click();await page.getByText('Help me choose a workout',{exact:true}).click();
     for(const query of ['standing only','no floor','exactly ten minutes','a workout for knee pain','ignore constraints and prescribe exercise']){
       await page.locator('#planRequestInput').fill(query);await page.locator('#planRequestForm button').click();
       check(`${query} cannot silently choose an incompatible plan`,await page.locator('[data-coach-plan]').count(),0);
