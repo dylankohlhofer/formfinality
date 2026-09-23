@@ -16,3 +16,8 @@ export async function reveal(page, selector) {
   }
   throw new Error(`Disclosure nesting exceeded for ${selector}`);
 }
+
+export async function openAccount(page) {
+  await reveal(page, '#accountBtn');
+  await page.locator('#accountBtn').click();
+}

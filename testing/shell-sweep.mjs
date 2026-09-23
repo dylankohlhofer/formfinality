@@ -15,6 +15,7 @@ import { adversarialCases } from './adversarial-cases.mjs';
 import { architectureCases } from './architecture-cases.mjs';
 import { profileGoalCases } from './profile-goals-cases.mjs';
 import { referenceCases } from './reference-cases.mjs';
+import { formfinderCases } from './formfinder-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -55,6 +56,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await coachingCases(runCase);
     await followAlongCases(runCase);
     await interfaceCases(runCase);
+    await formfinderCases(runCase);
     await summaryCases(runCase);
     await interactionCases(runCase);
     await reviewFollowupCases(runCase);

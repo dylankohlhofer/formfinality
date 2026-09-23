@@ -1,4 +1,4 @@
-# Form Coach — documentation
+# FormFinder — documentation
 
 **Start here.** This index covers the root documents and narrated HTML.
 Session handovers live under `sessions/`. Where any two disagree,
@@ -53,6 +53,7 @@ thing standing between here and the Swift port.
 
 | Document | Question it answers |
 |---|---|
+| `sessions/formfinder-interface-2026-09-23.md` | FormFinder branding, light mode, Account boundaries, simpler weekly progress/history and About |
 | `sessions/interface-simplification-2026-09-23.md` | Feature-by-feature decluttering, desktop/phone navigation and verification limits |
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
 | `sessions/code-review-fixes-2026-09-23.md` | Duo confirmation/upload boundaries and transactional demo-reference import/save recovery |

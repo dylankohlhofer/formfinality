@@ -1,4 +1,4 @@
-# Form Coach — interface principles
+# FormFinder — interface principles
 
 The rules the interface follows. They exist so the Swift port is a *translation* of an
 intent, not a re-derivation of it — and so future changes can be checked against
@@ -11,11 +11,14 @@ Two lanes, never crossed:
 - **Mint / amber / red — your body.** Form feedback only. Nothing else on screen may
   be saturated in these hues, so a coloured limb is always the only coloured thing in
   view.
-- **Iris (#9D8DF1) — your choices and your progress.** Selection, focus, the dial's
-  arc. Small doses.
+- **Iris (#9D8DF1), or plum (#6E4D9B) in light mode — your choices and progress.**
+  Selection, focus, the dial's arc. Small doses. These are one semantic lane.
 
 Everything else is near-black graphite, off-white text and hairlines. Primary
 actions also use iris, so the next step is clear without adding another colour.
+Light mode uses ivory surfaces and dark neutral text. Dark is the default; the
+user may explicitly select Light or Match device in More. Setup and the camera
+always retain dark feedback surfaces, independently of teaching/active state.
 If a new element wants colour, it must say which lane it belongs to — and if it belongs to
 neither, it's monochrome.
 
@@ -31,18 +34,25 @@ without requiring the person to remember a spoken instruction.
 ## 3 · Controls appear when their question exists
 
 The 23 September decluttering pass separates three layers: choosing a workout,
-doing it, and occasional tools. The idle header shows Workouts and More. During
+doing it, and occasional tools. The idle header shows Workouts, More and About. During
 exercise, Pause, Skip, Ask coach and End remain directly reachable. An active
 microphone's Off control and a diagnostic recorder's quick flag are never buried.
 More contains speech, camera switching, guide outline, Help and technical tools;
 opening it must not resize the camera. Native disclosures retain keyboard
 operation; Escape closes tools and returns focus, and navigation dismisses them.
 
-Welcome asks for a starting route before optional name/style preferences. Home
-separates workouts from weekly goals and history. Preview puts Start before an
+Welcome asks only for a starting route. Name/style previews belong under Account,
+where they are unavailable until verified identity and paid access are connected.
+Apple/Google linkage, cloud sync and Duo remain planned, not connected buttons.
+Home separates workouts from This week and History. Preview puts Start before an
 expandable exact plan. Debrief keeps observed results and save failures visible,
 but technical exports are optional. Optional does not mean hidden consent: all
 storage/microphone/diagnostic opt-ins remain explicit and off by default.
+This week shows saved routine-days, not an inferred streak or fitness level;
+unrecorded days are unknown. History uses compact cards with expandable set
+details. Coaching amount/demos remain usable without paid personalisation.
+About explains the mission and limitations. Future video and platform releases
+are labelled honestly; only real releases may receive download links.
 
 The tier control answers "how hard should this be?" — a question calibration exists
 to answer by watching. So it is hidden until the verdict lands or the user chooses to
@@ -58,6 +68,9 @@ not every picker card. Two columns on wide screens become one on phones. Heading
 and reading matter are left-aligned inside a bounded content column. Overlay
 content centres with `margin:auto`, never `align-items:center`: a centred flex child
 that overflows loses its top above the scroll origin, unreachably.
+Transitions are brief heading fades and restrained card hover changes, disabled
+by reduced-motion preference. Never animate a whole interactive overlay: the
+rapid profile/restart test exposed persistent hit-test interference when doing so.
 
 ## 5 · The `hidden` attribute must always win
 
@@ -107,8 +120,9 @@ names the incomplete set without grading it or pretending future sets happened.
 Calibration interruption offers a fresh check or the observed result, not a resumed
 continuous hold. These are core policies that the native shell must preserve.
 
-The current navigation inventory and remaining device checks are in
-[[sessions/interface-simplification-2026-09-23]]; the interruption contract and
+The current brand/theme/account presentation is in
+[[sessions/formfinder-interface-2026-09-23]]. The navigation inventory and remaining
+device checks are in [[sessions/interface-simplification-2026-09-23]]; the interruption contract and
 earlier inventory are in [[sessions/interface-review-2026-09-14]].
 
 ---

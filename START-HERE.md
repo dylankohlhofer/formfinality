@@ -1,4 +1,4 @@
-# Continue Form Coach on another device
+# Continue FormFinder on another device
 
 **23 September feature update:** the local Profile & Weekly Goals and explicit
 email drafts are documented in `docs/profile-duo-contract.md`. Read the newest

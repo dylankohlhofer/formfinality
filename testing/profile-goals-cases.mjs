@@ -22,7 +22,9 @@ export async function profileGoalCases(runCase){
     check('Saving starts off',await page.locator('#profileEnabled').isChecked(),false);
     check('Merely opening profile does not persist anything',await page.evaluate(()=>localStorage.getItem(__testLab.profileAccess().PROFILE_KEY)),null);
     await page.locator('#profileTarget').selectOption('2'); await page.locator('#profileEnabled').check();
-    await reveal(page,'#profileName'); await page.locator('#profileName').fill('<Sam>'); await page.locator('#profileTarget').selectOption('4');
+    // A pre-Account nickname from an older build remains data, not an identity.
+    await page.evaluate(()=>__testLab.profileAccess().profileGoals.update('<Sam>',2,false,Date.now()));
+    await reveal(page,'#profileTarget'); await page.locator('#profileTarget').selectOption('4');
     await page.locator('#profileSaveBtn').click();
     check('Current target is not rewritten',await page.evaluate(()=>__testLab.profileAccess().profileGoals.summary(Date.now()).target),2);
     check('Pending next-week target saved',await page.evaluate(()=>__testLab.profileAccess().profileGoals.summary(Date.now()).next.target),4);
@@ -32,7 +34,8 @@ export async function profileGoalCases(runCase){
     await capture('profile-settings'); await page.reload(); await page.waitForFunction(()=>!!window.__testLab); await home(page); await profile(page);
     check('Nickname restored as text',await page.locator('#profileName').inputValue(),'<Sam>');
     check('Saving restored',await page.locator('#profileEnabled').isChecked(),true);
-    const download=page.waitForEvent('download'); await page.locator('#profileExportBtn').click();
+    check('Legacy nickname is retained but cannot act as an account editor',await page.locator('#profileName').isDisabled(),true);
+    await reveal(page,'#profileExportBtn'); const download=page.waitForEvent('download'); await page.locator('#profileExportBtn').click();
     check('Explicit scoped export',(await download).suggestedFilename(),'formcoach-local-profile.json');
     await page.evaluate(()=>localStorage.setItem('profile-unrelated-sentinel','keep'));
     await page.locator('#profileEraseBtn').click(); await page.locator('#profileEraseNo').click();
@@ -60,6 +63,12 @@ export async function profileGoalCases(runCase){
     await capture('completion-email');
     await page.locator('#againBtn').click(); await start(page); await finishObserved(page);
     check('Two real routines remain one credited day',await page.evaluate(()=>{const s=__testLab.profileAccess().profileGoals.summary(Date.now());return [s.days,s.completions];}),[1,2]);
+    await page.locator('#againBtn').click(); await profile(page);
+    check('One calendar strip contains seven labelled days',await page.locator('.weekStrip [role="listitem"][aria-label]').count(),7);
+    check('Two routines mark only one saved day',await page.locator('.weekDay.recorded').count(),1);
+    check('Calendar does not call missing observations failure',await page.locator('#profileProgress').innerText().then(x=>x.includes('not a failed workout')),true);
+    check('Editing settings does not dominate saved progress',await page.locator('#profileOptions').evaluate(el=>el.open),false);
+    await capture('saved-week');
   });
   await runCase('profile-unassessed-choice','Manual completion is not a camera claim and only contributes after an explicit profile choice.',async(page,check,capture)=>{
     await plan(page); await home(page); await profile(page); await page.locator('#profileEnabled').check(); await page.locator('#profileClose').click();

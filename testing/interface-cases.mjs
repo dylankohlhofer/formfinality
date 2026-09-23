@@ -17,10 +17,8 @@ export async function interfaceCases(runCase){
   for(const [name,viewport] of [['phone',{width:320,height:640}],['desktop',{width:1280,height:800}]]){
     await runCase(`ui-disclosures-${name}`,'Secondary features disclose through real controls; navigation, consent and urgent workout actions remain explicit.',async(page,check,capture)=>{
       await page.setViewportSize(viewport);
-      check('Only Workouts and More occupy the idle header',await page.locator('header button:visible,header summary:visible,header input:visible').allTextContents(),['Workouts','More']);
-      check('Optional preferences start collapsed',await page.locator('#welcomePreferences').evaluate(el=>el.open),false);
-      await reveal(page,'#nameIn'); await page.locator('#nameIn').fill('Sam'); await capture('preferences');
-      await page.locator('#welcomePreferences > summary').click();
+      check('Only Workouts, More and About occupy the idle header',await page.locator('header button:visible,header summary:visible,header input:visible').allTextContents(),['Workouts','More','About']);
+      check('Paid personalisation does not clutter onboarding',await page.locator('#nameIn,[data-p]').count(),0);
       await page.locator('#toolsToggle').focus(); await page.keyboard.press('Enter');
       check('Keyboard opens native More disclosure',await page.locator('#toolsMenu').evaluate(el=>el.open),true);
       check('No consent granted by navigation',await page.evaluate(()=>({diagnostics:__testLab.diagnosticAccess().diagnostics.active,profile:document.getElementById('profileEnabled').checked,history:document.getElementById('rememberHistory').checked})),{diagnostics:false,profile:false,history:false});
@@ -31,7 +29,9 @@ export async function interfaceCases(runCase){
       check('Closing weekly goals restores its trigger',await page.locator('#profileOpenBtn').evaluate(el=>el===document.activeElement),true);
       await page.locator('#coachMemoryBtn').click(); await capture('history'); await page.locator('#memoryClose').click();
       await page.locator('#coachSettingsBtn').click();
-      check('Coach setup opens its settings instead of another closed disclosure',await page.locator('#welcomePreferences').evaluate(el=>el.open),true);
+      check('Account is the personalisation destination',await page.locator('#msg h2').innerText(),'Account');
+      check('Unconnected paid name is unavailable',await page.locator('#nameIn').isDisabled(),true);
+      await capture('account');
       await page.locator('#startBtn').click();
       await page.locator('[data-plan="first-steps"]').click();
       check('Detailed plan is optional; Start remains visible',await page.locator('#planDetails').evaluate(el=>!el.open)&&await page.locator('#planStartBtn').isVisible(),true);
@@ -63,7 +63,7 @@ export async function interfaceCases(runCase){
   await runCase('ui-startup','Welcome and help open without first loading the pose library.',async(page,check,capture)=>{
     check('Welcome visible without camera',await page.locator('#calBtn').isVisible(),true);
     check('Pose module not requested before starting',await page.evaluate(()=>performance.getEntriesByType('resource').some(x=>x.name.includes('vision_bundle'))),false);
-    check('Optional name has a real label',await page.getByLabel('What should I call you?',{exact:false}).count(),1);
+    check('Account name is absent from onboarding',await page.getByLabel('What should I call you?',{exact:false}).count(),0);
     check('Workouts is an honest action label',await page.locator('#startBtn').textContent(),'Workouts');
     await reveal(page, '#helpBtn'); await page.locator('#helpBtn').click();
     check('Help is a modal',await page.locator('#helpDialog').evaluate(el=>el.matches(':modal')),true);

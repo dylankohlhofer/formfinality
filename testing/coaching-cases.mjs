@@ -1,4 +1,4 @@
-import { reveal } from './ui-navigation.mjs';
+import { reveal, openAccount } from './ui-navigation.mjs';
 import { readFile } from 'node:fs/promises';
 import { exerciseInputs } from './exercise-inputs.mjs';
 
@@ -89,12 +89,14 @@ export async function coachingCases(runCase){
   for (const mode of ['recorded', 'native']) {
     await runCase(`coaching-voice-toggle-${mode}`, 'Actual Voice and Hear it handlers: explicit preview while muted, immediate cancellation, stale callbacks and fresh speech after re-enabling.', async (page, check) => {
       await controlledPlayback(page, mode);
+      await openAccount(page);
       await reveal(page, '#voicePrev'); await page.locator('#voicePrev').click();
       check('Explicit Hear it works with automatic Voice off', await page.evaluate(() => {
         const { coach } = __testLab.audioAccess();
         return !document.getElementById('voice').checked && coach.cur?.key === 'preview';
       }), true);
       await page.evaluate(() => __testLab.audioAccess().coach.reset());
+      await page.locator('#accountBackBtn').click();
       await reveal(page, '#voice'); await page.locator('#voice').check();
       await page.locator('#calBtn').click();
       const before = await page.evaluate(mode => {

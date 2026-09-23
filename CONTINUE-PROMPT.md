@@ -1,4 +1,4 @@
-Continue development of the Form Coach project in this local folder. The owner
+Continue development of the FormFinder project in this local folder. The owner
 resumed work on their own account on 22 September; the transfer to Ethan was
 cancelled. The current development branch is codex/automated-test-lab.
 

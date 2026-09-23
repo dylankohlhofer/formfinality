@@ -1,7 +1,11 @@
-# Form Coach — project context
+# FormFinder — project context
 
 Read this before changing anything. It encodes rules that were learned the hard way; several
 were paid for with bugs that shipped.
+
+FormFinder is the public name. Legacy `form-coach-v4.11.html`, `formcoach.*`
+storage/schema/export identifiers, voice paths and Swift module names remain stable;
+renaming the brand is not permission to break saved data or cross-platform fixtures.
 
 ## What this is
 
@@ -332,13 +336,28 @@ smoke is separate after model setup. Read `docs/web-release.md` before deploymen
 Current cost/pricing assumptions are in `docs/business-model-2026-09.md`; the July
 business plan is historical, not proof of profitability or a shipped native app.
 
-The September 23 interface uses task-first disclosure: idle Workouts/More; live
+The September 23 interface uses task-first disclosure: idle Workouts/More/About; live
 Pause/Skip/Ask coach/End remain direct. More never resizes the camera; recording
 start closes both tools and diagnostics, while quick flag and Mic off stay direct.
 Consent and save failures must not be hidden to reduce clutter. Keep `ui-*` in
 the existing loop, including disclosure/focus/phone navigation. Tests use
 `testing/ui-navigation.mjs` for real summary clicks, never forced hidden controls.
 See `docs/sessions/interface-simplification-2026-09-23.md` for the workflow review.
+
+The FormFinder follow-up adds default-dark / ivory-and-plum light / explicit device
+appearance. `cameraOn`, set by `showCamChrome`, keeps setup and exercise dark;
+`live` alone is insufficient because it begins after teaching. Appearance changes
+save only the allowlisted `formfinder.appearance.v1` preference, with visible errors.
+Account describes planned Apple/Google identity, separately verified paid access,
+optional cloud progress and Duo permission. Name/style previews are disabled;
+there is no connected sign-in, verified entitlement or secure browser paywall.
+Default recorded coaching remains available. Existing local nicknames survive
+goal edits; they never become authenticated identities. Goals show saved days,
+not invented streaks; empty days are unknown. Keep `formfinder-*`, `profile-*`,
+`interaction-memory` and the moved voice-preview checks in the existing loop.
+Animate headings rather than entire clickable panels; honour reduced motion.
+About has a clearly future video and platform availability, not fake store links
+or final legal terms. See `docs/sessions/formfinder-interface-2026-09-23.md`.
 
 Then the permanent static audits — each exists because a bug got past the previous set:
 

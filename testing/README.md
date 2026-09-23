@@ -61,6 +61,17 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**FormFinder presentation (23 September):** `formfinder-cases.mjs` adds eight
+shell cases to this same runner: brand/account availability, light layouts at
+320/390/844/1280px, stored/device appearance, read/write failures and reduced motion.
+Light text tokens must meet 4.5:1 against each app surface. Setup and active camera
+remain dark; End returns to the chosen theme. No fake identity, entitlement,
+cloud upload or video/store link is supplied. Existing voice-preview cases navigate
+through Account; existing history/profile controls use real disclosure clicks.
+Legacy profile names survive target edits, and two completed routines still mark
+only one calendar day. Saved screenshots are UI evidence, not physical-phone,
+screen-reader or beginner usability validation.
+
 **Interface simplification (23 September):** the existing `ui-*` cases now cover
 More, optional preferences, expanded plans and exports, goals/history navigation,
 camera sizing and keyboard dismissal. `ui-navigation.mjs` clicks native ancestor

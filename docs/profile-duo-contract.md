@@ -27,10 +27,35 @@ Video, landmarks, diagnostics and form scores remain outside that record.
 
 ## Implemented now: local profile and weekly goals
 
-The browser picker opens **Profile & weekly goals**. A separate, default-off
+The browser picker opens **This week**. A separate, default-off
 consent enables future completed-routine records. This does not enable or copy
-the existing coach history, preferences, diagnostics or microphone. A nickname
-is optional and local; it is not an authenticated identity. No avatar upload.
+the existing coach history, preferences, diagnostics or microphone. Previously
+saved nicknames remain local and are preserved on goal edits. The UI no longer
+offers a free nickname editor: new name/style personalisation is planned for
+paid Account access. A legacy nickname is not authenticated identity. No avatar upload.
+
+### Account linkage and paid personalisation — 23 September
+
+The user chose Apple or Google linkage for future cloud progress and Duo. The
+Account screen now owns that destination, independently of local weekly goals
+and History. **It is a presentation foundation, not an implemented account.**
+
+- Identity establishes which account is connected; a local name/email is not proof.
+- Paid access needs a verified purchase/restore entitlement. Sign-in alone cannot
+  grant it; disabled browser controls are not a secure paywall.
+- Cloud access is a separate explicit permission. Provider identity does not
+  silently upload local history or connect CloudKit/Drive.
+- Duo needs explicit pairing/invitation acceptance and sharing consent, retaining
+  the existing queued-versus-confirmed sync boundary.
+- Name and coach style are intended to belong to the paid account, with local
+  cached preferences scoped to it. No authenticated preferences store, automatic
+  migration, purchase UI or cross-device personalisation is implemented yet.
+
+The name and style previews are disabled until those integrations exist. Default
+recorded speech, local-only fallback, coaching amount and demos remain usable
+without an account. Existing storage keys, schema, credits and erase scopes are
+unchanged. `formfinder-*` shell cases protect honest availability; `profile-*`
+protects local-data preservation. No new provider/API or backend cost is introduced.
 
 `ProfileGoals`, `profileCompletion`, `profileCalendar` and `profileEmailDraft`
 live in the HTML, before the shell boundary. The shell consumes existing finish

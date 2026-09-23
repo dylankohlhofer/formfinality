@@ -1,4 +1,4 @@
-FORM COACH — LOCAL REVIEW ARTIFACT, NOT A PUBLIC RELEASE
+FORMFINDER — LOCAL REVIEW ARTIFACT, NOT A PUBLIC RELEASE
 
 No distribution or licensing clearance is implied by building this folder.
 Keep it local until docs/web-release.md's release gates are satisfied.

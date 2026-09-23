@@ -112,7 +112,7 @@ export async function interactionCases(runCase){
     await home(page);await page.locator('#coachMemoryBtn').click();
     check('Preferences off by default',await page.locator('#rememberPrefs').isChecked(),false);
     check('History off by default',await page.locator('#rememberHistory').isChecked(),false);
-    await page.locator('#explanationPref').selectOption('minimal');
+    await reveal(page,'#explanationPref'); await page.locator('#explanationPref').selectOption('minimal');
     check('No consent means no storage',await page.evaluate(()=>localStorage.getItem('formcoach.local-coach.v1')),null);
     await page.locator('#rememberPrefs').check();await page.locator('#demoPref').selectOption('always');await page.locator('#rememberHistory').check();
     await page.locator('#memoryClose').click();await page.locator('[data-plan="first-steps"]').click();await page.locator('#planStartBtn').click();
@@ -122,7 +122,9 @@ export async function interactionCases(runCase){
     await page.locator('#againBtn').click();await page.locator('#coachMemoryBtn').click();
     check('One ended workout saved',await page.locator('#memoryHistory li').count(),1);
     check('Early ending remains identified',/ended/.test(await page.locator('#memoryHistory').innerText()),true);
+    await page.locator('#memoryHistory summary').first().click();
     check('Guided work is separately identified as unassessed',/guided sets \/ \d+s \(unassessed\)/.test(await page.locator('#memoryHistory').innerText()),true);
+    await reveal(page,'#memoryExportBtn');
     const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#memoryExportBtn').click()]);
     check('Explicit export downloads',download.suggestedFilename(),'formcoach-local-history.json');
     await page.reload();await page.waitForFunction(()=>!!window.__testLab);await home(page);await page.locator('#coachMemoryBtn').click();
@@ -134,7 +136,7 @@ export async function interactionCases(runCase){
     await page.locator('#memoryClose').click();await page.locator('#coachMemoryBtn').click();
     check('Memory errors disable stale export',await page.locator('#memoryExportBtn').isDisabled(),true);
     check('Memory error is visible',/Synthetic storage failure/.test(await page.locator('#memoryStatus').innerText()),true);
-    await page.locator('#memoryEraseBtn').click();await page.locator('#memoryEraseYes').click();
+    await reveal(page,'#memoryEraseBtn'); await page.locator('#memoryEraseBtn').click();await page.locator('#memoryEraseYes').click();
     check('History erased',await page.locator('#memoryHistory li').count(),0);
     check('Consent disabled by erase',await page.locator('#rememberPrefs').isChecked(),false);
     check('Other local data preserved',await page.evaluate(()=>localStorage.getItem('unrelated.setting')),'keep');await capture('memory');

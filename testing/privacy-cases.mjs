@@ -1,4 +1,4 @@
-import { reveal } from './ui-navigation.mjs';
+import { reveal, openAccount } from './ui-navigation.mjs';
 import { readFile } from 'node:fs/promises';
 import { exerciseInputs } from './exercise-inputs.mjs';
 
@@ -61,7 +61,7 @@ function released(check, state) {
 export async function privacyCases(runCase) {
   for (const [id, voices, count] of [['local', [local, remote], 1], ['remote', [remote], 0]]) {
     await runCase(`privacy-preview-${id}`, 'The Hear it preview obeys the same local-only boundary as session speech.', async (page, check) => {
-      await setup(page, voices); await reveal(page, '#voicePrev'); await page.locator('#voicePrev').click();
+      await setup(page, voices); await openAccount(page); await reveal(page, '#voicePrev'); await page.locator('#voicePrev').click();
       check('Preview invokes only an explicitly local voice', await page.evaluate(() => window.__privacy.spoken.map(u => u.voice?.localService)), count ? [true] : []);
       if (!count) await unavailableStatus(page, check);
     });
@@ -103,6 +103,7 @@ export async function privacyCases(runCase) {
   for (const source of ['cached', 'selected']) for (const replacement of ['remote', 'missing', 'local']) {
     await runCase(`privacy-${source}-${replacement}`, 'Revalidate a previously usable voice at start, even without a voiceschanged event.', async (page, check) => {
       await setup(page, [local]);
+      if(source === 'selected') await openAccount(page);
       const result = await page.evaluate(({ source, replacement, remote, enhanced }) => {
         const { Coach } = window.__testLab.audioAccess(), p = window.__privacy;
         if (source === 'selected') {
@@ -190,6 +191,7 @@ export async function privacyCases(runCase) {
 
   await runCase('privacy-voice-dropdown', 'voiceschanged refreshes the fallback dropdown and excludes remote/non-English/unproven voices.', async (page, check) => {
     await setup(page, [remote, local, foreign, enhanced, voice('Unknown English', undefined)]);
+    await openAccount(page);
     await page.evaluate(() => speechSynthesis.dispatchEvent(new Event('voiceschanged')));
     const sel = page.locator('#voiceSel');
     await reveal(page,'#voiceSel');

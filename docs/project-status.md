@@ -1,7 +1,34 @@
-# Form Coach — project status report
+# FormFinder — project status report
 
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
+
+**23 September 2026 — FormFinder, appearance and Account presentation.** The
+[follow-up](sessions/formfinder-interface-2026-09-23.md) records the public rename,
+default-dark / ivory-and-plum light / device appearance, simpler saved-week and
+history cards, Account-owned paid-personalisation previews, and the About page.
+Apple/Google identity, verified purchases, cloud permissions and Duo pairing are
+separate future integrations, not connected features or a secure HTML paywall.
+Legacy storage/export identifiers and existing local nicknames are preserved.
+Only three brand strings changed in the extracted engine; all judgement logic,
+root vectors and Swift are unchanged.
+
+**Final `npm test` exited 0** in `test-results/2026-09-23T17-43-04-532Z-36955/`:
+82 infrastructure tests; 25 regression suites / 1,625 tests; all four original
+harnesses (4,127 conformance checks, eight caught mutations with healthy control,
+250 drawing checks, 26 skip checks); 55 engine cases / 1,307 checks;
+110 browser cases / 942 checks; **151 shell cases / 1,356 checks**; and
+16 audio cases / 388 checks. The eight new `formfinder-*` cases contribute
+105 checks. The final HTML SHA-256 is
+`d15aa0bb63863b082dd47bd7b0257548776bc3ca5bd11fab44db46bb46071aa1`;
+it and all **82** recorded source hashes match the delivered files. No product
+or test source changed after this full snapshot. Screenshots were visually reviewed.
+
+Twelve video cases remain blocked. The report retains 26 coverage-gap findings,
+not new failing assertions; physical devices, beginner usability, screen readers,
+body/clothing/partial-view recognition and native-TTS/intelligibility remain
+unvalidated. A preceding run was intentionally stopped for a final calendar-label
+contrast correction; its partial evidence is identified in the follow-up.
 
 **23 September 2026 — interface simplification.** The
 [workflow review](sessions/interface-simplification-2026-09-23.md) documents a
