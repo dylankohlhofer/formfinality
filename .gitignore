@@ -22,3 +22,6 @@ test-results/
 testing/private/
 testing/assets/
 dist/
+
+# User-supplied Mixamo source; retain locally, do not redistribute the raw asset.
+/Ch44_nonPBR.fbx
