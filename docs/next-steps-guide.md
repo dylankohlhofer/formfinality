@@ -1,97 +1,81 @@
-# Form Coach — what to do next, in order
+# FormFinder — next steps
 
-**Updated after beginner test 01.** The phases below assume you're on **v4.11**.
+Updated 24 September 2026. The browser build is still `form-coach-v4.11.html`.
+Use [project status](project-status.md) for the last measured checkpoint,
+[feature inventory](feature-inventory.md) for implemented capabilities, and
+[chat backlog](chat-backlog-2026-09-24.md) for every retained request and decision.
 
-**Where you are:** thesis validated, five defects fixed, one beginner session to go.
+## 1. Check the current build
 
----
-
-## Phase A · Render the pending voice (10 min, ~£1–2.50)
-
-210 clips are unrendered — the framing cues, "slower"/"deeper", the calibration verdict and
-the revised opening. Mixed recorded/TTS was probably half of Max's "overlapping voices"
-complaint, so this matters before test 02.
-
-```bash
-cd ~/Documents/formfinality/voice-render-kit
-# render-plan.json is tracked in the repo now — nothing to copy in from Downloads
-rm -f voice/*/*/start.a_0.mp3 voice/*/*/start.b_0.mp3   # the opening line changed
-read -s ELEVENLABS_API_KEY && export ELEVENLABS_API_KEY
-node render.mjs
-rm -rf ~/Documents/formfinality/voice && cp -r voice ~/Documents/formfinality/voice
+```sh
+npm ci
+npx playwright install chromium firefox webkit
+npm test
 ```
 
-Also worth re-rendering: Warm's `num/2` — Max heard "coo".
+The existing suite covers the engine, browser, shell, interruptions, recorded
+audio and deliberate fault controls. Missing human-video fixtures remain gaps.
+Run one heavy browser/audio suite at a time; preserve failures even if a repeat
+passes. On the supported Mac, `swift test --package-path swift/FormCoachEngine
+--jobs 1` checks the native modules. Native session cores and a store app remain
+future work.
 
-## Phase B · Smoke-test v4.11 yourself (15 min)
+For an unpublished, self-contained static review directory:
 
-The shell still has no automated coverage. Specifically check the things that changed:
-
-```
-[ ] Side plank demo — the hips visibly LIFT (they never moved before)
-[ ] Crunch demo — legs inside the frame, arms no longer zigzag
-[ ] Praise disappears after a few seconds instead of lingering
-[ ] Praise vanishes immediately if a limb goes red
-[ ] Side plank clock waits until you're actually in the shape
-[ ] Rep pop lands at the TOP of the movement, not on the way down
-[ ] Out of position: ONE spoken cue, then a persistent on-screen message
-[ ] Console: zero red errors
-```
-
-Then the two things that changed *after* v4.9, neither of which the shell can test:
-
-```
-[ ] Every demo is drawn in correct proportion — heads no longer balloon on the
-    lying-down movements, and the ghost lines up with a correctly-held pose
-    (they now sit ~29% smaller in the demo box; judge that on screen)
-[ ] Skip a phase mid-set — the debrief shows "—" for it, never 0, and the reps
-    you did before skipping still count
-[ ] Skip EVERY phase — AVG FORM reads "—" and the summary does not congratulate
-    you for a session you didn't do
+```sh
+npm run test:setup-video
+npm run test:release
+npm run build:web -- --out dist/web-review-next
+npm run test:release:smoke -- --dir dist/web-review-next
+npm run test:camera -- --dir dist/web-review-next
+node verify.mjs dist/web-review-next/index.html
 ```
 
-## Phase C · Beginner test 02 — the gate
+Choose a new output directory for each build; existing outputs are protected.
+The camera test exercises the real model and app in Chromium, Firefox and WebKit
+with generated blank streams, including disconnect/restart/End. It does not test
+human recognition or a physical phone. Read [web release](web-release.md) before
+sharing an artifact. Never serve, tunnel or publish the repository root, which
+contains development material and may contain private local evidence.
 
-Full method in `beginner-test-protocol.md`. Changes for this round:
+## 2. Finish the speech review
 
-- **Ask the wrong-corrections question explicitly** in the debrief: *"did it ever tell you to
-  fix something that wasn't wrong?"* Test 01's notes didn't cover it directly.
-- **Write the time down whenever they hesitate** — the CSV aligns to the frame.
-- Everything else as before: hand them the phone, one sentence, then silence.
+Use the [local voice audit](voice-library-audit.md) to screen the library and
+prioritise listening. Start with all three voices' numbers 1–20, especially Warm
+“two”; compare the original clips with the actual application recordings in the
+audio reports. Decoding, measurable signal and intended wording do not prove
+pronunciation. Record the exact clip hash for any confirmed issue or approval.
 
-## Phase D · Score the gate
+The earlier intermittent loading failures remain a separate investigation; one
+successful run cannot identify their cause. Regenerate only clips whose defect
+has been established. Review replacement bytes and existing playback tests before
+changing the voice manifest. Provider changes, paid generation and voice rights
+are explicit product decisions, not part of running the local audit.
 
-Both sessions against `swift-port.md`. Pass → pay the Apple fee, start Week 1. Fail → fix in
-the browser and re-test, which is exactly why the prototype exists.
+## 3. Run beginner test 02 on a real phone
 
----
+Follow [the beginner protocol](beginner-test-protocol.md). Record the timestamps of
+hesitation, refused work, incorrect corrections, awkward prompts and unclear
+speech. Ask whether the coach ever corrected something that was not wrong.
+Diagnostics are optional and stay local; a screen recording alone is not a
+clean-camera replay fixture. Obtain consent for any reusable camera footage.
 
-## In parallel, whenever the Mac is idle
+Include everyday clothing and a range of body shapes. Check foreground/background,
+camera switching, a disconnected camera, speaker audio and a complete routine.
+Ankle-hidden Leg Raise and missing required Plank geometry remain recognised
+limitations: offer the explicit unassessed Follow along option without inventing
+reps, hold seconds or a score.
 
-**Set up Claude Code** (`tooling-guide.md`) — half an hour, and the Swift port is precisely
-what it's best at. The old first task (reconcile the 23 divergences) is **done** — `verify.mjs`
-exits 0 on 4,127 checks and `swift test` passes 15/15, the demo gate check is a real section
-(`refGates`), and there are now four harnesses rather than one. First task now: rebuild the
-lost behavioural suites — cooldown neutrality, plan completion, regression swaps.
+## 4. Use that evidence to choose the next product slice
 
-Neither gates the beginner test. Run it in parallel, or after.
+The Remotion squat is an isolated, approved visual direction with a locally held
+character. Technique review, other exercises and an app integration remain open.
+Local weekly goals work; Duo transport is only a tested prototype. Real account
+consent, partner visibility, cloud quotas/revocation and identity switching must
+be proven before offering pairing. See [the Duo contract](profile-duo-contract.md).
 
----
-
-## Phone setup, if you need it again
-
-The camera needs a secure context, so `file://` and LAN `http://` both block it.
-
-```bash
-brew install cloudflared
-cd ~/Documents/formfinality && python3 -m http.server 8000     # terminal 1
-cloudflared tunnel --url http://localhost:8000                 # terminal 2
-```
-
-Open the printed `https://…` URL + `/form-coach-v4.11.html` on the phone, and **check the
-header says v4.11**. For testing away from your Mac, drag the folder into Netlify for a
-permanent URL.
-
-**Distance depends on the workout** (see `camera-placement-analysis.md`): floor exercises
-want the phone low, shin height, ~1.5–2 m back; standing exercises higher and ~3 m back. The
-app will tell you if it can't see you.
+The native UI/session port, verified purchases, public domain/free offer, automatic
+notifications and cross-platform distribution remain separate releases. Use the
+[business model](business-model-2026-09.md) to evaluate them after the core workout
+experience is validated. Do not introduce separate judgement implementations or
+promise shipped functionality from a prototype.

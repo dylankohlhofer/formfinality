@@ -1,5 +1,10 @@
 # Claude Code, Obsidian and agents — a practical setup
 
+**Historical rationale, refreshed pointers on 24 September 2026.** Current setup
+is in [START-HERE](../START-HERE.md), with delivered features and outstanding work
+in [the inventory](feature-inventory.md) and [chat backlog](chat-backlog-2026-09-24.md).
+The original loss described below predates the shared test/watch/report loop.
+
 Written after the sandbox that held this project's test suites reset and deleted all 17 of
 them. That event is the argument, so it's worth starting there.
 
@@ -16,7 +21,7 @@ That is not a Claude limitation you work around with better habits. It's a struc
 about working through a chat interface: *the work happens somewhere you don't own.*
 
 **Claude Code inverts that.** The work happens in your repo. Nothing is ephemeral, nothing
-needs downloading, and the loop closes: it can run `node verify.mjs`, read the failure, fix
+needs downloading, and the loop closes: it can run `node verify.mjs form-coach-v4.11.html`, read the failure, fix
 the file, and run it again — without you copying output back and forth.
 
 ---
@@ -93,23 +98,27 @@ formfinality/
 ├── verify-skip.mjs        ← also, if you touched skip/endPhase/finish
 ├── conformance-vectors.json
 ├── content-v4.8.json
-├── swift/                 ← unzip swift-port-kit here
+├── swift/                 ← tracked native modules and shared fixtures
+├── testing/               ← shared test/watch/report loop
+├── release/               ← allowlisted local review packaging
+├── exercise-demos/        ← isolated Remotion prototype
 ├── voice/                 ← rendered clips + manifest
 ├── voice-render-kit/
-└── docs/                  ← README + 17 documents, wikilinked
+└── docs/                  ← 31 root Markdown files (including README), 1 HTML, plus sessions/
 ```
 
 ### What to hand it first
 
-*The old first task — "reconcile the 23 divergences" — is **done**. `verify.mjs` exits 0 on
-4,127 checks, and `swift test` runs against the same JSON and passes 15/15 now that Xcode is
-licensed. The safety net is restored, and has grown to four harnesses — `verify.mjs`,
-`verify-mutations.mjs`, `verify-draw.mjs`, `verify-skip.mjs`; what follows extends it.*
+The original divergence repair is done: 4,127 conformance checks and the four
+original harnesses remain. The shared test/watch/CI loop now adds behavioral,
+browser, shell and real recorded-audio coverage. The latest native checkpoint
+passed 105 deterministic tests with three optional model tests skipped; this is
+not a finished native app. See project status for the actual dated runs.
 
-1. **"Add the lost behavioural suites."** The vectors cover engine *values*; what was lost
-   were scenario tests (cooldown neutrality, plan completion, regression swaps). Rebuilding
-   them in the repo means they persist this time.
-2. **Then the Swift port**, Week 0 onward.
+Start a new session with [CONTINUE-PROMPT.md](../CONTINUE-PROMPT.md). Do not rebuild
+already-retained suites or start the full native port merely because an old
+checklist here suggested it. The reconciled backlog and beginner evidence set
+the next task.
 
 *Also done: "make the demo gate check a suite". It is `refGates` in `verify.mjs` — 224 checks
 asserting every demo against its own gates, mutation-tested, with its exceptions asserted
@@ -138,7 +147,7 @@ docs/
 │   └── 2026-07-29 beginner test — B.md
 ├── decisions/
 │   └── circuit-vs-straight-sets.md
-└── (the 15 reference documents)
+└── (31 root Markdown files and one narrated HTML, as of 24 September)
 ```
 
 Then link a session note to the backlog item it affects, and the backlog item shows you

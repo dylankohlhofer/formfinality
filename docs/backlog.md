@@ -1,4 +1,13 @@
-# Form Coach — backlog
+# Form Coach — historical July backlog
+
+**Superseded for current planning:** use [the reconciled chat backlog](chat-backlog-2026-09-24.md)
+and [implemented feature inventory](feature-inventory.md), updated 24 September.
+The entries below preserve the original ideas and reasoning, not current feature
+status or launch requirements. The shell now has automated coverage; local history,
+weekly goals and bounded local AI selection exist. There is no installable/offline
+PWA, connected CloudKit Duo, automatic ability progression or unrestricted AI coach.
+Current contracts override historical suggestions about fixed camera distances,
+score-derived fitness levels, cloud costs and planned release dates.
 
 Captured from Dylan's notes, July 2026. Triaged, not just listed: each item has a verdict
 so future-you doesn't relitigate settled calls at 2am.

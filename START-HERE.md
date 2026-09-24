@@ -1,66 +1,41 @@
-# Continue FormFinder on another device
+# Continue FormFinder
 
-**23 September feature update:** the local Profile & Weekly Goals and explicit
-email drafts are documented in `docs/profile-duo-contract.md`. Read the newest
-`docs/project-status.md` entry for verification. Cloud pairing/accounts and mobile
-integrations are not implemented. The voice intelligibility audit remains open;
-the older device handover is historical, not the only current task.
+Updated 24 September 2026. Open this folder as the local project and read
+[AGENTS.md](AGENTS.md) (also available through the CLAUDE.md symlink).
 
-**22 September update:** work is continuing on the owner's account. The planned
-transfer to Ethan is cancelled. For a GitHub checkout, use the
-`codex/automated-test-lab` branch, read `AGENTS.md`, and follow the dependency and
-test commands below. The snapshot verifier and generated receipt files apply only
-to a completed export ZIP; a normal checkout does not contain those receipts.
-The interrupted September export was never verified as a finished handover.
+Start with:
 
-This is a working-source handover, not an account or chat-history export. Start a
-new Codex chat with this folder attached as its local project. Use the account
-holder's own login; no credentials, cookies or account configuration are included.
+- [Feature inventory](docs/feature-inventory.md): everything implemented during this collaboration.
+- [Reconciled chat backlog](docs/chat-backlog-2026-09-24.md): 77 retained requests with actual status and next conditions.
+- [Project status](docs/project-status.md): measured checkpoints, failures and current GitHub publication status.
+- [Next steps](docs/next-steps-guide.md): current test, release and human-review sequence.
+- [Continuation prompt](CONTINUE-PROMPT.md): a ready-to-paste brief for a new coding session.
 
-## Three steps
+The local branch is `codex/automated-test-lab`. The owner cancelled the Ethan
+transfer and resumed on their own account. A local branch or old GitHub `main`
+does not prove current work is backed up: check the latest closure record before
+cloning. No credentials or account access should be copied between people.
+The 24 September push was rejected because the current Personal Access Token
+lacks `workflow` scope. Current development remains local until an appropriately
+authorized credential publishes this branch and its remote SHA is confirmed.
 
-1. Clone the current branch, or extract a completed export ZIP into a **new folder**:
+## Dependency setup and checks
 
-   ```sh
-   git clone --branch codex/automated-test-lab https://github.com/dylankohlhofer/formfinality.git
-   ```
-2. Open that extracted `formfinality` folder as the local project in Codex.
-3. Paste the contents of [CONTINUE-PROMPT.md](CONTINUE-PROMPT.md) into a new chat.
-
-The agent can do the setup below for you, subject to device permissions. You do
-not need to upload the entire folder into an ordinary web chat. The new chat uses
-the written handover; it does not inherit this conversation's hidden state,
-permissions, account history, running terminals or installed tools.
-
-## Setup and verification
-
-Install Node.js 22 (the CI major version) and Git if absent. In a terminal opened
-inside a folder extracted from a completed export ZIP, first run:
-
-```sh
-node handover/verify-snapshot.mjs
-```
-
-This checks the packaged files against `handover/SNAPSHOT.json`. It is an
-integrity check, not a digital signature or an application test. Run it **before
-editing**. Missing/mismatched files must be investigated, not re-baselined.
-
-Then install the pinned test dependencies and Chromium:
+The root tools use Node 20+; CI uses Node 22. Install the pinned dependencies:
 
 ```sh
 npm ci
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm test
 ```
 
-Installation needs internet access. On Linux, Chromium may also need system
-dependencies (`npx playwright install --with-deps chromium`, with approval for
-system changes). Do not run competing test/watch processes. These commands need
-no API key and must not upload private recordings. The current browser app still
-uses external runtime/model/font assets: on-device inference is not the same as
-a fully offline installation.
+On Linux, Playwright may also require system dependencies via
+`npx playwright install --with-deps chromium firefox webkit`.
+Run heavy browser/audio/render suites serially. Test reports and personal
+recordings remain in ignored local directories. New devices must establish their
+own results; this folder's written report is not proof of phone or speaker behavior.
 
-The four fast, original harnesses can run before dependency installation:
+The four fast original harnesses:
 
 ```sh
 node verify.mjs form-coach-v4.11.html
@@ -69,58 +44,39 @@ node verify-draw.mjs form-coach-v4.11.html
 node verify-skip.mjs form-coach-v4.11.html
 ```
 
-For subsequent work, `npm run test:watch` is the existing foreground watcher;
-Ctrl+C stops it. On a supported Mac with the appropriate Swift SDK, native tests
-are `swift test --package-path swift/FormCoachEngine`. Mac-only native speech and
-Apple model work cannot be claimed tested on Windows/Linux. Real model smoke
-tests are opt-in and are not needed for ordinary setup.
+`npm run test:watch` runs the existing foreground watcher; Ctrl+C stops it.
+`npm run voice:audit` screens the complete active voice library and saves a
+prioritised local listening queue. It does not transcribe or approve words.
 
-## What is preserved
+On a supported Mac with the required Swift SDK:
 
-- Current HTML, root conformance vectors, test sources, Swift sources, bundled
-  coach audio and render tooling, including work previously uncommitted.
-- The project rules in `AGENTS.md`, with `CLAUDE.md` pointing to that file.
-- A current [continuation brief](docs/sessions/device-handover-2026-09-16.md).
-- Original planning documents, kept unchanged; they contain historical proposals,
-  not evidence that those proposals were implemented.
-- A selected, synthetic-only test receipt in `handover/BASELINE.json`, plus
-  `handover/TRANSFER-CHECKS.json` describing this transfer's checks.
+```sh
+swift test --package-path swift/FormCoachEngine --jobs 1
+```
 
-No raw human recordings, diagnostic exports, test-result media, credentials,
-`node_modules`, downloaded models, local app configuration or Git history are
-included. Written source documentation still contains historical user-test notes
-and references to files on the original device. Those paths are context, not
-files available on this device. The obsolete `swift-port-kit.zip` is deliberately
-omitted; use the current `swift/` source instead.
+The optional Remotion demo package uses Node 24 and a separately held licensed
+character asset. Follow [its README](exercise-demos/README.md); missing model
+binaries do not count as passed tests. It is not the demo currently used by workouts.
 
-## Saving work and Git
+## Reviewing the app
 
-The ZIP is a source snapshot, **not a Git clone**. `handover/SNAPSHOT.json` names
-the original branch/commit and any working-tree changes. Keep the original ZIP
-and its separately supplied SHA-256 file. GitHub alone may be older than the ZIP.
+Read [the local release guide](docs/web-release.md). It builds a fresh, allowlisted
+directory with pinned runtime/model/audio and a checksummed receipt. Serve only
+that directory. Never serve, tunnel or publish the repository root.
 
-If Git history is not needed, initialize a new local repository immediately after
-verifying and before changing files (`git init -b codex/device-continuation`), then
-review and commit the extracted source as a baseline. Configure your own Git name
-and email if Git asks. Do not force-push this unrelated history to the original
-repository. Return reviewed changes as a patch or a new source snapshot, or ask
-the project owner to reconcile them onto the original branch.
+The source HTML still downloads runtime/model/fonts; the static review build
+bundles those dependencies but is not an installed/offline PWA. A domain, native
+store builds, connected accounts/Duo and verified payments are not implemented.
 
-On macOS, the included packaging helper can make another local handover after
-committing tracked changes: `node handover/package-snapshot.mjs test-results/<completed-full-run>`.
-It reads committed assets from Git, checks the test checkpoint and explicitly
-allowlists additional untracked documents. New untracked files require review
-before export. It does not push or upload the ZIP. The integrity verifier itself
-is platform-independent; the packager currently uses macOS ZIP tools.
+## Older exported handovers
 
-For shared Git history, the owner must separately grant your GitHub account
-access to `dylankohlhofer/formfinality` and publish the checkpoint. Do not assume
-this preparation invited anyone or pushed anything. Never copy `.codex/auth.json`,
-SSH keys, browser cookies or API keys between people.
+A normal Git clone does not contain generated handover receipts. For a completed
+older ZIP only, read its dated [handover record](docs/sessions/device-handover-2026-09-16.md)
+and run `node handover/verify-snapshot.mjs` against the original snapshot before
+editing. Missing/mismatched receipts require investigation, not re-baselining.
+The interrupted Ethan export was never verified as a finished transfer.
 
-If your ZIP extractor materializes `CLAUDE.md` incorrectly, read `AGENTS.md`
-directly and repair the alias to that file. The verifier accepts a real symlink
-or an identical full-text copy, not a file containing only `AGENTS.md`.
-
-Official guidance: [local projects and durable instructions](https://learn.chatgpt.com/docs/projects),
-[account authentication and credential protection](https://learn.chatgpt.com/docs/auth).
+A new chat does not inherit hidden conversation state, previous approvals,
+running terminals or device test results. The inventory, backlog, rules and
+dated evidence are the durable continuation record. Use each person's own login
+and provider identity; no keys, cookies or authentication files belong in a handover.

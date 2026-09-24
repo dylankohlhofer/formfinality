@@ -3,6 +3,139 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
+**24 September 2026 — current loose-end closure.** Camera disconnects now pause
+assessment, release/detach streams and offer explicit restart; a reconnected
+workout waits for Resume, calibration retains only its observed hold, and an
+interrupted reference recording is not saved. Eleven new shell cases are in the
+default loop. Packaged-app GPU flows passed **19/19 each** in Chromium desktop
+and phone, Firefox phone and WebKit phone. The WebKit synthetic-camera override
+was corrected and strengthened after an initial test-substitution failure.
+
+The fresh web review build completed after bounded rolling I/O changes: **1,294
+clips read in 162.8 seconds**, 1,305 assets written in 0.1 seconds. Its artifact
+smoke and all 4,127 conformance checks passed. Individual source reads still took
+seconds; the underlying storage delay remains unexplained. Nothing was deployed.
+
+The new local voice audit screened **1,294/1,294 clips**, with zero execution or
+mapping errors, four passing decoder controls and **68 machine listening
+candidates**. All pronunciations remain unreviewed, including Warm “two”. The
+audit's 22 unit/control tests are now in default/watch/CI. No clips were replaced,
+transcribed, uploaded or regenerated. Existing intermittent playback findings
+remain open.
+
+**Full `npm test` exited 0:** 82 infrastructure controls; 26 regression suites /
+1,662 tests; four original harnesses; 55 engine / 1,307 checks; 110 browser / 942
+checks; 162 shell / 1,438 checks; 16 audio / 388 checks. Twelve human-video cases
+remain blocked and 26 review/coverage candidates remain. The separate blank-video
+smoke passed 14/14. Main evidence:
+`test-results/2026-09-24T11-36-35-595Z-20614/`. All **86** recorded source hashes
+and the saved HTML match the final implementation. HTML SHA-256 is
+`16474a35ef2987f1c1bf61ce9c3456f6d7bbee46073a11d1eba1fc11de2ff21e`.
+The judgement engine is byte-identical; root vectors, voice bytes and Swift did
+not change. Native tests were not rerun; their previous result remains dated below.
+
+See [the closure record](sessions/loose-ends-2026-09-24.md) for precise evidence,
+[the complete feature inventory](feature-inventory.md) for delivered work and
+[the 77-item chat reconciliation](chat-backlog-2026-09-24.md) for open/superseded
+requests and dependencies. The active continuation and next-step documents were
+refreshed. Local commits `816e43e` and `09ad337` preserve the approved demo and
+verified reliability work. **The 24 September GitHub push was rejected:** the
+current Personal Access Token lacks `workflow` scope for the test workflow.
+Current development is not backed up remotely; remote CI remains unconfirmed.
+See the closure record for the exact rejection and safe next action.
+
+**23 September 2026 — full end-to-end review.** The current v4.11 HTML hash is
+`d15aa0bb63863b082dd47bd7b0257548776bc3ca5bd11fab44db46bb46071aa1`.
+The complete `npm test` exited 0: 25 regression suites, four original harnesses,
+55 engine, 110 browser, 151 shell and 16 recorded-audio cases passed. Twelve
+human-video cases remain blocked; 26 review candidates remain. One generated
+blank-video MediaPipe replay passed 14/14 checks. The demo passed 30 checks and
+the Studio playback smoke; Swift passed 105 deterministic tests with three
+optional model smokes skipped.
+
+New current-source cross-engine camera flows passed 15/15 checks each in
+Chromium desktop and phone, Firefox phone and WebKit phone. A camera-track
+disconnect reproduced a **recovery defect**: Chromium/Firefox stayed live with
+only a tracking warning; WebKit gave a restart cue but hit a MediaPipe frame
+error. A fresh static review build also exceeded its ten-minute voice-read
+deadline without producing an artifact. Neither is fixed by this test-only pass.
+Read the [full test review](sessions/full-e2e-review-2026-09-23.md) for exact
+reproduction evidence, false alarms and coverage limits. One green audio run
+does not close the earlier intermittent audio finding. No app judgement or
+native code changed.
+
+**23 September 2026 — front-view squat teaching.** The isolated Remotion study
+now shows the full second rep from the front, returning to three-quarter view
+for the third. One-second camera turns happen only while standing; the 5.4-second
+pace, 16.2-second composition and full-rep cards remain. Knee spacing is taught
+relative to foot direction, not a fixed distance. Front inspection exposed an
+inward-knee artifact in the earlier rig; the prototype IK now preserves neutral
+standing, fixed feet and limb lengths while aligning the bent knees with their
+own foot direction. This is an authored character trajectory, not a new form gate.
+
+**30 prototype tests, TypeScript/ESLint and ten cold-load renders pass**
+(`exercise-demos/out/asset-render-check-StNsMd/`). Tests cover all-frame framing,
+camera timing/seek invariants and knee alignment; image checks require the second
+view to actually differ. Both formats were visually reviewed, including a portrait
+label-spacing correction. See the prototype README for playback evidence.
+The user approved the visual direction; qualified technique review and real-device
+playback remain outstanding. The app/engine, assets, vectors, Swift and root CI
+are unchanged. The previously reported audio failures remain unresolved.
+
+**23 September 2026 — user-supplied Mixamo character preview.** The isolated
+Remotion compositions now use the user's Alien Soldier FBX, locally converted
+from 98,272,560 to 9,258,336 bytes. Its 65 bones and 46,108 triangles are retained;
+textures are reduced to 1024², non-PBR materials approximated, and extra skinning
+influences limited/normalized by the importer. These losses remain explicit.
+The 326 original material groups are regrouped into two, without decimation.
+The page, cards and 5.4-second timing are unchanged; the character keeps its own
+proportions with foot-locked leg IK. Both source and derived models remain local,
+git-ignored assets, not raw-model redistribution.
+
+**25 prototype tests, TypeScript/ESLint and six cold-load render checks pass.**
+The live Studio smoke also plays the three-rep timeline, restarts and steps five
+frames without page errors (`exercise-demos/out/studio-check-asYlvF/`).
+New checks cover actual deformed geometry and stage-parent transform independence;
+render checks reject an empty stage. An earlier 326-primitive geometry test was
+stopped as too slow; the regrouped mesh passes the full suite without weakened
+invariants. See [`exercise-demos/assets/alien-soldier.md`](../exercise-demos/assets/alien-soldier.md)
+for hashes, source, conversion warnings and review boundaries. No app engine,
+vectors, Swift, root CI or workout demos changed. Technique approval, beginner
+readability, phone playback and the previously retained audio failures remain open.
+
+**23 September 2026 — isolated Remotion demo prototype.**
+[`exercise-demos/`](../exercise-demos/README.md) contains a local-only, silent
+16.2-second 3D squat study in landscape and portrait. Following the user's preview
+feedback, a human-shaped clothed figure replaces the initial mannequin, with a
+neutral face, smaller trainers, lower shoulders, narrower hips and clearer hands.
+The follow-up pace is 5.4 seconds per rep (previously 6); each teaching card still
+stays for a complete rep. Motion angles and depth are retained; shoulder and foot
+geometry are revised. A later refinement reduces nose/ears/hair and removes the
+camera-facing hand roll, without changing the user-approved page or 5.4-second
+motion timing. The timeline has three cycles. Sixteen prototype tests plus
+TypeScript/ESLint pass. Geometry and synthetic side-projection compatibility are
+tested, not rendered-pixel pose inference or biomechanical validity. Qualified
+technique review, beginner comprehension and real-device playback remain open.
+No demos were replaced in the app, and no final MP4, cloud generation, account
+connection, workflow update or deployment was performed. The prototype tests are
+separate from root CI; installed Product Design/GitHub uses are evaluated in its
+README, not claimed as completed audits or authenticated remote operations.
+The recommended next visual step is a licensed, properly modelled and rigged human
+inside this retained Remotion composition, not a replacement page or a claim that
+generated video proves exercise technique. No new model/plugin was acquired.
+
+**At the earlier 23 September 18:39 checkpoint, root `npm test` exited 1**, with evidence in
+`test-results/2026-09-23T18-39-12-622Z-44411/`. All 82 infrastructure tests,
+25 regression suites, four original harnesses, 55 engine cases, 110 browser
+cases and 151 shell cases passed. **Nine of 16 audio cases failed** with clip
+loading stalls or missing audible output; 12 video cases remain blocked.
+The saved and current HTML hash remains
+`d15aa0bb63863b082dd47bd7b0257548776bc3ca5bd11fab44db46bb46071aa1`.
+No app, audio, engine, vector or existing test source changed. Some Remotion
+preview/render work overlapped the run; contention is not a proven cause.
+These failures are retained and unresolved, not superseded by the earlier green
+run or by the new prototype's passing checks.
+
 **23 September 2026 — FormFinder, appearance and Account presentation.** The
 [follow-up](sessions/formfinder-interface-2026-09-23.md) records the public rename,
 default-dark / ivory-and-plum light / device appearance, simpler saved-week and

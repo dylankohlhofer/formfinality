@@ -1,45 +1,60 @@
-Continue development of the FormFinder project in this local folder. The owner
-resumed work on their own account on 22 September; the transfer to Ethan was
-cancelled. The current development branch is codex/automated-test-lab.
+Continue development of FormFinder in this local folder. The owner cancelled the
+Ethan transfer and is working on their own account. The local development branch
+is codex/automated-test-lab. Check docs/project-status.md for the latest verified
+commit, test evidence and whether its GitHub push actually succeeded.
 
-First read AGENTS.md, START-HERE.md and
-docs/sessions/device-handover-2026-09-16.md. If this is an extracted export ZIP,
-check handover/SNAPSHOT.json, handover/BASELINE.json and
-handover/TRANSFER-CHECKS.json and run node handover/verify-snapshot.mjs before
-editing. Those generated files are not expected in a Git clone. Read the relevant current
-sections of docs/project-status.md and testing/README.md. Older proposal documents
-are historical context, not automatically authorized changes.
+Read AGENTS.md, docs/feature-inventory.md, docs/chat-backlog-2026-09-24.md,
+docs/next-steps-guide.md and the newest entry in docs/project-status.md.
+The inventory covers this collaboration's delivered features; the backlog keeps
+all retained requests, prototypes and unresolved dependencies visible. Historical
+handover/planning notes must not override those current records.
 
-Help set up the dependencies and run the baseline on this device. Explain any
-missing permissions or platform capabilities; don't claim device tests passed
-because they passed on the previous Mac. Preserve all received work, scoring
-honesty and coverage gaps. Never change expected vectors just to get green.
+Preserve existing work, on-device privacy, scoring honesty and coverage gaps.
+The browser source remains form-coach-v4.11.html. Do not alter Swift first or
+change vector expectations to make a regression pass. The September 24 camera
+recovery keeps observed work, pauses on ended tracks and requires camera restart
+plus explicit Resume. Calibration restarts a fresh hold or uses only observations
+already collected. Tests include eleven camera-loss shell cases and the real
+GPU camera/model path against the packaged artifact in three browser engines.
+The static review builder uses bounded rolling I/O and path-specific deadlines.
 
-The 23 September approved feature work adds a separate opt-in local Profile &
-Weekly Goals and explicit user-approved email drafts. Read
-docs/profile-duo-contract.md and the latest verification in docs/project-status.md.
-Remote Duo, CloudKit/Drive authorization, automatic email, reminder scheduling
-and Android/native profile UI remain proposals, not implemented integrations.
-Do not select a provider, create cloud resources or enable uploads implicitly.
+Set up the pinned dependencies and run tests appropriate to the next change.
+Read testing/README.md. Run heavy audio, browser and render checks serially.
+The existing defaults cover synthetic exercise/core/shell and recorded audio;
+12 missing human-video fixtures remain a coverage gap. The optional Remotion
+package needs Node 24 and the separately held licensed character asset; its
+source is not an installed workout demo.
 
-An outstanding development task is a LOCAL, DEVELOPMENT-ONLY voice-library audit using
-the existing testing/report infrastructure. It has been discussed but NOT built.
-The user reports that the spoken number 2 can sound like "coo". This is unconfirmed
-pronunciation, not a diagnosed decoder fault. Current tests prove playback and
-signal, not the spoken words. There are 1,294 manifest entries and 360 number
-recordings. The historical docs/feasibility-study.md names Warm's "two" in Max's
-earlier report; prioritize that clip but verify its current bytes and playback.
-Pilot all three voices' 2 and numbers 1–20; compare original clips
-with actual app playback, use independent wrong-number/truncation controls, then
-batch-screen the library and generate a prioritised listening queue. Assess the
-availability of on-device transcription; no cloud fallback or automatic upload.
-Report transcription as machine evidence, never human pronunciation approval.
-Persist any genuine listening approvals against file hashes. Retain unverified
-clips as gaps. Do not regenerate voices or incur API costs without permission.
+For speech, read docs/voice-library-audit.md and the latest saved audit result.
+The development-only audit screens manifest clips and produces a local listening
+queue. Warm “two” and all three voices' numbers 1–20 remain the priority.
+Decoded signal and intended scripts are not transcriptions or pronunciation
+approvals. Compare source clips with actual app playback; retain byte hashes.
+Do not regenerate voices, choose Fish/ElevenLabs paid services or upload clips
+without an explicit provider/cost decision. Earlier intermittent audio failures
+remain open until their cause and a repair are established.
 
-For that audit, keep the shipped audio unchanged until there is evidence of a
-specific defect and an explained fix. Existing audio-stall handling is implemented and tested; do not
-repeat or undo it. Do not start a framework rewrite, Swift session port, hosting
-deployment or unrelated feature work. Ask before externally sharing data, making
-paid calls or replacing recordings. Save new tests and implementation durably in
-Git and explain the tests run, remaining gaps and next action at each handoff.
+The highest-value remaining product evidence is beginner test 02 and real-phone
+camera/speaker testing, including different bodies/clothing and partial framing.
+Leg Raise with missing required ankles and Plank with missing required geometry
+remain recognition limits. Follow along is an explicitly unassessed escape hatch.
+
+Account is presentation only; local history/goals work, while Duo is a separate
+transport prototype. No connected Apple/Google identity, payment verification,
+cloud Duo, automatic email, notification scheduler or native store app exists.
+Repeated-fault screenshots, more video demos, circuits and custom workouts are
+tracked in the backlog, not implied finished or automatic next-step authority.
+
+Use docs/web-release.md for fresh static artifacts; serve only the verified built
+directory, never the repository root. Do not publish, purchase services, share
+private evidence, merge into main or delete an old branch implicitly. If the
+GitHub workflow push is blocked, preserve local commits and report the exact
+permission requirement; do not remove the workflow to get a push through.
+The actual 24 September push was rejected because the current Personal Access
+Token lacks workflow scope. Current development remains local. The owner must
+authorize workflow publication before retrying; never request a token in chat.
+
+For a normal Git clone, no generated handover receipts are expected. If this is
+an older exported ZIP, follow START-HERE.md and verify its original snapshot
+before editing. A new chat does not inherit hidden history or previous device
+test results; use the committed documents and fresh evidence.

@@ -8,6 +8,11 @@ remembered.
 **New to the codebase?** `architecture-guide.md` is the orientation — the whole system, from
 nothing, with a map of where everything lives.
 
+**What have we built, and what is still owed?** Start with the comprehensive
+[feature inventory](feature-inventory.md) and [reconciled chat backlog](chat-backlog-2026-09-24.md).
+They separate working browser features, native modules, prototypes, open bugs,
+human/provider dependencies and superseded requests.
+
 **Continuing on another device?** Start with `../START-HERE.md` and
 `sessions/device-handover-2026-09-16.md`; the latter records the conversation's
 current next task and distinguishes completed fixes from the proposed voice audit.
@@ -30,7 +35,11 @@ thing standing between here and the Swift port.
 | Document | Use it when |
 |---|---|
 | `next-steps-guide.md` | You want the phase-by-phase task list, with exact commands |
+| `feature-inventory.md` | Every feature, repair and developer capability added during this collaboration, with evidence |
+| `chat-backlog-2026-09-24.md` | All retained chat requests, completion states and concrete remaining dependencies |
+| `voice-library-audit.md` | Screen the recorded voice library locally and review a prioritised listening queue |
 | `../testing/README.md` | Run the automated scenario loop and review saved evidence, failures and coverage gaps |
+| `../exercise-demos/README.md` | Isolated Remotion squat prototype, local previews, technique-review gate and plugin evaluation |
 | `web-release.md` | Build/test the private static review artifact, excluded data, hosting and launch gates |
 | `beginner-test-protocol.md` | You're running the beginner test — **test 02 is the current priority** |
 | `swift-port.md` | You're deciding whether to start the port, or doing it |
@@ -53,6 +62,8 @@ thing standing between here and the Swift port.
 
 | Document | Question it answers |
 |---|---|
+| `sessions/loose-ends-2026-09-24.md` | Camera recovery, release-build optimisation, whole voice-bank audit, final verification and GitHub status |
+| `sessions/full-e2e-review-2026-09-23.md` | Full current-build run, real local camera/model path across three browser engines, camera-disconnect defect and review-build timeout |
 | `sessions/formfinder-interface-2026-09-23.md` | FormFinder branding, light mode, Account boundaries, simpler weekly progress/history and About |
 | `sessions/interface-simplification-2026-09-23.md` | Feature-by-feature decluttering, desktop/phone navigation and verification limits |
 | `honesty-audit.md` | Which exercises do we genuinely coach, and where are we blind? |
@@ -87,7 +98,8 @@ thing standing between here and the Swift port.
 | File | What it is |
 |---|---|
 | `form-coach-v4.11.html` | **The build.** Single HTML file; runtime/model and fonts still load externally, so it is not yet an offline package |
-| `swift-port-kit.zip` | Swift package: 12 sources, conformance vectors |
+| `swift/` | Current native engine, summary and interaction modules with shared parity fixtures; use tracked source rather than the historical ZIP |
+| `release/` | Reproducible local review packaging; generated artifacts stay under ignored `dist/` |
 | `conformance-vectors.json` | The executable specification — 1,896 recorded cases |
 
 `test-recovery-kit.zip` is **gone**. Every file it carried — `verify.mjs`,
@@ -109,5 +121,7 @@ recovery kit must never do.
 
 ## The one-line status
 
-**Thesis validated by a real beginner. Five defects found and fixed in v4.9. One more
-beginner session** stands between here and a justified Swift port.
+The browser has extensive automated coverage and local coaching/history features;
+native session UI, connected accounts/Duo and public distribution remain unfinished.
+**Beginner test 02, real-phone recognition and listening review remain release gates.**
+Use the latest measured entry in [project status](project-status.md) for results.
