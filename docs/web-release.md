@@ -22,7 +22,25 @@ name for the next build. Errors before assembly completes create no output;
 a write failure may leave a partial directory, which is not a completed release.
 The command has a ten-minute overall deadline and no automatic retry. The initial
 three-minute limit expired twice on slow local voice-file reads, including an
-unsandboxed attempt; this does not establish the OS/filesystem cause.
+unsandboxed attempt; the subsequent ten-minute limit also expired at 604/1,294
+clips on 23 September. Neither establishes the OS/filesystem cause.
+
+Packaging now keeps at most **eight file operations** in flight, immediately
+refilling a free slot instead of waiting for a whole four-file batch. Output
+writes use the same bound; `release.json` is written only after every asset
+finishes. Sorted asset order and input/output hashes remain deterministic.
+Directory symlink checks still run for every input; they are not cached. The
+redundant second leaf `lstat` has been removed.
+
+Each file has a **30-second deadline**, including its path checks and I/O. Every
+five seconds, progress reports the completed/total count, elapsed time, throughput,
+oldest pending paths and their current operations, plus the slowest completed file.
+A timeout names the file and operation. Failure stops admission of further work
+and aborts pending reads/writes where Node supports cancellation. Metadata calls
+may remain uninterruptible; the CLI exits on failure rather than waiting forever.
+The ten-minute overall build deadline remains unchanged. A failed write can leave
+partial files; inspect them and choose a new destination for any later attempt.
+Receipt presence alone is not verification: the loader below checks every hash.
 
 To review locally, serve **only the built directory**, bound to loopback, not the
 repository. For example `python3 -m http.server 8767 --bind 127.0.0.1 --directory
@@ -63,6 +81,35 @@ Warm “two” with measurable signal. It refuses external browser requests. Sig
 is not intelligibility; CPU blank frames are not GPU/real-person validation.
 It saves its result, console, requests and screenshot in ignored `test-results/`.
 CI builds/smokes after the existing model download/video step, never deploys.
+
+Both the smoke and other actual-artifact browser checks can share
+`loadVerifiedArtifact(root, { progress, signal })` from `release/web.mjs`. It
+returns `{ receipt, receiptBytes, files }`, with HTTP-style `/path` keys in the
+`files` Map. It validates receipt structure, declared sizes and total budget,
+required runtime/model files, the hashed voice manifest and its exact clip list,
+then reads and verifies the remaining assets through the bounded queue. Unknown,
+duplicate, missing, symlinked or changed assets fail before a server is exposed.
+Unlisted files on disk are never served. Receipt hashes are provenance checks,
+not signatures from a trusted publisher.
+
+The loader has a fixed **90-second overall deadline**, shared across its receipt,
+manifest and asset stages, in addition to the per-file limit. The existing artifact
+smoke keeps its **90-second whole-process deadline**, including browser checks;
+loading does not reset that clock. A caller can pass an AbortSignal to cancel
+loading sooner. `node --test testing/web-release.test.mjs` tests rolling admission,
+bounded concurrency, ordering, cancellation/late failures, per-file and whole-load
+deadlines, output failure, hash checks and both size budgets using local fixtures.
+
+On 24 September, resampling three previously slow source clips took **0.38–0.96
+ms** each; the earlier 5–10-second delay did not recur in that small sample. A
+controlled twelve-task probe (three 40 ms callbacks and nine 2 ms callbacks) took
+**123.4 ms** with four-file batches, **44.7 ms** with four rolling slots and
+**43.4 ms** with eight. These are scheduling measurements, not storage or full-build
+benchmarks, and the test sets no speed threshold. The fresh 24 September build
+then read all 1,294 clips in 162.8 seconds and wrote 1,305 assets in 0.1 seconds.
+Its emitted-artifact smoke and 4,127 conformance checks passed. Source reads still
+varied up to 3.9 seconds per file: the underlying storage delay is not diagnosed
+or claimed fixed. This is one successful build, not a portable speed guarantee.
 
 ## Before public preview or sale
 

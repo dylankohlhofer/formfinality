@@ -15,7 +15,8 @@ export async function cameraProbe(html,{paused=false,following=false,missing=fal
   return Function('convert','landmarks','paused','following','missing','aspect',`
     const frames=[],converted=[],counts={inference:0,demo:0,draw:0};
     const buildFrame=(...args)=>{const frame=convert(...args);converted.push(frame);return frame;};
-    const video={currentTime:0},canvas={width:360*aspect,height:360};
+    const video={currentTime:0,readyState:2,videoWidth:360*aspect,videoHeight:360},canvas={width:360*aspect,height:360};
+    const cameraSwitchState='idle';
     const ctx=new Proxy({},{get:(_target,key)=>()=>{if(key==='drawImage')counts.draw++;},set:()=>true});
     ${html.match(/const BONES = [^;]+;/)?.[0] || 'throw new Error("Bones boundary missing");'}
     const JOINTS=Object.keys(convert(landmarks,aspect).left);

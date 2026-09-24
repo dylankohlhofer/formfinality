@@ -802,6 +802,7 @@ button:disabled{ cursor:not-allowed }
 <dialog id="sessionDialog" aria-labelledby="sessionDialogTitle">
   <h2 id="sessionDialogTitle">Workout paused</h2><p id="sessionDialogCopy"></p>
   <div class="row"><button class="ctl primary" id="resumeBtn">Resume workout</button>
+  <button class="ctl primary" id="restartCameraBtn" hidden>Restart camera</button>
   <button class="ctl" id="endSessionBtn">End workout</button>
   <button class="ctl" id="pauseMicOffBtn" hidden>Turn microphone off</button></div>
 </dialog>
@@ -5756,6 +5757,7 @@ function showPauseDialog(calibrating = false){
     : "Take your time. Reps, hold time and rest are paused. Observed work stays here until you end the workout or reload.";
   $("resumeBtn").textContent = calibrating ? "Restart plank check" : "Resume workout";
   $("endSessionBtn").textContent = calibrating ? "Use observed result" : "End workout";
+  $("restartCameraBtn").hidden = cameraSwitchState !== "disconnected";
   if(!$("sessionDialog").open) $("sessionDialog").showModal();
 }
 function pauseCurrent(reason = "user"){
@@ -6255,11 +6257,97 @@ async function releaseWakeLock(lock){
 let cameraRequest = 0, cameraStarting = false, cameraAnimation = null;
 // A switch temporarily owns two streams, even while playback is unresolved.
 const cameraStreams = new Set();
+const cameraTrackListeners = new Map();
+function cameraVideoLive(stream){
+  return !!stream?.getVideoTracks().some(track => track.readyState === "live");
+}
+function ownCameraStream(stream, request){
+  cameraStreams.add(stream);
+  if(!cameraVideoLive(stream)) throw new DOMException("Camera disconnected", "NotReadableError");
+  for(const track of stream.getVideoTracks()){
+    const ended = () => {
+      if(request !== cameraRequest || video.srcObject !== stream) return;
+      if(cameraStarting && !running){ cameraStage = "playback"; camError(new DOMException("Camera disconnected during startup", "NotReadableError")); }
+      else cameraDisconnected();
+    };
+    track.addEventListener("ended", ended);
+    cameraTrackListeners.set(track, ended);
+  }
+}
 function releaseCameraStream(stream){
   if(!stream) return;
   cameraStreams.delete(stream);
-  for(const track of stream.getTracks()) if(track.readyState !== "ended") track.stop();
+  for(const track of stream.getTracks()){
+    const ended = cameraTrackListeners.get(track);
+    if(ended) track.removeEventListener("ended", ended);
+    cameraTrackListeners.delete(track);
+    if(track.readyState !== "ended") track.stop();
+  }
 }
+function cameraDisconnected(){
+  if(!running || cameraSwitchState === "disconnected") return;
+  if(recMode){
+    running = false; stopCam(); recMode = null; showCamChrome(false); screenChanged();
+    startBtn.textContent = "Workouts"; startBtn.classList.remove("live"); document.body.classList.remove("live");
+    msgEl.hidden = false;
+    msgInner.innerHTML = `<h2>Camera disconnected</h2><p>The incomplete demo was not saved. Start recording again when the camera is ready.</p><button class="ctl" id="recDone">Back to workouts</button>`;
+    $("recDone").onclick = showHome;
+    return;
+  }
+  pauseCurrent("camera disconnected");
+  closeCoachPanel(false); $("helpDialog").close();
+  localListener?.stop("camera disconnected"); coach.reset(); cancelCoachConfirmation();
+  cameraRequest++; cameraStarting = false; cameraSwitchState = "disconnected";
+  cancelAnimationFrame(cameraAnimation); cameraAnimation = null;
+  for(const stream of cameraStreams) releaseCameraStream(stream);
+  video.srcObject = null; lastT = 0; lastVideoTime = -1; lastTint = null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  wakeLockPending = null; releaseWakeLock(wakeLock); wakeLock = null;
+  startBtn.disabled = false; $("helpBtn").disabled = false; flipBtn.disabled = true;
+  $("resumeBtn").disabled = $("coachResumeBtn").disabled = true;
+  showPauseDialog(!!calib);
+  $("sessionDialogTitle").textContent = "Camera disconnected";
+  $("sessionDialogCopy").textContent = calib
+    ? "The plank check is paused. Use the observations already collected, or restart the camera for a fresh check. Separate holds are never joined."
+    : "Your workout is paused and observed work is kept. Restart the camera, then resume when ready, or end to review your workout.";
+  $("restartCameraBtn").disabled = false;
+  $("restartCameraBtn").textContent = calib ? "Restart plank check" : "Restart camera";
+  diagnosticEvent("camera-disconnected", {reason:"video track ended"});
+}
+async function restartDisconnectedCamera(){
+  if(!running || cameraSwitchState !== "disconnected" || document.hidden) return false;
+  if(calib){
+    running = false; stopCam(); calib = null; $("sessionDialog").close();
+    await beginCalibration(); return true;
+  }
+  const request = ++cameraRequest;
+  cameraSwitchState = "restarting"; $("restartCameraBtn").disabled = true;
+  $("sessionDialogCopy").textContent = "Reconnecting camera… Your workout stays paused. You can still end it while waiting.";
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:camFacing,width:{ideal:1280},height:{ideal:720}},audio:false});
+    if(request !== cameraRequest || !running){ releaseCameraStream(stream); return false; }
+    ownCameraStream(stream,request); video.srcObject = stream;
+    await video.play();
+    if(request !== cameraRequest || !running) return false;
+    if(!cameraVideoLive(stream)) throw new Error("The replacement camera disconnected.");
+    canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720;
+    $("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+    cameraSwitchState = "idle"; lastT = 0; lastVideoTime = -1;
+    flipBtn.disabled = false; $("resumeBtn").disabled = $("coachResumeBtn").disabled = false;
+    showPauseDialog();
+    $("sessionDialogCopy").textContent = "Camera ready. Your workout is still paused. Get into position and choose Resume workout.";
+    cameraAnimation = requestAnimationFrame(t => loop(t,request));
+    return true;
+  }catch(e){
+    if(request !== cameraRequest || !running) return false;
+    cameraDisconnected();
+    $("sessionDialogCopy").textContent = "The camera could not reconnect. Check camera access and close other apps using it, then retry or end this workout. Your observed work is kept.";
+    diagnosticEvent("camera-restart-failed", {name:e.name});
+    return false;
+  }
+}
+$("restartCameraBtn").onclick = () => restartDisconnectedCamera();
 function cameraProgress(title, copy){
   msgInner.innerHTML = `<h2>${title}</h2><p>${copy}</p><button class="ctl" id="cancelCameraBtn">Cancel</button>`;
   msgEl.hidden = false;
@@ -6275,11 +6363,12 @@ async function openCamera(){
   const stream = await navigator.mediaDevices.getUserMedia({
     video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
   if(request !== cameraRequest){ releaseCameraStream(stream); return false; }
-  cameraStreams.add(stream);
+  ownCameraStream(stream,request);
   video.srcObject = stream;
   cameraStage = "playback";
   await video.play();
   if(request !== cameraRequest) return false;
+  if(!cameraVideoLive(stream)) throw new DOMException("Camera disconnected", "NotReadableError");
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   document.getElementById("stage").style.aspectRatio = `${canvas.width} / ${canvas.height}`;
@@ -6290,6 +6379,7 @@ async function openCamera(){
     if(request !== cameraRequest){ model.close?.(); return false; }
     landmarker = model;
   }
+  if(!cameraVideoLive(stream)) { cameraStage = "playback"; throw new DOMException("Camera disconnected", "NotReadableError"); }
   msgEl.hidden = true;
   running = true; lastT = 0; lastVideoTime = -1;
   requestWakeLock(); // optional capability must not hold startup hostage
@@ -6304,6 +6394,7 @@ function stopCam(){
   cancelAnimationFrame(cameraAnimation); cameraAnimation = null;
   $("helpBtn").disabled = false;
   cameraSwitchState = "idle";
+  $("restartCameraBtn").hidden = true;
   flipBtn.disabled = false; $("resumeBtn").disabled = false; $("coachResumeBtn").disabled = false;
   if(video.srcObject) cameraStreams.add(video.srcObject);
   for(const stream of cameraStreams) releaseCameraStream(stream);
@@ -6326,10 +6417,11 @@ $("flipBtn").onclick = async () => {
     stream = await navigator.mediaDevices.getUserMedia({
       video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
     if(request !== cameraRequest || !running){ releaseCameraStream(stream); return; }
-    cameraStreams.add(stream);
+    ownCameraStream(stream,request);
     video.srcObject = stream;
     await video.play();
     if(request !== cameraRequest || !running){ releaseCameraStream(original); return; }
+    if(!cameraVideoLive(stream)) throw new Error("Replacement camera disconnected");
     releaseCameraStream(original);
     camFacing = facing; flipBtn.style.color = facing === "environment" ? "var(--iris)" : "";
     canvas.width = video.videoWidth || 1280;
@@ -6339,6 +6431,7 @@ $("flipBtn").onclick = async () => {
     releaseCameraStream(stream);
     if(request !== cameraRequest || !running){ releaseCameraStream(original); return; }
     video.srcObject = original;
+    if(!cameraVideoLive(original)){ cameraDisconnected(); return; }
     try{
       await video.play();
       if(request !== cameraRequest || !running) return;
@@ -6717,6 +6810,10 @@ function reportLoopError(e){
 }
 
 function loopBody(t){
+  // stop() does not dispatch "ended" in browsers. Check the actual track before
+  // the unchanged-timestamp shortcut or inference, including during a pause.
+  if(video.srcObject && !cameraVideoLive(video.srcObject)){ cameraDisconnected(); return; }
+  if(cameraSwitchState !== "idle" || video.readyState < 2 || !video.videoWidth || !video.videoHeight){ lastT = 0; return; }
   if(video.currentTime === lastVideoTime) return;
   lastVideoTime = video.currentTime;
   const dt = Math.min(lastT ? (t - lastT)/1000 : 0, 0.1);

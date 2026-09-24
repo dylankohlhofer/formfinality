@@ -61,6 +61,30 @@ See `docs/sessions/historical-fixes-2026-09-07.md` for the policy and limits.
 
 ## The loop
 
+**Camera disconnect recovery (24 September):** eleven `camera-loss-*` cases run
+in the existing default/watch/CI shell sweep. They cover ended tracks with and
+without an `ended` event, startup loss, incomplete reference recording, pending
+camera switching, failed retry, End during reconnect and both calibration choices.
+No disconnected interval earns observed work; a replacement camera leaves a
+workout paused until explicit Resume. Calibration keeps its observed result or
+starts a fresh check. `architecture-probes.mjs` now declares the valid video
+dimensions/readiness and idle camera state required by the production frame guard.
+
+The permanent uninstrumented integration check runs against a verified release:
+
+```sh
+npx playwright install chromium firefox webkit
+npm run test:camera -- --dir dist/<exact-build>
+```
+
+It runs the real GPU model, camera handlers and animation loop in all three
+desktop browser engines (plus both Chromium viewport sizes), with a generated
+blank camera stream. Each flow disconnects, reconnects, explicitly resumes and
+ends; frozen clocks, track cleanup, errors, layout and external requests are
+checked. JSON and screenshots are saved under `test-results/camera-e2e-*`.
+CI invokes it after building the local artifact. These are not hardware-camera,
+phone, speech intelligibility or human movement tests.
+
 **FormFinder presentation (23 September):** `formfinder-cases.mjs` adds eight
 shell cases to this same runner: brand/account availability, light layouts at
 320/390/844/1280px, stored/device appearance, read/write failures and reduced motion.
@@ -479,6 +503,15 @@ An agent can add scenarios and fix reviewed defects using this evidence in a lat
 development turn. Human review remains necessary for new movement judgements.
 
 ## Recorded voice and coaching review
+
+The separate development-only whole-library screening tool is now available:
+`npm run voice:audit`. It records hashes, actual decoded signal measurements,
+container anomalies and exact source clips, producing a prioritised local
+listening queue. Its 22 independent unit/control tests run in default test/watch/CI;
+the full library decoding run is explicit. See [the audit guide](../docs/voice-library-audit.md).
+All clips remain pronunciation-unreviewed. There is no transcription provider,
+automatic approval, generation request or cloud upload. Existing real-time app
+audio reports are still needed to compare source clips with queue playback.
 
 ```sh
 npm run test:audio

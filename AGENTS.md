@@ -359,6 +359,19 @@ Animate headings rather than entire clickable panels; honour reduced motion.
 About has a clearly future video and platform availability, not fake store links
 or final legal terms. See `docs/sessions/formfinder-interface-2026-09-23.md`.
 
+Camera-track loss now pauses the active core, releases every owned stream and
+requires explicit restart and Resume. Calibration can use only the observed
+hold or restart fresh; an incomplete reference recording is never saved.
+Keep the eleven `camera-loss-*` shell cases in the default loop and the packaged
+three-engine `npm run test:camera -- --dir <artifact>` in CI. The frame-loop guard
+must run before timestamp deduplication or inference; stopping a track does not
+necessarily emit `ended`. Pending restart/switch callbacks must check generation
+before touching a newer session. The judgement engine and vectors are unchanged.
+See the 24 September closure record and `docs/chat-backlog-2026-09-24.md` for
+current unfinished requests; `docs/feature-inventory.md` inventories the delivered
+features and prototypes. Historical backlog and handover instructions are not
+current implementation status.
+
 Then the permanent static audits — each exists because a bug got past the previous set:
 
 - every runtime-toggled CSS class is styled

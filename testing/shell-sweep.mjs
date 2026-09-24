@@ -16,6 +16,7 @@ import { architectureCases } from './architecture-cases.mjs';
 import { profileGoalCases } from './profile-goals-cases.mjs';
 import { referenceCases } from './reference-cases.mjs';
 import { formfinderCases } from './formfinder-cases.mjs';
+import { cameraLossCases } from './camera-loss-cases.mjs';
 
 export async function shellSweep({ root, html, engine, browser, dir, only }) {
   const server = await serve(root, html), results = [];
@@ -61,6 +62,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await interactionCases(runCase);
     await reviewFollowupCases(runCase);
     await adversarialCases(runCase);
+    await cameraLossCases(runCase, root);
     await architectureCases(runCase);
     await profileGoalCases(runCase);
     await referenceCases(runCase);

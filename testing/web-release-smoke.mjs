@@ -1,27 +1,30 @@
 #!/usr/bin/env node
 // Exercise the emitted artifact, not the test-instrumented app. No webcam, user
 // data or external requests. CPU blank-canvas inference is only a wiring check.
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { readPublicInput, sha256 } from '../release/web.mjs';
+import { loadVerifiedArtifact, sha256 } from '../release/web.mjs';
 import { benignConsoleError } from './lib.mjs';
 const args = process.argv.slice(2);
 if (args.length !== 2 || args[0] !== '--dir') throw new Error('Usage: node testing/web-release-smoke.mjs --dir <built-directory>');
-const deadline = setTimeout(() => { console.error('Web artifact smoke exceeded 90 seconds; incomplete, not passed.'); process.exit(1); }, 90000);
+let lastProgress = 'Loading release receipt';
+const deadline = setTimeout(() => {
+  console.error(`Web artifact smoke exceeded 90 seconds; incomplete, not passed. Last progress: ${lastProgress}`);
+  process.exit(1);
+}, 90000);
 const root = resolve(args[1]);
-const receiptBytes = await readPublicInput(root, 'release.json');
-const receipt = JSON.parse(receiptBytes);
-assert.equal(receipt.schema, 'web-review-release/1');
-const files = new Map([['/release.json', receiptBytes]]);
-for (const asset of receipt.assets) {
-  const bytes = await readPublicInput(root, asset.path);
-  assert.equal(sha256(bytes), asset.sha256, `Changed asset: ${asset.path}`);
-  assert.equal(bytes.length, asset.bytes);
-  files.set('/' + asset.path, bytes);
+let artifact;
+try {
+  artifact = await loadVerifiedArtifact(root, { progress: message => { lastProgress = message; console.log(message); } });
+} catch (error) {
+  console.error(error);
+  process.exit(1);
 }
+const { receipt, receiptBytes, files } = artifact;
+lastProgress = 'Assets verified; starting browser, preview, model and audio checks';
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript',
   '.json':'application/json','.wasm':'application/wasm','.mp3':'audio/mpeg'};
 const headers = Object.fromEntries(files.get('/_headers').toString().split('\n').filter(l => l.startsWith('  ')).map(line => {

@@ -35,9 +35,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install pinned dependencies and Chromium
+      - name: Install pinned dependencies and browser engines
         id: dependencies
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm ci && npx playwright install --with-deps chromium firefox webkit
       - name: Infrastructure, original harnesses and shared scenarios
         run: npm test
       - name: Real inference on synthetic blank video (no people)
@@ -45,6 +45,8 @@ jobs:
         run: npm run test:setup-video && npm run test:video
       - name: Local web artifact and same-origin inference smoke (no deployment)
         run: npm run build:web -- --out dist/web-review && npm run test:release:smoke -- --dir dist/web-review
+      - name: Real camera lifecycle and disconnect recovery across browser engines
+        run: npm run test:camera -- --dir dist/web-review
       - name: Preserve review evidence even when tests fail
         if: always()
         uses: actions/upload-artifact@v4

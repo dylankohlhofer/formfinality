@@ -69,7 +69,7 @@ for (const folder of ['release', 'commercial'])
   for (const name of (await readdir(resolve(root, folder))).sort())
     run.testSourceHashes[`${folder}/${name}`] = hash(await readFile(resolve(root, folder, name)));
 if (options.mode === 'all') {
-  for (const suite of ['coach-regressions', 'review-regressions', 'adversarial', 'architecture', 'audio-stalls', 'setup-prompt', 'diagnostics', 'references', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'profile-goals', 'duo-sync', 'local-command-listener', 'ai-review', 'review-workflow', 'web-release', 'economics']) {
+  for (const suite of ['coach-regressions', 'review-regressions', 'adversarial', 'architecture', 'audio-stalls', 'voice-audit', 'setup-prompt', 'diagnostics', 'references', 'worker-queue', 'reported-session', 'movement-evidence', 'evidence-parity', 'partial-visibility', 'body-tolerance', 'interface', 'summary', 'interaction', 'local-coach', 'profile-goals', 'duo-sync', 'local-command-listener', 'ai-review', 'review-workflow', 'web-release', 'economics']) {
     const checked = spawnSync(process.execPath, ['--test', `testing/${suite}.test.mjs`], {
       cwd: root, encoding: 'utf8', timeout: 120000, env: { ...process.env, FORM_COACH_TEST_BUILD: resolve(dir, 'build.html') }
     });
