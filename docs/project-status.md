@@ -3,7 +3,47 @@
 **Each verification entry names the build checkpoint it measured.** Older entries
 are history, not current counts. Where any other document disagrees, this file wins.
 
-**24 September 2026 — current loose-end closure.** Camera disconnects now pause
+**24 September 2026 — audio-integrity follow-up and GitHub unblocked.** Explicit
+play/decode errors now fail an entire recorded sentence instead of speaking its
+remaining fragments. Unsupported changing set/result placeholders decline static
+recordings and use complete local fallback or visible unavailability. The
+number-capture harness now observes bounded completion instead of cutting off a
+legally started late “two”. Production speech deadlines are unchanged.
+
+**Full `npm test` exited 0:** 96 infrastructure controls; 27 regression suites /
+1,696 tests; four original harnesses (4,127 conformance, eight caught mutations
+plus healthy control, 250 drawing and 26 skip checks); 55 engine / 1,307 checks;
+110 browser / 942 checks; 163 shell / 1,448 checks; 16 audio / 413 checks.
+Twelve human-video cases remain blocked and 26 review/coverage candidates remain.
+Evidence: `test-results/2026-09-24T12-46-54-834Z-25039/`. All **89** recorded
+source hashes and the saved HTML match the delivered implementation. HTML SHA-256:
+`a083a5317dbd00850a55031de454c973829259dc5e5061157b287a87f3fe67f6`.
+The judgement engine is byte-identical; root vectors, content, voice bytes and
+dependencies are unchanged. Eight additive clip cases expand JS/Swift parity to
+25; **Swift passed 105 deterministic tests, with three optional model skips**.
+
+Both corrupt-splice controls fail on the saved pre-fix build and pass on the
+repair. The deliberately fixed four-second capture still fails its full-number
+check; completion-aware capture passes with the original start deadline. New
+reports save unchanged sources beside app audio and bounded browser/server/file
+timings. All 65 per-case source copies in this run match their complete served
+responses; that proves byte identity, not intelligibility. “Two”, source padding,
+physical speakers and the original intermittent delivery cause remain open.
+
+Fresh unpublished package `dist/web-review-audio-2026-09-24/` passed its actual-
+artifact smoke and all 4,127 conformance checks. Smoke evidence:
+`test-results/web-release-1790254605556-26749/`. No deployment or new camera/device
+validation is claimed. See the [audio follow-up](sessions/audio-integrity-2026-09-24.md).
+
+The owner added **Workflows permission to the existing fine-grained token**.
+The non-forced development-branch push succeeded; remote `56412b4` was verified
+and [Actions run 36001701699](https://github.com/dylankohlhofer/formfinality/actions/runs/36001701699)
+started automatically. Publication is no longer blocked. That initial run was
+still in progress when checked; local passes are not a completed remote pass.
+Check the latest `codex/automated-test-lab` SHA/run for subsequent publication.
+No token was regenerated/shared, and `main`/`ethan` were not changed.
+
+**Earlier 24 September 2026 — loose-end closure.** Camera disconnects now pause
 assessment, release/detach streams and offer explicit restart; a reconnected
 workout waits for Resume, calibration retains only its observed hold, and an
 interrupted reference recording is not saved. Eleven new shell cases are in the

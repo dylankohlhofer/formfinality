@@ -504,6 +504,28 @@ development turn. Human review remains necessary for new movement judgements.
 
 ## Recorded voice and coaching review
 
+**Audio integrity follow-up (24 September):** explicit load/decode/play failures
+now stop the entire recorded sentence, discard the failed element and never
+advance into its trailing fragments. Two real corrupted-splice controls and seven
+additional deterministic cases protect the repair. Unsupported dynamic set/result
+placeholders use the complete local fallback or visible unavailability, not an
+unchanging MP3. Twenty-five clip-resolution cases are shared with Swift.
+
+Number samples retain their four-second minimum but observe queue/media completion
+and 250ms quiet for at most seven seconds. Their original three-second first-start
+deadlines and per-number complete-signal assertions remain unchanged. A delayed
+real Warm clip crosses the old cutoff in a controlled test; it must end naturally.
+Stuck playback or an unresponsive status read cannot turn the bound into a pass.
+
+New reports include `audio-transport.json` with per-case browser request timing
+and bounded local server/file-read stages. Source controls in `audio-review.html`
+play unchanged, hash-addressed copies beside the app mix. Complete response hashes
+can verify served-byte identity; absent/intercepted/partial responses cannot.
+Source-copy errors remain failed checks, and private/unlisted/symlinked inputs are
+rejected. `audio-source-review` joins default/watch/CI with nineteen fixture tests.
+These additions do not transcribe or approve “two”, diagnose every historical
+delivery stall, or test phone speakers. See [the follow-up](../docs/sessions/audio-integrity-2026-09-24.md).
+
 The separate development-only whole-library screening tool is now available:
 `npm run voice:audit`. It records hashes, actual decoded signal measurements,
 container anomalies and exact source clips, producing a prioritised local

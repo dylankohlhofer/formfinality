@@ -157,3 +157,16 @@ The initial read-only remote check found `main` and `ethan` at `e7251ce`, with n
 after the rejection confirmed exactly the same two refs. This rejected push
 does not back up the current development work. Licensed character assets and
 generated/private evidence remain intentionally outside Git.
+
+### Later on 24 September: publication unblocked
+
+The credential was confirmed to be fine-grained; GitHub's generic `workflow`
+scope wording was not evidence that it was a classic token. The owner added
+Workflows read/write permission to the existing repository-scoped token without
+regenerating it. The same non-forced branch push succeeded, and `git ls-remote`
+confirmed `56412b4eefce2d3d3c02b49aa04cf5cfaa6712b7` on
+`refs/heads/codex/automated-test-lab`. No other branch was changed.
+[Actions run 36001701699](https://github.com/dylankohlhofer/formfinality/actions/runs/36001701699)
+started automatically for that SHA. Its start is not a completed test pass.
+See [project status](../project-status.md) and the
+[audio follow-up](audio-integrity-2026-09-24.md) for subsequent commits/results.

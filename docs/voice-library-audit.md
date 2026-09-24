@@ -133,10 +133,13 @@ device availability. There is no cloud fallback.
 This audit does not yet compare all 60 pilot sources with recordings captured
 through the actual Coach queue. The existing `npm run test:audio` captures 1 then
 2 across the nine persona/tier combinations with explicit playback deadlines;
-its events and intended text are not a transcript. Use those existing reports
-for app-playback comparison, then extend that path only if source listening
-points to a playback defect. Physical speakers, native speech, mobile timing
-and real rep/countdown/correction contention remain separate checks.
+its events and intended text are not a transcript. New reports now save exact,
+hash-checked source copies beside the app mix and local request/file-read timings
+for direct comparison. This uses the existing runner, not a second capture harness.
+Source identity and nonzero signal still do not approve pronunciation. Physical
+speakers, native speech, mobile timing and real rep/countdown/correction contention
+remain separate checks. See [the follow-up](sessions/audio-integrity-2026-09-24.md)
+for confirmed sentence-error/set-routing repairs and source listening priorities.
 
 No heavy audit or browser capture is run as part of the focused unit command.
 `npm run voice:audit` runs the explicit full-library audit; keep it separate from

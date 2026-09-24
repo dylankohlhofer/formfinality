@@ -1,5 +1,6 @@
 import { reveal } from './ui-navigation.mjs';
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
@@ -16,9 +17,22 @@ export async function serve(root, html, recording, { audio = false } = {}) {
     .replace('</script>', '\n' + bridge + '\n</script>');
   const types = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm',
     '.json': 'application/json', '.mp3': 'audio/mpeg', '.mp4': 'video/mp4', '.webm': 'video/webm', '.css': 'text/css' };
+  const assetEvents = []; let assetEventsDropped = 0, assetSequence = 0;
   const server = createServer(async (req, res) => {
+    const receivedAt = Date.now(), receivedClock = performance.now();
+    let event;
+    const mark = name => { if(event && event.stages.length < 20) event.stages.push({name,ms:performance.now()-receivedClock}); };
     try {
       const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+      if(audio && path.startsWith('/voice/')){
+        if(assetEvents.length < 4096){
+          event = {id:++assetSequence,caseId:String(req.headers['x-formfinder-test-case'] || '').slice(0,160),
+            path,receivedAt,stages:[],bytes:0};
+          assetEvents.push(event); mark('received');
+          res.once('finish',()=>{event.statusCode=res.statusCode;event.finishedAt=Date.now();mark('response-finish');});
+          res.once('close',()=>{event.statusCode=res.statusCode;event.closedAt=Date.now();mark('response-close');});
+        } else assetEventsDropped++;
+      }
       if (path === '/') { res.setHeader('Content-Type', 'text/html'); res.end(instrumented); return; }
       if (path === '/favicon.ico') { res.writeHead(204); res.end(); return; }
       // Do not expose the repository, .git, credentials, or arbitrary private files.
@@ -26,24 +40,43 @@ export async function serve(root, html, recording, { audio = false } = {}) {
       if (path === '/recording' && recording) file = recording;
       else if (path === '/model.task') file = resolve(root, 'testing/assets/pose_landmarker_lite.task');
       else if (path.startsWith('/node_modules/@mediapipe/tasks-vision/') || path.startsWith('/voice/')) {
+        mark('realpath-start');
         file = await realpath(resolve(root, '.' + path));
+        mark('realpath-end');
         const allowed = path.startsWith('/voice/') ? resolve(root, 'voice') : resolve(root, 'node_modules/@mediapipe/tasks-vision');
         if (!file.startsWith(allowed + sep)) throw new Error('Path outside allowed assets');
       } else { res.writeHead(404); res.end(); return; }
-      const { size } = await stat(file);
+      mark('stat-start'); const { size } = await stat(file); mark('stat-end');
+      if(event) event.size=size;
       res.setHeader('Content-Type', types[extname(file)] || 'application/octet-stream');
+      const send = options => {
+        const input=createReadStream(file,options);
+        if(event){
+          const digest=createHash('sha256'); let first=true;
+          input.once('open',()=>mark('file-open'));
+          input.on('data',chunk=>{
+            if(first){mark('first-byte');first=false;}
+            event.bytes+=chunk.length;digest.update(chunk);
+          });
+          input.once('end',()=>{event.sha256=digest.digest('hex');mark('file-end');});
+        }
+        input.on('error',error=>{mark('file-error');res.destroy(error);}).pipe(res);
+      };
       // Browser seeking needs byte ranges for many MP4 encodings.
       const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
       if (range) {
         const start = Number(range[1]), end = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+        if(event) event.range={start,end};
         if (start > end || start >= size) { res.writeHead(416); res.end(); return; }
         res.writeHead(206, { 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1 });
-        createReadStream(file, { start, end }).on('error', error => res.destroy(error)).pipe(res);
-      } else createReadStream(file).on('error', error => res.destroy(error)).pipe(res);
-    } catch (error) { res.writeHead(error.code === 'ENOENT' ? 404 : 500); res.end('Test asset unavailable'); }
+        send({ start, end });
+      } else send();
+    } catch (error) { mark('asset-error');res.writeHead(error.code === 'ENOENT' ? 404 : 500); res.end('Test asset unavailable'); }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise(resolve => server.close(resolve)) };
+  return { url: `http://127.0.0.1:${server.address().port}`, assetEvents,
+    get assetEventsDropped(){return assetEventsDropped;},
+    close: () => new Promise(resolve => server.close(resolve)) };
 }
 
 export async function runBrowser({ root, html, scenario, frameFor, dir, viewport, recording, sharedBrowser }) {

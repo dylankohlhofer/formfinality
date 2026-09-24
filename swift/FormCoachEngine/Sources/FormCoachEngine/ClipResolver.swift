@@ -28,6 +28,13 @@ public func clipPlanFor(personaId: String, tierId: String, key: String, variant:
     }
     func TOK(_ t: String) -> String { "voice/\(personaId)/tok/\(slugTok(t)).mp3" }
 
+    // Mirror HTML: changing set/result values are not static recordings.
+    // Only authored splice tokens and the optional nickname can resolve here.
+    let unsupported = ["{n}", "{t}", "{p}", "{x}"].reduce(tmpl) {
+        $0.replacingOccurrences(of: $1, with: "")
+    }
+    if unsupported.contains("{") || unsupported.contains("}") { return nil }
+
     var tokens: [String] = []
     var search = Substring(tmpl)
     while let r = search.range(of: "{") {

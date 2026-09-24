@@ -89,3 +89,49 @@ test('missing fresh asset on retry fails once without pending timers',()=>{
   const h=harness();h.play(['one']);h.bank.manifest.clear();h.tick(2000);
   assert.deepEqual(h.results,[{failed:true,reason:'clip loading stalled'}]);assert.equal(h.jobs.size,0);
 });
+
+for(const index of [0,1])test(`a rejected splice ${index+1} fails the entire line, never its remaining fragments`,async()=>{
+  const h=harness();h.play(['one','two','three']);
+  if(index===1){h.media[0].begin();h.media[0].end();}
+  const broken=h.media[index],lateEnd=broken.onended,latePlaying=broken.onplaying;
+  broken.reject(new Error('decode failed'));await Promise.resolve();
+  assert.equal(h.media[index+1].requested,undefined,'Missing words cannot turn into a number-only tail');
+  assert.equal(h.results.length,1);assert.equal(h.results[0].failed,true);
+  assert.equal(h.bank.cache.has(index===0?'one':'two'),false,'Discard a known failed element');
+  assert.equal(broken.src,'');assert.equal(broken.loads,1);assert.ok(broken.pauses>0);
+  lateEnd();latePlaying();h.tick(30000);
+  assert.equal(h.results.length,1);assert.equal(h.jobs.size,0);assert.equal(h.bank.pendingLoads.size,0);
+  h.play(['three']);h.media[2].begin();h.media[2].end();
+  assert.deepEqual(h.results.at(-1),{failed:false},'A separately requested new line can still finish');
+});
+test('a media error after playback starts fails promptly without replay or trailing words',()=>{
+  const h=harness();h.play();const broken=h.media[0];broken.begin();
+  broken.error={code:3,message:'decode interrupted'};broken.onerror?.();
+  assert.equal(h.results.length,1,'Do not wait for the progress watchdog after an explicit error');
+  assert.equal(h.results[0].failed,true);assert.equal(h.media[1].requested,undefined);
+  assert.equal(broken.src,'');assert.equal(h.media.length,2);assert.equal(h.jobs.size,0);
+});
+test('error event and rejected play promise settle a failed line only once',async()=>{
+  const h=harness();h.play();const broken=h.media[0];
+  broken.onerror?.();broken.reject(new Error('same failure'));await Promise.resolve();
+  assert.equal(h.results.length,1);assert.equal(h.results[0].failed,true);
+  assert.equal(h.media[1].requested,undefined);assert.equal(broken.loads,1);
+  assert.equal(h.events.filter(e=>e.event==='clip-error').length,1);
+});
+test('an error callback saved before Stop cannot cancel newer playback',()=>{
+  const h=harness();h.play();const staleError=h.media[0].onerror;
+  assert.equal(typeof staleError,'function');
+  h.bank.stop();h.play(['three']);staleError();
+  h.media[2].begin();h.media[2].end();assert.deepEqual(h.results,[{failed:false}]);
+});
+test('a stale error from a completed splice cannot fail its successor',()=>{
+  const h=harness();h.play();const oldError=h.media[0].onerror;
+  assert.equal(typeof oldError,'function');
+  h.media[0].begin();h.media[0].end();oldError();
+  h.media[1].begin();h.media[1].end();assert.deepEqual(h.results,[{failed:false}]);
+});
+test('a missing manifest fragment refuses the entire line before any audio starts',()=>{
+  const h=harness();const accepted=h.play(['one','missing','two']);
+  assert.equal(accepted,false,'Caller may use complete local fallback, never partial recorded wording');
+  assert.equal(h.media.some(a=>a.requested),false);assert.equal(h.results.length,0);assert.equal(h.jobs.size,0);
+});

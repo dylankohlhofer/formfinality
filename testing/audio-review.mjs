@@ -5,6 +5,8 @@ import { escape } from './report.mjs';
 export function auditAudio(evidence, {numbers = []} = {}) {
   const checks = [], concerns = [], events = evidence.events || [], levels = evidence.levels || [];
   const check = (label, actual, expected, pass = actual === expected) => checks.push({ label, actual, expected, pass });
+  if(evidence.sourceReview) check('Saved source comparison has no hash, privacy or copy errors',
+    evidence.sourceReview.errors, [], Array.isArray(evidence.sourceReview.errors) && evidence.sourceReview.errors.length === 0);
   const starts = events.filter(e => e.type === 'speech-start');
   const captures = events.filter(e => e.type === 'capture-start');
   check('Capture started exactly once', captures.length, 1);
@@ -88,11 +90,20 @@ export function auditAudio(evidence, {numbers = []} = {}) {
 
 export function audioReviewPage(scenario, evidence, audit) {
   const rows = evidence.events.filter(e => ['speech-start', 'clip-start', 'clip-end', 'clip-stalled', 'clip-pause-request', 'clip-cancelled', 'clip-error', 'dropped', 'tts-request', 'tts-unavailable', 'observation', 'action'].includes(e.type));
+  const sources = evidence.sourceReview;
+  const sourcePanel = sources ? `<details><summary>Compare source recordings with the captured app playback</summary>
+    <p>${escape(sources.sourceMeaning)} All pronunciations remain unreviewed. Use the timeline buttons to seek the app recording, then compare its source below.</p>
+    ${(sources.errors || []).map(e=>`<p>Source evidence error: ${escape(e.path || '')} — ${escape(e.message)}</p>`).join('')}
+    ${(sources.clips || []).map(s=>`<details><summary>${escape(s.path)}</summary>
+      <p><small>SHA-256: ${escape(s.sha256 || 'unavailable')}<br>${escape(s.transport?.reason || 'Served-byte identity unverified.')}</small></p>
+      ${/^source-clips\/[a-f0-9]{64}\.mp3$/.test(s.localPath || '') && !s.error ? `<audio controls preload="none" src="${s.localPath}"></audio>` : '<p>Verified source copy unavailable.</p>'}
+      </details>`).join('')}</details>` : '';
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Voice review — ${escape(scenario.id)}</title>
   <style>body{font:16px/1.5 system-ui;max-width:1100px;margin:32px auto;padding:0 20px;color:#222}table{border-collapse:collapse;width:100%}td,th{padding:8px;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}small{color:#555}audio{width:100%}button,a{color:#534693}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
   <h1>${escape(scenario.id)} — voice review</h1><p>${escape(scenario.description)}</p>
   <p>Listen to actual decoded app clips. Text below is the app's intended wording, <strong>not an audio transcription</strong>. Missing TTS sound is a coverage gap, never evidence of silence.</p>
-  <audio id="audio" controls preload="metadata" src="audio.webm"></audio><p><a href="audio.json">Full timestamped evidence and audio levels</a> · <a href="screen.webm">Screen recording (silent; audio is above)</a> · <a href="scenario.json">Saved test case</a></p>
+  <audio id="audio" controls preload="metadata" src="audio.webm"></audio><p><a href="audio.json">Full timestamped evidence and audio levels</a> · <a href="screen.webm">Screen recording (silent; audio is above)</a> · <a href="scenario.json">Saved test case</a> · <a href="audio-transport.json">Request and file-read timings</a></p>
+  ${sourcePanel}
   <p>Capture starts at ${(evidence.events.find(e => e.type === 'capture-start')?.ms / 1000).toFixed(2)}s on the event clock. Screen recording starts earlier; its offset is unmeasured. Timeline buttons seek the audio, not the video.</p>
   <h2>Checks and review candidates</h2><ul>${audit.checks.map(c => `<li>${c.pass ? 'PASS' : 'FAIL'}: ${escape(c.label)}</li>`).join('')}
   ${audit.concerns.map(c => `<li>REVIEW at ${(c.ms / 1000).toFixed(2)}s: ${escape(c.detail)}</li>`).join('')}
@@ -100,5 +111,6 @@ export function audioReviewPage(scenario, evidence, audit) {
   <h2>Speech and exercise timeline</h2><table><thead><tr><th>Time</th><th>Event</th><th>Exercise / input</th><th>Intended words or clip</th></tr></thead><tbody>
   ${rows.map(e => `<tr><td><button data-seek="${Math.max(0, (e.ms - (evidence.events.find(x => x.type === 'capture-start')?.ms || 0)) / 1000)}">${(e.ms / 1000).toFixed(2)}s</button></td><td>${escape(e.type)}<br><small>${escape(e.reason || e.action || e.error || '')}</small></td><td>${escape(e.state.movement || 'no session')}<br><small>${escape(e.state.state || '')} · ${escape(e.state.observation.pose)}</small></td><td>${escape(e.item?.text || e.path || '')}<br><small>${escape(e.item?.key || '')}</small></td></tr>`).join('')}</tbody></table>
   <h2>Limits</h2><ul>${evidence.limitations.map(l => `<li>${escape(l)}</li>`).join('')}</ul>
-  <script>document.querySelectorAll('[data-seek]').forEach(b=>b.onclick=()=>{document.getElementById('audio').currentTime=Number(b.dataset.seek)});</script></html>`;
+  <script>document.querySelectorAll('[data-seek]').forEach(b=>b.onclick=()=>{document.getElementById('audio').currentTime=Number(b.dataset.seek)});
+  document.querySelectorAll('audio').forEach(a=>a.addEventListener('play',()=>{document.querySelectorAll('audio').forEach(other=>{if(other!==a)other.pause()})}));</script></html>`;
 }

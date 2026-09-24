@@ -236,6 +236,51 @@
       "expect": null
     },
     {
+      "id": "set-one-is-not-static",
+      "key": "nextset", "variant": 0, "vars": {"c":1,"o":3},
+      "tmpl": "Set {c} of {o}.",
+      "manifest": ["voice/warm/building/nextset_0.mp3"], "expect": null
+    },
+    {
+      "id": "set-two-is-not-static",
+      "key": "nextset", "variant": 0, "vars": {"c":2,"o":3},
+      "tmpl": "Set {c} of {o}.",
+      "manifest": ["voice/warm/building/nextset_0.mp3"], "expect": null
+    },
+    {
+      "id": "round-number-is-not-static",
+      "key": "nextset", "variant": 1, "vars": {"c":2},
+      "tmpl": "Round {c}. Same standard.",
+      "manifest": ["voice/warm/building/nextset_1.mp3"], "expect": null
+    },
+    {
+      "id": "result-value-is-not-static",
+      "key": "pr", "variant": 0, "vars": {"v":"Forty seconds"},
+      "tmpl": "Personal best. {v}.",
+      "manifest": ["voice/warm/building/pr_0.mp3"], "expect": null
+    },
+    {
+      "id": "unsupported-value-in-splice",
+      "key": "rest", "variant": 0, "vars": {"t":40,"c":2},
+      "tmpl": "Set {c}. Rest {t} seconds.",
+      "manifest": ["voice/warm/building/rest.a_0.mp3","voice/warm/num/40.mp3","voice/warm/building/rest.b_0.mp3"], "expect": null
+    },
+    {
+      "id": "future-placeholder-is-not-static",
+      "key": "go", "variant": 0, "vars": {}, "tmpl": "Hold for {duration}.",
+      "manifest": ["voice/warm/building/go_0.mp3"], "expect": null
+    },
+    {
+      "id": "malformed-placeholder-is-not-static",
+      "key": "go", "variant": 0, "vars": {}, "tmpl": "Hold for {c.",
+      "manifest": ["voice/warm/building/go_0.mp3"], "expect": null
+    },
+    {
+      "id": "optional-name-whole-line",
+      "key": "go", "variant": 0, "vars": {}, "tmpl": "Ready{n}.",
+      "manifest": ["voice/warm/building/go_0.mp3"], "expect": ["voice/warm/building/go_0.mp3"]
+    },
+    {
       "id": "whole-line",
       "key": "go",
       "variant": 0,

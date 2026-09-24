@@ -131,7 +131,8 @@ or claimed fixed. This is one successful build, not a portable speed guarantee.
 7. Design/test PWA storage/update handling, then add installation/offline claims.
    Later paid store builds require verified local entitlements and restore tests.
 
-The GitHub workflow cannot run remotely until the owner credential can push the
-existing workflow file (`workflow` scope or equivalent appropriate authorization).
-Do not remove tests/workflows to work around that. Account budgets/quotas remain
+The owner added Workflows permission to the fine-grained token on 24 September;
+the development branch pushed and its workflow started. See project status for
+the latest published checkpoint and actual completed result. Do not remove
+tests/workflows to work around authorization. Account budgets/quotas remain
 external settings; same-ref CI cancellation only avoids superseded test work.

@@ -45,6 +45,10 @@ prioritise listening. Start with all three voices' numbers 1–20, especially Wa
 “two”; compare the original clips with the actual application recordings in the
 audio reports. Decoding, measurable signal and intended wording do not prove
 pronunciation. Record the exact clip hash for any confirmed issue or approval.
+New reports include unchanged source copies, complete-response identity where
+available and request/file-read timings. The audio-integrity follow-up repaired
+whole-sentence failure handling, static recordings for changing set values and
+premature test capture cutoff; it did not approve or regenerate the recordings.
 
 The earlier intermittent loading failures remain a separate investigation; one
 successful run cannot identify their cause. Regenerate only clips whose defect

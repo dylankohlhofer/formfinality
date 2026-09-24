@@ -625,6 +625,34 @@ Evidence: [closure record](sessions/loose-ends-2026-09-24.md),
 [voice audit](voice-library-audit.md), [release guide](web-release.md),
 [reconciled backlog](chat-backlog-2026-09-24.md).
 
+## 18. September 24 audio-integrity follow-up
+
+- Explicit recording load/decode/play errors now fail the complete sentence,
+  remove failed cached media and suppress its trailing fragments. Missing clip
+  lists cannot start partial recorded wording; unrelated new speech remains usable.
+- Added seven deterministic failure/cancellation cases and two actual corrupted-
+  media controls. The old shell expectation that errors advanced the sentence was
+  deliberately replaced with whole-line failure and no-tail assertions.
+- Dynamic set/result placeholders can no longer select an unchanging whole MP3.
+  Complete local speech or visible unavailability replaces unsupported resolution.
+  Eight additive shared cases expand clip-resolution parity from seventeen to
+  twenty-five, with the HTML-first fix mirrored in Swift.
+- Fixed number-sample capture ending before legally started playback finished:
+  four-second minimum, bounded completion/quiet tail, seven-second maximum.
+  Production start deadlines and per-number complete-signal requirements remain.
+- Added bounded browser/server/file-read timing evidence to audio reports and
+  unchanged, hash-addressed source recordings beside the actual captured mix.
+  Source copying rejects private/unlisted/symlinked/stale inputs and never
+  overwrites saved evidence. Complete served-byte identity is distinguished from
+  partial, missing or intercepted responses. Nineteen helper tests protect this.
+
+Evidence: [audio-integrity follow-up](sessions/audio-integrity-2026-09-24.md),
+[source-copy helper](../testing/audio-source-review.mjs),
+[real-media controls](../testing/audio-splice-cases.mjs),
+[shared clip cases](../testing/clip-resolution-vectors.json).
+No voice recording was changed, regenerated, transcribed or approved. The reported
+“two” pronunciation and physical-speaker experience remain review questions.
+
 ## Prior verified checkpoint and remaining boundaries
 
 The latest completed review before this closure work is

@@ -541,7 +541,7 @@ final class ConformanceTests: XCTestCase {
         let url = Self.repoRoot.appendingPathComponent("testing/clip-resolution-vectors.json")
         let suite = try JSONDecoder().decode(Suite.self, from: Data(contentsOf: url))
         XCTAssertEqual(suite.schema, "clip-resolution/1")
-        XCTAssertEqual(suite.cases.count, 17)
+        XCTAssertEqual(suite.cases.count, 25)
         for r in suite.cases {
             let man = Set(r.manifest)
             XCTAssertEqual(clipPlanFor(personaId: "warm", tierId: "building", key: r.key,

@@ -5,6 +5,14 @@ Found during the local Profile/Weekly Goals verification on 23 September.
 No playback implementation, voice assets, audio expectations or deadlines were
 changed by that feature. The cause of the local request delays is unconfirmed.
 
+**24 September follow-up:** the four-second capture-cutoff defect described below
+is now reproduced by a controlled late-start real clip and repaired with a bounded
+completion tail. Production start expiry and per-number complete-signal checks
+are unchanged. Explicit sentence-fragment playback errors and dynamic set-clip
+routing were independently repaired. New audio reports include per-case browser/
+server/file-read timings and verified source-copy comparisons. These repairs do
+not diagnose the old delivery delay. See [the follow-up](../../docs/sessions/audio-integrity-2026-09-24.md).
+
 ## Preserved evidence
 
 Full run `test-results/2026-09-23T12-42-50-429Z-7846/` exited 1.

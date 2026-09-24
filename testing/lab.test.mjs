@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
-import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError, runExitCode } from './lib.mjs';
+import { validate, validateRecording, assertion, engineSource, snapshot, runTimeline, benignConsoleError, runExitCode, hash } from './lib.mjs';
 import { findings, escape, hasScreenshot, suiteLog } from './report.mjs';
 import { serve } from './browser.mjs';
 import {resolve,dirname,join} from 'node:path';
@@ -199,6 +199,36 @@ test('test instrumentation never rewrites the shipped file', async () => {
     assert.equal(await readFile(build, 'utf8'), html);
     assert.equal(html.includes('window.__testLab'), false);
   } finally { await server.close(); }
+});
+test('audio transport evidence measures served bytes and isolates requests without exposing private files',async()=>{
+  const root=fileURLToPath(new URL('../',import.meta.url));
+  const html=await readFile(resolve(root,'form-coach-v4.11.html'),'utf8');
+  const source=await readFile(resolve(root,'voice/warm/num/2.mp3'));
+  const server=await serve(root,html,undefined,{audio:true});
+  try{
+    const headers={'X-FormFinder-Test-Case':'transport-control'};
+    const full=await fetch(server.url+'/voice/warm/num/2.mp3',{headers});
+    assert.deepEqual(Buffer.from(await full.arrayBuffer()),source);
+    const range=await fetch(server.url+'/voice/warm/num/2.mp3',{headers:{...headers,Range:'bytes=0-63'}});
+    assert.equal(range.status,206);assert.deepEqual(Buffer.from(await range.arrayBuffer()),source.subarray(0,64));
+    assert.equal((await fetch(server.url+'/AGENTS.md',{headers})).status,404);
+    assert.equal((await fetch(server.url+'/voice/not-a-real-clip.mp3',{headers})).status,404);
+    assert.equal(server.assetEventsDropped,0);assert.equal(server.assetEvents.length,3);
+    const [whole,part,missing]=server.assetEvents;
+    assert.equal(whole.caseId,'transport-control');assert.equal(whole.bytes,source.length);
+    assert.equal(whole.sha256,hash(source));assert.equal(whole.statusCode,200);
+    assert.equal(part.bytes,64);assert.equal(part.sha256,hash(source.subarray(0,64)));
+    assert.deepEqual(part.range,{start:0,end:63});assert.equal(missing.sha256,undefined);
+    assert.equal(missing.statusCode,404);assert.ok(missing.stages.some(s=>s.name==='asset-error'));
+    for(const row of [whole,part]){
+      const stages=row.stages.map(s=>s.name);
+      assert.ok(stages.indexOf('realpath-end')>stages.indexOf('realpath-start'));
+      assert.ok(stages.indexOf('first-byte')>stages.indexOf('file-open'));
+      assert.ok(stages.indexOf('response-finish')>stages.indexOf('file-end'));
+      assert.ok(row.finishedAt>=row.receivedAt);
+      assert.ok(row.stages.every((s,i)=>i===0||s.ms>=row.stages[i-1].ms));
+    }
+  }finally{await server.close();}
 });
 const engine = await loadEngine(await readFile(new URL('../form-coach-v4.11.html', import.meta.url), 'utf8'));
 const exercise = exerciseInputs(JSON.parse(await readFile(new URL('../conformance-vectors.json', import.meta.url))).poses);

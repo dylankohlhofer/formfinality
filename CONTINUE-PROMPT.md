@@ -30,6 +30,12 @@ The development-only audit screens manifest clips and produces a local listening
 queue. Warm “two” and all three voices' numbers 1–20 remain the priority.
 Decoded signal and intended scripts are not transcriptions or pronunciation
 approvals. Compare source clips with actual app playback; retain byte hashes.
+New real-audio reports retain unchanged source copies and per-case transport
+timings. The September 24 audio-integrity repair fails a whole sentence on a
+fragment error, declines static recordings for unsupported dynamic placeholders,
+and captures legally started late numbers through bounded completion. The shared
+clip resolver now has 25 JS/Swift cases. These repairs do not prove pronunciation
+or identify the original intermittent delivery delay.
 Do not regenerate voices, choose Fish/ElevenLabs paid services or upload clips
 without an explicit provider/cost decision. Earlier intermittent audio failures
 remain open until their cause and a repair are established.
@@ -50,9 +56,11 @@ directory, never the repository root. Do not publish, purchase services, share
 private evidence, merge into main or delete an old branch implicitly. If the
 GitHub workflow push is blocked, preserve local commits and report the exact
 permission requirement; do not remove the workflow to get a push through.
-The actual 24 September push was rejected because the current Personal Access
-Token lacks workflow scope. Current development remains local. The owner must
-authorize workflow publication before retrying; never request a token in chat.
+The initial 24 September push was rejected for workflow authorization. The owner
+subsequently added Workflows permission to the existing fine-grained token; the
+development branch pushed successfully and Actions started. Check the newest
+project-status entry and actual remote SHA/run before claiming a later checkpoint
+is published or CI has passed. Never request a token in chat or print credentials.
 
 For a normal Git clone, no generated handover receipts are expected. If this is
 an older exported ZIP, follow START-HERE.md and verify its original snapshot

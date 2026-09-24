@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { audioSweep } from './audio-sweep.mjs';
+import { registerAudioSpliceTests } from './audio-splice-cases.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const html = await readFile(resolve(root, process.env.FORM_COACH_TEST_BUILD || 'form-coach-v4.11.html'), 'utf8');
 await mkdir(resolve(root, 'test-results'), { recursive: true });
@@ -18,6 +19,69 @@ test('real decoded playback control is audible and sequential', async () => {
   const [r] = await audioSweep({ root, html, dir: resolve(dir, 'control'), only: 'clips-steady-building', repeatFailures: false,
     verification: { variant: 'healthy control', expected: 'passes', source: 'testing/audio-capture.test.mjs' } });
   assert.equal(r.status, 'passed', JSON.stringify(r));
+});
+test('a legally delayed second number is captured through its real media completion', async () => {
+  // Pre-read the exact source bytes so this tests capture finalization, not
+  // variable filesystem latency. Slow only this TEST-COPY second clip enough
+  // to cross the old four-second cutoff, while retaining the original 3s TTL.
+  const clips = new Map(await Promise.all([1,2].map(async n => [String(n),
+    await readFile(resolve(root, `voice/warm/num/${n}.mp3`))])));
+  // Keep the failing fixed-window capture as a permanent negative control and
+  // retain it beside the healthy completion-aware run. No retry-to-green.
+  for (const fixedCutoff of [true, false]) {
+    const target = resolve(dir, fixedCutoff ? 'delayed-number-fixed-cutoff' : 'delayed-number-completion');
+    const [r] = await audioSweep({ root, html, dir: target, only: 'clips-warm-building', repeatFailures: false,
+      verification: { variant: `${fixedCutoff ? 'force the old fixed 4s cutoff; ' : ''}first response at 0.5s, second at 2.7s with real Warm two at 0.65x speed`,
+        expected: fixedCutoff ? 'second-number completion assertion fails; capture-policy negative control, NOT an app bug'
+          : 'both clips complete with measured signal; 3000ms start deadlines unchanged', source: 'testing/audio-capture.test.mjs' },
+      mutate: async page => {
+        if (fixedCutoff) await page.evaluate(() => {
+          // Force the sampler to finish at its unchanged 4s minimum, reproducing
+          // the former policy without changing media/Coach completion or TTLs.
+          window.__audioLab.captureStatus = () => ({busy:false, quietMs:1000});
+        });
+        await page.evaluate(() => {
+          const sequence = window.__audioLab.sequence;
+          window.__audioLab.sequence = () => { window.__numberControlStart = performance.now(); return sequence(); };
+          const { AudioBank } = window.__testLab.audioAccess(), get = AudioBank.get;
+          AudioBank.get = function(path) {
+            const a = get.call(this, path);
+            if (a && path === 'voice/warm/num/2.mp3') a.playbackRate = .65;
+            return a;
+          };
+        });
+        await page.route('**/voice/warm/num/*.mp3', async route => {
+          const number = new URL(route.request().url()).pathname.match(/\/(\d+)\.mp3$/)?.[1];
+          if (!clips.has(number)) return route.continue();
+          await page.evaluate(async targetMs => {
+            const remaining = window.__numberControlStart + targetMs - performance.now();
+            if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+          }, number === '1' ? 500 : 2700);
+          await route.fulfill({ status: 200, contentType: 'audio/mpeg', body: clips.get(number) });
+        });
+      } });
+    const e = JSON.parse(await readFile(resolve(target, 'audio-clips-warm-building/audio.json')));
+    const second = e.events.find(e => e.type === 'clip-start' && e.item?.text === '2');
+    assert.ok(second, 'The delayed second recording must actually start');
+    assert.equal(second.item.ttl, 3000);
+    assert.ok(second.ms - second.item.requestedMs >= 2600 && second.ms - second.item.requestedMs < 3000,
+      `Actual delayed media start must be inside the original deadline: ${JSON.stringify(second)}`);
+    if (fixedCutoff) {
+      assert.ok(!r.error, r.error);
+      assert.equal(r.status, 'failed');
+      assert.deepEqual(r.checks.filter(c => !c.pass).map(c => c.label),
+        ['Number 2 actually plays to completion with measured signal']);
+      assert.equal(e.events.find(e => e.type === 'clip-end' && e.playId === second.playId)?.reason, 'paused');
+      continue;
+    }
+    assert.equal(r.status, 'passed', JSON.stringify(r));
+    const end = e.events.find(e => e.type === 'clip-end' && e.playId === second.playId);
+    assert.equal(end?.reason, 'ended');
+    assert.ok(end.ms - second.item.requestedMs > 4000, 'Control must exercise audio beyond the old capture cutoff');
+    assert.ok(e.events.find(e => e.type === 'capture-end').ms > end.ms);
+    assert.equal(e.captureWindow.reason, 'settled');
+    assert.ok(e.captureWindow.elapsedMs > 4000 && e.captureWindow.elapsedMs < 7000);
+  }
 });
 test('pausing pending real playback is retained as cancellation, with per-request ownership on reuse', async () => {
   const target = resolve(dir, 'pending-pause');
@@ -155,7 +219,7 @@ test('initial silence stays in the recording and preserves timeline alignment', 
   try {
     const page = await browser.newPage();
     await page.goto(pathToFileURL(resolve(dir, 'initial-silence/audio-clips-steady-building/audio-review.html')).href);
-    const at = await page.locator('audio').evaluate(async audio => {
+    const at = await page.locator('#audio').evaluate(async audio => {
       await audio.play(); audio.pause();
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Saved recording cannot seek')), 5000);
@@ -166,3 +230,5 @@ test('initial silence stays in the recording and preserves timeline alignment', 
     assert.ok(Math.abs(at - 1.5) < .05);
   } finally { await browser.close(); }
 });
+
+registerAudioSpliceTests({root,html,dir});

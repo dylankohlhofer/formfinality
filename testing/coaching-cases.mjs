@@ -28,6 +28,31 @@ async function controlledPlayback(page, mode = 'recorded') {
 // Queue tests use actual Coach code with controlled playback callbacks. No claim
 // about acoustic audibility; audio-sweep measures real recorded clip output.
 export async function coachingCases(runCase){
+  await runCase('coaching-dynamic-set-speech','Changing set values cannot reuse static recordings; the complete local utterance or visible unavailability is required.',async(page,check)=>{
+    await controlledPlayback(page);
+    const result=await page.evaluate(()=>{
+      const {coach}=__testLab.audioAccess(),p=__coaching;
+      document.getElementById('voice').checked=true;
+      coach.say('nextset',{vars:{c:1,o:3},pri:3});
+      const first=p.spoken.at(-1);first?.onend();
+      coach.say('nextset',{vars:{c:2,o:3},pri:3});
+      const second=p.spoken.at(-1);second?.onend();
+      const recorded=[...p.started];coach.reset();
+      speechSynthesis.getVoices=()=>[];
+      coach.say('nextset',{vars:{c:3,o:3},pri:3});
+      return {first:first?.text,second:second?.text,local:first?.voice?.localService&&second?.voice?.localService,
+        recorded,noUnspecifiedSpeech:p.spoken.length===2,released:!coach.speaking(),
+        visible:!document.getElementById('speechStatus').hidden,
+        status:document.getElementById('speechStatus').textContent};
+    });
+    check('First announcement includes the actual first set',/\b1\b/.test(result.first),true);
+    check('Second announcement includes the changed set',/\b2\b/.test(result.second),true);
+    check('Complete dynamic wording uses explicitly local speech',result.local,true);
+    check('No static set clip is selected',result.recorded,[]);
+    check('Unavailable local speech never invokes a default voice',result.noUnspecifiedSpeech,true);
+    check('Unavailable speech releases the queue',result.released,true);
+    check('Unavailable speech is explained visibly',result.visible&&/local.*unavailable/i.test(result.status),true);
+  });
   await runCase('coaching-stalled-calibration','Never-starting recorded teaching fails visibly and releases actual calibration without manually clearing the coach.',async(page,check)=>{
     await controlledPlayback(page);
     await reveal(page, '#voice'); await page.locator('#voice').check();await page.locator('#calBtn').click();

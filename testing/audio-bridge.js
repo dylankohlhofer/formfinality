@@ -4,8 +4,10 @@
 window.__audioLab = (() => {
   const events = [], levels = [], items = new WeakMap(), attached = new WeakSet();
   let ctx, destination, recorder, clockSource, origin, sequence = 0, activeItem = null, invoking = null;
-  let observation = { pose: 'none', since: 0 }, latest = null, sampler, stopped = false;
-  const live = new Map(), chunks = [];
+  let observation = { pose: 'none', since: 0 }, latest = null, sampler, stopped = false, lastAudioActivity = 0;
+  const live = new Map(), pendingPlays = new Set(), chunks = [];
+  const audioActivity = new Set(['clip-request', 'clip-start', 'clip-end', 'clip-cancelled', 'clip-error',
+    'speech-start', 'speech-finish', 'coach-decision', 'dropped', 'reset']);
   const now = () => Math.round((performance.now() - origin) * 10) / 10;
   const state = () => {
     const c = calib?.core || sess?.core;
@@ -16,7 +18,9 @@ window.__audioLab = (() => {
       cue: c?.following || c?.paused ? null : latest?.cue ?? null };
   };
   const log = (type, data = {}) => {
-    const e = { type, ms: now(), state: state(), ...data }; events.push(e); return e;
+    const e = { type, ms: now(), state: state(), ...data }; events.push(e);
+    if (audioActivity.has(type)) lastAudioActivity = e.ms;
+    return e;
   };
   const describe = item => {
     if (!items.has(item)) items.set(item, { id: ++sequence, key: item.key ?? invoking?.key ?? 'raw',
@@ -96,7 +100,7 @@ window.__audioLab = (() => {
     const play = a.play.bind(a), pause = a.pause.bind(a);
     a.play = () => {
       const request = { playId: ++sequence, pausedAt: null };
-      playId = request.playId; pending.add(request);
+      playId = request.playId; pending.add(request); pendingPlays.add(request);
       log('clip-request', { playId: request.playId, path, item: activeItem });
       return play().catch(error => {
         // pause() may reject a still-pending play() before any "playing" event.
@@ -107,7 +111,7 @@ window.__audioLab = (() => {
         log(cancelled ? 'clip-cancelled' : 'clip-error', { playId: request.playId, path,
           error: error.message, errorName: error.name, pausedAt: request.pausedAt });
         throw error;
-      }).finally(() => pending.delete(request));
+      }).finally(() => { pending.delete(request); pendingPlays.delete(request); });
     };
     const end = reason => {
       if (!live.has(a)) return;
@@ -174,6 +178,11 @@ window.__audioLab = (() => {
     observe(pose) { observation = { pose, since: now() }; log('observation'); },
     mark(action) { log('action', { action }); },
     state,
+    captureStatus() {
+      return { busy: !!(coach.cur || coach.pending || live.size || pendingPlays.size),
+        quietMs: Math.max(0, now() - lastAudioActivity),
+        current: !!coach.cur, pending: !!coach.pending, playing: live.size, pendingPlays: pendingPlays.size };
+    },
     queueExpiry() {
       coach.say('teach.plank', { vars: { t: 30 }, pri: 3 });
       coach.say('sag', { pri: 2, ttl: 200 });

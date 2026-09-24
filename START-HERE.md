@@ -15,9 +15,10 @@ The local branch is `codex/automated-test-lab`. The owner cancelled the Ethan
 transfer and resumed on their own account. A local branch or old GitHub `main`
 does not prove current work is backed up: check the latest closure record before
 cloning. No credentials or account access should be copied between people.
-The 24 September push was rejected because the current Personal Access Token
-lacks `workflow` scope. Current development remains local until an appropriately
-authorized credential publishes this branch and its remote SHA is confirmed.
+The owner added the fine-grained token's Workflows permission on 24 September.
+The development branch was then pushed successfully and its remote SHA verified;
+GitHub Actions started. See project status for the latest published checkpoint
+and completed CI result, rather than assuming a started run has passed.
 
 ## Dependency setup and checks
 

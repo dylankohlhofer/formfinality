@@ -1,10 +1,49 @@
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, relative, sep } from 'node:path';
 import { chromium } from 'playwright';
 import { serve } from './browser.mjs';
 import { hash } from './lib.mjs';
 import { exerciseInputs } from './exercise-inputs.mjs';
 import { auditAudio, audioReviewPage } from './audio-review.mjs';
+import { copyAudioSources } from './audio-source-review.mjs';
+
+export const CLIP_CAPTURE_WINDOW = Object.freeze({ minimumMs: 4000, maximumMs: 7000, quietMs: 250 });
+
+// Observe completion; never drain/reset the queue, extend an item's TTL or wait
+// for a missing number to be retried. The independent audio audit still decides
+// whether both expected numbers really completed with signal. Only clips-* uses
+// this tail: session action/cancellation timelines retain their declared length.
+export async function waitForClipCapture(page, { now = () => performance.now(),
+  sleep = ms => page.waitForTimeout(ms), setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+  const { minimumMs, maximumMs, quietMs } = CLIP_CAPTURE_WINDOW;
+  const started = now();
+  await sleep(minimumMs);
+  let status = null;
+  for (;;) {
+    const elapsedMs = now() - started;
+    if (elapsedMs >= maximumMs)
+      return { ...CLIP_CAPTURE_WINDOW, elapsedMs, reason: 'deadline', status };
+    let timer, read;
+    try {
+      read = await Promise.race([
+        page.evaluate(() => window.__audioLab.captureStatus()).then(status => ({status})),
+        new Promise(resolve => { timer = setTimer(() => resolve({timedOut:true}), maximumMs - elapsedMs); })
+      ]);
+    } finally { if (timer !== undefined) clearTimer(timer); }
+    if (read.timedOut)
+      return { ...CLIP_CAPTURE_WINDOW, elapsedMs: now() - started, reason: 'deadline', deadlineStage: 'status-read', status };
+    status = read.status;
+    if (typeof status?.busy !== 'boolean' || !Number.isFinite(status.quietMs) || status.quietMs < 0)
+      throw new Error('Invalid audio capture completion status');
+    const measuredMs = now() - started;
+    // A slow status read cannot turn a deadline overrun into a successful wait.
+    if (measuredMs >= maximumMs)
+      return { ...CLIP_CAPTURE_WINDOW, elapsedMs: measuredMs, reason: 'deadline', status };
+    if (!status.busy && status.quietMs >= quietMs)
+      return { ...CLIP_CAPTURE_WINDOW, elapsedMs: measuredMs, reason: 'settled', status };
+    await sleep(Math.min(25, maximumMs - measuredMs));
+  }
+}
 
 export async function clickAudioAction(page,action){
   const controls={skip:'#skipExBtn',stop:'#startBtn',pause:'#pauseBtn',resume:'#resumeBtn',
@@ -29,6 +68,7 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
   // scenario coverage is separately declared above; this is not a 9x exercise claim.
   const cases = [...declared, ...['steady', 'warm', 'energy'].flatMap(persona => ['learning', 'building', 'strong'].map(tier => ({
     id: `clips-${persona}-${tier}`, kind: 'clips', persona, tier, seconds: 4,
+    captureWindow: CLIP_CAPTURE_WINDOW,
     description: `Actual ${persona}/${tier} recorded numbers through the Coach queue.`,
     oracle: 'One followed by two with an explicit 3000ms TTL (playback sample, not simultaneous rep events), real non-silent decoded clips, no overlapping audio.'
   })))].filter(c => !only || c.id === only);
@@ -40,13 +80,26 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
   catch (error) { await server.close(); throw error; }
   async function execute(scenario, target) {
     await mkdir(target, { recursive: true });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, recordVideo: { dir: target, size: { width: 1280, height: 800 } } });
+    const caseId = relative(dir, target).split(sep).join('/');
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 },
+      extraHTTPHeaders: { 'X-FormFinder-Test-Case': caseId },
+      recordVideo: { dir: target, size: { width: 1280, height: 800 } } });
     await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     const page = await context.newPage(), logs = [], errors = [], checks = [];
+    const requests = []; let requestsDropped = 0;
+    const recordRequest = (request, event) => {
+      const path = new URL(request.url()).pathname;
+      if (!path.startsWith('/voice/')) return;
+      if (requests.length >= 4096) { requestsDropped++; return; }
+      requests.push({ path, event, observedAt: Date.now(), timing: request.timing(),
+        failure: request.failure()?.errorText ?? null });
+    };
+    page.on('requestfinished', request => recordRequest(request, 'finished'));
+    page.on('requestfailed', request => recordRequest(request, 'failed'));
     page.setDefaultTimeout(10000);
     page.on('console', m => { logs.push({ type: m.type(), text: m.text() }); if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', e => { logs.push({ type: 'pageerror', text: e.message }); errors.push(e.message); });
-    let evidence, error, begun = false;
+    let evidence, error, captureWindow, begun = false;
     const check = (label, actual, expected) => checks.push({ label, actual, expected, pass: actual === expected });
     try {
       await page.route('**/*', route => new URL(route.request().url()).origin === server.url ? route.continue() : route.abort());
@@ -89,7 +142,10 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         if (scenario.id === 'tracking-loss') check('No body never arms the session', await page.evaluate(() => window.__audioLab.state().state), 'setup');
       } else {
         await page.evaluate(kind => kind === 'queue' ? window.__audioLab.queueExpiry() : window.__audioLab.sequence(), scenario.kind);
-        await page.waitForTimeout(scenario.seconds * 1000);
+        if (scenario.kind === 'clips') {
+          captureWindow = await waitForClipCapture(page);
+          check('Number capture settles before its hard completion deadline', captureWindow.reason, 'settled');
+        } else await page.waitForTimeout(scenario.seconds * 1000);
       }
     } catch (e) { error = e.stack; }
     finally {
@@ -100,10 +156,19 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
       await writeFile(resolve(target, 'console.json'), JSON.stringify(logs, null, 2));
       await context.tracing.stop({ path: resolve(target, 'trace.zip') });
       await context.close();
+      await writeFile(resolve(target, 'audio-transport.json'), JSON.stringify({
+        schema: 'audio-transport/1', caseId,
+        server: { available: Array.isArray(server.assetEvents),
+          events: server.assetEvents?.filter(row => row.caseId === caseId) ?? [],
+          dropped: server.assetEventsDropped ?? null, dropScope: 'shared server, all cases' },
+        browser: { events: requests, dropped: requestsDropped },
+        note: 'Local voice transport observations only. Browser timing.startTime and server receivedAt are wall-clock epochs; other timing fields are relative milliseconds. Missing/unfinished stages are not a successful response.'
+      }, null, 2));
       await rename(await page.video().path(), resolve(target, 'screen.webm'));
     }
     let audit = { checks: [], concerns: [], gaps: [] };
     if (evidence) {
+      if (captureWindow) evidence.captureWindow = captureWindow;
       await writeFile(resolve(target, 'audio.webm'), Buffer.from(evidence.base64, 'base64')); delete evidence.base64;
       // Playwright's video starts before navigation; no frame-accurate video sync
       // is claimed. Audio and event clocks are measured within the same page.
@@ -115,6 +180,9 @@ export async function audioSweep({ root, html, dir, onResult = async () => {}, o
         try { evidence.clipHashes[path] = hash(await readFile(resolve(root, path))); }
         catch (e) { evidence.clipHashes[path] = `unavailable: ${e.code}`; }
       }
+      evidence.sourceReview = await copyAudioSources({ root, target,
+        clipHashes: evidence.clipHashes, manifestHash: evidence.manifestHash,
+        transportResponses: server.assetEvents.filter(row => row.caseId === caseId), caseId });
       audit = auditAudio(evidence, {numbers:scenario.kind === 'clips' ? [1,2] : []});
       if (scenario.id === 'tracking-loss') {
         const reminders = evidence.events.filter(e => e.type === 'effect' && e.effect.t === 'say' && ['vis', 'trackingLost'].includes(e.effect.key));

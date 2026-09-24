@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { auditAudio, audioReviewPage } from './audio-review.mjs';
 import { findings } from './report.mjs';
-import { clickAudioAction } from './audio-sweep.mjs';
+import { clickAudioAction, waitForClipCapture, CLIP_CAPTURE_WINDOW } from './audio-sweep.mjs';
 import { runInNewContext } from 'node:vm';
 test('Audio action clock starts at actual click dispatch, not delayed automation intent',async()=>{
   let now=0;const events=[],element=new EventTarget();
@@ -23,6 +23,75 @@ test('Audio action clock starts at actual click dispatch, not delayed automation
 test('Unknown and inherited audio actions fail before instrumenting a page',async()=>{
   const page={evaluate:()=>{throw Error('Should not instrument');}};
   for(const action of ['unknown','toString','constructor','__proto__'])await assert.rejects(()=>clickAudioAction(page,action),/Unknown audio action/);
+});
+function captureClock(statusAt) {
+  let ms = 0;
+  const sleeps = [];
+  return { sleeps, page: { evaluate: async () => statusAt(ms) },
+    clock: { now: () => ms, sleep: async amount => { sleeps.push(amount); ms += amount; } } };
+}
+test('number capture retains its four-second baseline when playback already settled', async () => {
+  const c = captureClock(ms => ({busy:false, quietMs:ms - 2000}));
+  const result = await waitForClipCapture(c.page, c.clock);
+  assert.equal(result.reason, 'settled'); assert.equal(result.elapsedMs, 4000);
+  assert.deepEqual(c.sleeps, [4000]);
+});
+test('number capture waits through on-time late playback and a bounded quiet tail', async () => {
+  const c = captureClock(ms => ({busy:ms < 4400, quietMs:ms < 4400 ? 0 : ms - 4400}));
+  const result = await waitForClipCapture(c.page, c.clock);
+  assert.equal(result.reason, 'settled'); assert.equal(result.elapsedMs, 4650);
+  assert.equal(result.maximumMs, 7000); assert.equal(result.quietMs, 250);
+});
+test('inter-segment quiet shorter than the tail cannot end capture early', async () => {
+  const c = captureClock(ms => ({busy:ms < 4100 || (ms >= 4250 && ms < 4900),
+    quietMs:ms < 4100 ? 0 : ms < 4250 ? ms - 4100 : ms < 4900 ? 0 : ms - 4900}));
+  const result = await waitForClipCapture(c.page, c.clock);
+  assert.equal(result.reason, 'settled'); assert.equal(result.elapsedMs, 5150);
+});
+test('stuck playback and endlessly fresh activity cannot extend the hard bound', async () => {
+  for (const busy of [true,false]) {
+    const c = captureClock(() => ({busy,quietMs:0}));
+    const result = await waitForClipCapture(c.page, c.clock);
+    assert.equal(result.reason, 'deadline'); assert.equal(result.elapsedMs, 7000);
+    assert.equal(c.sleeps.reduce((a,b)=>a+b,0), 7000);
+  }
+  assert.ok(Object.isFrozen(CLIP_CAPTURE_WINDOW));
+});
+test('unknown capture status fails instead of certifying completion', async () => {
+  for (const status of [null,{}, {busy:false,quietMs:NaN}, {busy:false,quietMs:-1}, {busy:0,quietMs:1000}]) {
+    const c = captureClock(() => status);
+    await assert.rejects(waitForClipCapture(c.page,c.clock), /Invalid audio capture completion status/);
+  }
+});
+test('a never-resolving browser status read cannot bypass the capture deadline', async () => {
+  let ms=0, reads=0, cleared=0;
+  const result = await waitForClipCapture({evaluate:()=>{reads++; return new Promise(()=>{});}}, {
+    now:()=>ms, sleep:async amount=>{ms+=amount;},
+    setTimer:(callback,remaining)=>{
+      assert.equal(remaining,3000,'Only the remaining capture budget is available');
+      queueMicrotask(()=>{ms+=remaining;callback();}); return 'status-read-timer';
+    },
+    clearTimer:id=>{assert.equal(id,'status-read-timer');cleared++;}
+  });
+  assert.equal(reads,1); assert.equal(cleared,1);
+  assert.equal(result.reason,'deadline'); assert.equal(result.deadlineStage,'status-read');
+  assert.equal(result.elapsedMs,7000); assert.equal(result.status,null);
+});
+test('status timers are cleaned up on both successful reads and read failures', async () => {
+  for (const fail of [false,true]) {
+    let ms=0, cleared=0;
+    const waiting = waitForClipCapture({evaluate:async()=>{
+      if(fail)throw new Error('Page closed during status read');
+      return {busy:false,quietMs:1000};
+    }}, {
+      now:()=>ms,sleep:async amount=>{ms+=amount;},
+      setTimer:(_callback,remaining)=>{assert.equal(remaining,3000);return 'pending-timer';},
+      clearTimer:id=>{assert.equal(id,'pending-timer');cleared++;}
+    });
+    if(fail)await assert.rejects(waiting,/Page closed/);
+    else assert.equal((await waiting).reason,'settled');
+    assert.equal(cleared,1);
+  }
 });
 const state = { phase: 0, movement: 'plank', observation: { pose: 'good', since: 0 } };
 const item = { id: 1, key: 'goodhold', text: 'Good.', requestedMs: 0, ttl: 2500, requestedState: state };
@@ -107,6 +176,33 @@ test('both declared numbers must complete with their own measured signal', () =>
   e.events.find(x=>x.playId===3 && x.type==='clip-end').reason='paused';
   assert.deepEqual(failed(),['Number 2 actually plays to completion with measured signal']);
 });
+test('a fixed four-second capture truncates an on-time second number, independently of its start TTL', () => {
+  const first = {...item, id:1, key:'number', text:'1', ttl:3000};
+  const second = {...first, id:2, text:'2'};
+  const e = {events:[
+    {type:'capture-start',ms:0,state},
+    {type:'speech-start',ms:500,item:first,state},
+    {type:'clip-start',ms:500,playId:3,item:first,state},
+    {type:'clip-end',ms:1400,playId:3,reason:'ended',state},
+    {type:'speech-start',ms:1400,item:second,state},
+    {type:'clip-start',ms:2700,playId:4,item:second,state},
+    // finish() records capture-end then resets the coach, pausing live media.
+    {type:'capture-end',ms:4000,state},
+    {type:'clip-end',ms:4000,playId:4,reason:'paused',state}
+  ],levels:[{ms:600,playId:3,rms:.1},{ms:2800,playId:4,rms:.1}],
+  decoded:{seconds:4,rms:.1},limitations:[]};
+  const audit = () => auditAudio(e,{numbers:[1,2]});
+  assert.deepEqual(audit().checks.filter(c=>!c.pass).map(c=>c.label),
+    ['Number 2 actually plays to completion with measured signal']);
+  assert.ok(audit().checks.find(c=>c.label.startsWith('Speech never starts'))?.pass);
+  // The expected legal end is after the obsolete recording cutoff. Completing
+  // it requires more capture time, not a longer production first-start deadline.
+  e.events.splice(-2,2,{type:'clip-end',ms:4400,playId:4,reason:'ended',state},
+    {type:'capture-end',ms:4700,state});
+  e.decoded.seconds=4.7;
+  assert.deepEqual(audit().checks.filter(c=>!c.pass),[]);
+  assert.equal(second.ttl,3000);
+});
 test('sound after stop fails', () => {
   const e = evidence(); e.events.push({ type: 'action', action: 'stop', ms: 100, state });
   e.levels.push({ ms: 800, playId: 2, rms: .1 }); assert.match(failures(e).join(), /Stop silences/);
@@ -115,6 +211,23 @@ test('review renderer escapes speech and marks intended text, not transcription'
   const e = evidence(); e.events[1].item = { ...item, text: '<img src=x onerror=bad()>' };
   const page = audioReviewPage({ id: 'case', description: 'test' }, e, auditAudio(e));
   assert.ok(!page.includes('<img src=x')); assert.match(page, /not an audio transcription/);
+});
+test('source comparison errors cannot pass behind healthy recorded output',()=>{
+  const e=evidence();e.sourceReview={clips:[],errors:[{path:'voice/warm/num/2.mp3',message:'Stale captured clip hash'}]};
+  assert.match(failures(e).join(),/source comparison/i);
+});
+test('source comparison only embeds safe local hash-addressed copies and labels unreviewed pronunciation',()=>{
+  const e=evidence(),sha='a'.repeat(64);
+  e.sourceReview={sourceMeaning:'Saved after capture, not a transcription.',errors:[],clips:[
+    {path:'voice/warm/num/2.mp3',sha256:sha,localPath:`source-clips/${sha}.mp3`,transport:{reason:'Exact served bytes match.'}},
+    {path:'<img src=x onerror=bad()>',localPath:'https://example.test/private.mp3',error:'unverified'},
+    {path:'unsafe',localPath:'../../private.mp3'}
+  ]};
+  const html=audioReviewPage({id:'source-control',description:'Source comparison'},e,auditAudio(e));
+  assert.ok(html.includes(`src="source-clips/${sha}.mp3"`));
+  assert.ok(!html.includes('src="https://example.test'));assert.ok(!html.includes('src="../../private'));
+  assert.ok(!html.includes('<img src=x'));assert.match(html,/All pronunciations remain unreviewed/);
+  assert.match(html,/audio-transport.json/);
 });
 test('review concerns and TTS gaps remain visible in main findings', () => {
   const f = findings([{ id: 'audio', checks: [], concerns: [{ detail: 'Repetition', ms: 1 }], audioGaps: ['No waveform'] }]);

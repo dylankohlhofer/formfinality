@@ -13,9 +13,9 @@ nothing, with a map of where everything lives.
 They separate working browser features, native modules, prototypes, open bugs,
 human/provider dependencies and superseded requests.
 
-**Continuing on another device?** Start with `../START-HERE.md` and
-`sessions/device-handover-2026-09-16.md`; the latter records the conversation's
-current next task and distinguishes completed fixes from the proposed voice audit.
+**Continuing on another device?** Start with `../START-HERE.md` and current
+`project-status.md`. `sessions/device-handover-2026-09-16.md` preserves the older
+transfer checkpoint; its then-proposed voice audit has since been implemented.
 The owner resumed work on their own account on 22 September; the Ethan transfer
 is cancelled. Git clones use the normal test setup, not generated ZIP receipts.
 

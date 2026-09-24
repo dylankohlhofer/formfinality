@@ -258,7 +258,7 @@ the visible button. Failed playback keeps assessment paused; late recovery callb
 cannot affect a new workout. Preserve the five `review-*` shell cases. Unavailable
 view telemetry is not labelled guided. Missing words in a spliced recording require
 the complete local fallback (or visual unavailability), never a number-only fragment.
-The 17 `testing/clip-resolution-vectors.json` rows are shared with Swift; eight older
+The 25 `testing/clip-resolution-vectors.json` rows are shared with Swift; eight older
 clip rows also run against the actual browser resolver. The one historical Rest
 expectation was explicitly migrated by `testing/refresh-review-speech.mjs`.
 All original harnesses in the shared runner must use its saved `build.html`, so a
@@ -302,6 +302,20 @@ shell case and both real-transport fault tests. Number samples must prove both
 numbers complete with their own measured signal; a queue start is not sound.
 Watchdog/recorded-utterance failures cannot pass behind earlier audio. The original
 OS/browser trigger remains unconfirmed; see `docs/sessions/audio-stall-recovery-2026-09-14.md`.
+Explicit media errors and rejected `play()` promises must fail the entire
+recorded sentence, evict the failed element and suppress its remaining fragments.
+Never advance past missing words into a number-only tail. Missing path lists
+must decline before playback so the complete local fallback remains possible.
+Keep error/cancellation ownership and real corrupted-splice controls. Number
+capture may observe a bounded completion tail after its four-second minimum;
+that is not an extension of the production three-second sample start deadline.
+Retain per-number completion/signal checks and bounded request/file-read evidence.
+See `docs/sessions/audio-integrity-2026-09-24.md` for the deliberate legacy shell
+expectation correction; root vectors and judgement are unchanged.
+The clip resolver must reject unsupported dynamic placeholders such as set
+numbers (`{c}`/`{o}`) and result text (`{v}`), not select a static recording for
+changing facts. Twenty-five shared clip-resolution cases now cover this in HTML
+and Swift; the eight new cases are additive, with no root-vector refresh.
 
 Local profiles/weekly goals use the separate default-off `profile-goals/1` store.
 They consume existing finishes, never alter assessment or infer a fitness level.
@@ -428,7 +442,7 @@ rows, CSV columns and dialogue keys. Labels are editable brand; ids are plumbing
 checks from the surviving vectors and exits 0. `swift test` passes 105 deterministic
 tests (26 engine, 22 summary, 57 interaction); three real-model smoke tests are
 opt-in and skipped by default. They read the same root conformance JSON, 35 shared
-movement-evidence cases, 17 clip-resolution cases, 22 summary-selection, 22 choice-selection and 39 command
+movement-evidence cases, 25 clip-resolution cases, 22 summary-selection, 22 choice-selection and 39 command
 cases. `REF` is covered by the `refGates` section — a keyframe edit that breaks a gate now
 fails by name — and `verify-draw.mjs` (250 checks) covers `drawRef`, the first coverage the
 drawing has ever had. `verify-skip.mjs` (26 checks) covers both cores' `skip` with derived

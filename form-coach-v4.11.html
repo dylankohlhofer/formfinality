@@ -4452,22 +4452,32 @@ const AudioBank = {
   /** Play a sequence of clips back to back. Resolves when done. */
   play(paths, onEnd, {deadline = Infinity} = {}){
     const queue = paths.map(path => ({path, audio:this.get(path)})).filter(x => x.audio);
-    if(!queue.length) return false;
+    // An unavailable fragment cannot turn a sentence into disconnected words.
+    // Returning false before playback lets Coach use its complete local fallback.
+    if(!queue.length || queue.length !== paths.length) return false;
     const epoch = this.playEpoch;
-    let i = 0, failed = queue.length !== paths.length, heard = false, retried = false, settled = false;
+    let i = 0, heard = false, retried = false, settled = false;
     const finish = result => { if(settled || epoch !== this.playEpoch) return; settled = true; onEnd?.(result); };
     const next = () => {
       if(settled || epoch !== this.playEpoch) return;
-      if(i >= queue.length){ finish({failed}); return; }
+      if(i >= queue.length){ finish({failed:false}); return; }
       const {audio:a, path} = queue[i++];
       let live = true, started = false, position = 0, timer;
       const current = () => live && !settled && epoch === this.playEpoch;
       const clear = () => { clearTimeout(timer); this.pendingLoads.delete(clear); };
       const discard = () => {
-        live = false; clear(); a.onplaying = a.onended = null;
+        live = false; clear(); a.onplaying = a.onended = a.onerror = null;
         // pause alone leaves an unresolved fetch/decoder cached for the next set.
         if(this.cache.get(path) === a) this.cache.delete(path);
         a.pause(); a.removeAttribute?.("src"); a.load?.();
+      };
+      const fail = () => {
+        if(!current()) return;
+        discard();
+        diagnosticEvent("speech", {event:"clip-error", path});
+        // Explicit load/decode failures follow the same whole-line boundary as
+        // stalls. Never skip missing words, replay a partial line or play its tail.
+        finish({failed:true, reason:"clip load or playback failed"});
       };
       const arm = () => {
         clearTimeout(timer); this.pendingLoads.add(clear);
@@ -4496,9 +4506,14 @@ const AudioBank = {
         started = heard = true; position = a.currentTime;
         diagnosticEvent("speech", {event:"clip-playing", path}); arm();
       };
-      a.onended = () => { if(!current()) return; live = false; clear(); diagnosticEvent("speech", {event:"clip-ended", path}); next(); };
+      a.onended = () => {
+        if(!current()) return;
+        live = false; clear(); a.onplaying = a.onended = a.onerror = null;
+        diagnosticEvent("speech", {event:"clip-ended", path}); next();
+      };
+      a.onerror = fail;
       arm();
-      a.play().catch(() => { if(!current()) return; live = false; clear(); failed = true; diagnosticEvent("speech", {event:"clip-error", path}); next(); });
+      a.play().catch(fail);
     };
     next();
     return true;
@@ -4882,6 +4897,9 @@ function clipPlanFor(personaId, tierId, key, variant, vars, tmpl, has){
   };
   const TOK = t => `voice/${personaId}/tok/${slugTok(t)}.mp3`;
 
+  // Only these splice tokens and the optional nickname have authored support.
+  // A static MP3 cannot truthfully announce changing set/result values ({c,o,v}).
+  if(/[{}]/.test(tmpl.replace(/\{[ntpx]\}/g, ""))) return null;
   const tokens = tmpl.match(/\{[tpx]\}/g) || [];
   if(tokens.length === 0){
     const base = P(key, variant);

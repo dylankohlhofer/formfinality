@@ -227,7 +227,7 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
     await runCase('recorded-clip-cancel', 'Stopping a sequence invalidates delayed play rejection and ended callbacks, but new speech still completes. Controlled media events.', async (page, check) => {
       const result = await page.evaluate(async () => {
         const { AudioBank } = window.__testLab.audioAccess();
-        const started = [], paused = []; let rejectOld, oldFinished = 0, newFinished = 0, errorFinished = 0;
+        const started = [], paused = []; let rejectOld, oldFinished = 0, newFinished = 0, errorResult = null;
         AudioBank.get = key => {
           if (!AudioBank.cache.has(key)) AudioBank.cache.set(key, {
             currentTime: 0, pause: () => paused.push(key),
@@ -248,15 +248,18 @@ export async function shellSweep({ root, html, engine, browser, dir, only }) {
         await Promise.resolve(); await Promise.resolve(); staleEnded();
         const afterCancelledCallbacks = [...started];
         AudioBank.cache.get('new-intro').onended(); AudioBank.cache.get('new-tail').onended();
-        AudioBank.play(['broken', 'recovered'], () => errorFinished++);
-        await Promise.resolve(); await Promise.resolve(); AudioBank.cache.get('recovered').onended();
-        return { afterCancelledCallbacks, paused, oldFinished, newFinished, errorFinished };
+        AudioBank.play(['broken', 'recovered'], result => errorResult = result);
+        await Promise.resolve(); await Promise.resolve();
+        return { afterCancelledCallbacks, paused, oldFinished, newFinished, errorResult,
+          failedTailStarted: started.includes('recovered'), brokenCached: AudioBank.cache.has('broken') };
       });
       check('Late rejection and ended callback cannot restart old clips', result.afterCancelledCallbacks, ['old-intro', 'new-intro']);
-      check('Stop pauses the cached old clips', result.paused, ['old-intro', 'old-tail']);
+      check('Stop pauses old clips and a failed element is discarded', result.paused, ['old-intro', 'old-tail', 'broken']);
       check('Abandoned sequence does not report completion', result.oldFinished, 0);
       check('New sequence still completes', result.newFinished, 1);
-      check('Active clip errors still advance the current sequence', result.errorFinished, 1);
+      check('Active clip error fails the complete sentence', result.errorResult, {failed:true,reason:'clip load or playback failed'});
+      check('Failed sentence cannot speak its trailing fragment', result.failedTailStarted, false);
+      check('Failed element is removed from cache', result.brokenCached, false);
     });
     const fakePlayback = async page => {
       await page.waitForFunction(() => window.__testLab.audioAccess().AudioBank.enabled);
